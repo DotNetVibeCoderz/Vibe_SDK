@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- A quadruped in plan view: body, four contacts, and the sensor dome at the front. The activity
+       bar renders this monochrome, so it has to read at 16 px from silhouette alone. -->
+  <rect x="6" y="8.5" width="12" height="7" rx="1.5" />
+  <circle cx="12" cy="5.5" r="1.6" />
+  <path d="M12 7.1v1.4" />
+  <path d="M6 10.5H3.5M6 13.5H3.5M18 10.5h2.5M18 13.5h2.5" />
+  <circle cx="2.6" cy="10.5" r="1" fill="currentColor" stroke="none" />
+  <circle cx="2.6" cy="13.5" r="1" fill="currentColor" stroke="none" />
+  <circle cx="21.4" cy="10.5" r="1" fill="currentColor" stroke="none" />
+  <circle cx="21.4" cy="13.5" r="1" fill="currentColor" stroke="none" />
+  <path d="M9 18.5h6" />
+</svg>

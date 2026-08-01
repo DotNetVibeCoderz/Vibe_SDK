@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Sensor integration for Unitree.Net: IMU, LiDAR point clouds, foot contact, battery monitoring and a unified telemetry hub.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unitree.Net.Core\Unitree.Net.Core.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Dds\Unitree.Net.Dds.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Messages\Unitree.Net.Messages.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

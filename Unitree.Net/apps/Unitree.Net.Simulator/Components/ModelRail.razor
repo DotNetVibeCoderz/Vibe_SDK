@@ -1,0 +1,120 @@
+@implements IDisposable
+@inject SimulatorState State
+
+<aside class="rail">
+
+    <section class="section">
+        <div class="panel-head">
+            <span class="label">Platform</span>
+            @if (State.IsRunning)
+            {
+                <span class="label" title="Stop the simulation to change platform">Locked</span>
+            }
+        </div>
+
+        <div class="models">
+            @foreach (RobotModel model in RobotRig.SupportedModels)
+            {
+                RobotRig rig = RobotRig.For(model);
+                bool selected = State.SelectedModel == model;
+
+                <button type="button"
+                        class="model @(selected ? "model-on" : null)"
+                        disabled="@State.IsRunning"
+                        title="@rig.Summary"
+                        @onclick="() => State.SelectedModel = model">
+                    <span>
+                        <span class="model-name">@rig.DisplayName</span><br />
+                        <span class="model-meta">@rig.JointCount joints · @rig.StandingHeight.ToString("0.00", CultureInfo.InvariantCulture) m</span>
+                    </span>
+                    <span class="model-kind">@(rig.IsQuadruped ? "QUAD" : "HUM")</span>
+                </button>
+            }
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="panel-head"><span class="label">Transport</span></div>
+        <div class="section-body rows">
+            <label class="row" style="display:block">
+                <span class="label">Multicast group</span>
+                <input class="field" value="@State.Options.MulticastAddress"
+                       disabled="@State.IsRunning"
+                       @onchange="OnAddressChanged" />
+            </label>
+
+            <label class="row" style="display:block">
+                <span class="label">Port</span>
+                <input class="field" type="number" value="@State.Options.MulticastPort"
+                       disabled="@State.IsRunning"
+                       @onchange="OnPortChanged" />
+            </label>
+
+            <label class="row" style="display:block">
+                <span class="label">Publish rate</span>
+                <select class="field" disabled="@State.IsRunning" @onchange="OnRateChanged">
+                    @foreach (int rate in Rates)
+                    {
+                        <option value="@rate" selected="@(State.Options.LowStateRateHz == rate)">@rate Hz</option>
+                    }
+                </select>
+            </label>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="panel-head"><span class="label">Attach anything</span></div>
+        <div class="section-body">
+            <p style="margin:0;font-size:0.78rem;color:var(--ink-1)">
+                While this runs, point the CLI or the dashboard at the same group and they will connect
+                as though a robot were present.
+            </p>
+            <pre style="margin:0.6rem 0 0;font-family:var(--mono);font-size:0.7rem;color:var(--ink-2);white-space:pre-wrap">dotnet run --project apps/Unitree.Net.Cli -- status</pre>
+        </div>
+    </section>
+
+    <footer style="margin-top:auto;padding:0.85rem;border-top:1px solid var(--rule)">
+        <p style="margin:0;font-size:0.72rem;color:var(--ink-2);line-height:1.5">
+            Unitree.Net Simulator<br />
+            Dibuat oleh <strong style="color:var(--ink-1)">Gravicode Studios</strong><br />
+            dipimpin <strong style="color:var(--ink-1)">Kang Fadhil</strong>
+        </p>
+    </footer>
+
+</aside>
+
+@code {
+    private static readonly int[] Rates = [50, 100, 200, 500, 1000];
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    private void OnAddressChanged(ChangeEventArgs e)
+    {
+        string? value = e.Value?.ToString();
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            State.Options.MulticastAddress = value.Trim();
+        }
+    }
+
+    private void OnPortChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), CultureInfo.InvariantCulture, out int port) && port is > 0 and < 65536)
+        {
+            State.Options.MulticastPort = port;
+        }
+    }
+
+    private void OnRateChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), CultureInfo.InvariantCulture, out int rate))
+        {
+            State.Options.LowStateRateHz = rate;
+        }
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

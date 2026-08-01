@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <!-- WPF pins this to Windows. The simulation itself lives in Unitree.Net.Simulation, which is
+         plain net10.0 and runs anywhere; only the shell is Windows-only.
+
+         The OS version in the moniker is not decoration: BlazorWebView reaches WebView2 through the
+         CsWinRT projections, and a bare net10.0-windows does not reference them. Without it the app
+         starts and then dies on "Could not load Microsoft.Windows.SDK.NET" the moment the WebView is
+         constructed. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Unitree.Net.Simulator</RootNamespace>
+    <AssemblyName>Unitree.Net.Simulator</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unitree.Net.Simulation\Unitree.Net.Simulation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

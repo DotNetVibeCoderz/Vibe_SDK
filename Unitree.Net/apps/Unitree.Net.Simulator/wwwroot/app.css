@@ -1,0 +1,684 @@
+/* Unitree.Net Simulator — "bench instrument".
+
+   The design rule that drives everything here: values that come from the machine are set in the mono
+   face with tabular figures; words written by a person are set in the sans. You can tell at a glance
+   which is which, which is exactly the distinction this tool exists to blur and then make honest again.
+
+   Colour carries two accents rather than one. Signal cyan means live machine data; amber means armed,
+   i.e. the robot would move if this were real. The status ramp is the validated data-viz palette, and
+   status is never carried by colour alone — every state pairs a tone with a glyph and a word. */
+
+:root {
+    color-scheme: dark;
+
+    --bench-0: #0f1319;
+    --bench-1: #161c24;
+    --bench-2: #1e2631;
+    --bench-3: #263140;
+    --rule: #2a3543;
+
+    --ink-0: #e6edf6;
+    --ink-1: #93a3b8;
+    --ink-2: #62718a;
+
+    --signal: #38cfe0;
+    --signal-dim: rgba(56, 207, 224, 0.16);
+    --armed: #f2a33c;
+    --armed-dim: rgba(242, 163, 60, 0.16);
+
+    --good: #3fbf3f;
+    --warn: #fab219;
+    --serious: #ec835a;
+    --critical: #e05555;
+
+    --radius: 8px;
+    --radius-sm: 5px;
+
+    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", "Cascadia Code", ui-monospace, Consolas, "SF Mono", monospace;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bench-0: #f4f3ef;
+    --bench-1: #ffffff;
+    --bench-2: #eae8e2;
+    --bench-3: #dedbd3;
+    --rule: #d5d2c9;
+
+    --ink-0: #10161d;
+    --ink-1: #4e5a68;
+    --ink-2: #7d8896;
+
+    --signal: #0b7c8a;
+    --signal-dim: rgba(11, 124, 138, 0.12);
+    --armed: #a2650a;
+    --armed-dim: rgba(162, 101, 10, 0.13);
+
+    --good: #0ca30c;
+    --warn: #a97400;
+    --serious: #c25a2c;
+    --critical: #d03b3b;
+
+    --shadow: 0 1px 2px rgba(20, 24, 28, 0.10), 0 8px 20px rgba(20, 24, 28, 0.07);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+body {
+    font-family: var(--sans);
+    font-size: 14px;
+    background: var(--bench-0);
+    color: var(--ink-0);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+}
+
+#app { height: 100vh; }
+
+/* Every machine-derived number goes through this. Tabular figures stop the value from jittering
+   sideways as digits change, which at 5 Hz is the difference between readable and seasick. */
+.v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero" 1;
+    letter-spacing: -0.01em;
+}
+
+.boot {
+    height: 100vh;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 1rem;
+    color: var(--ink-2);
+}
+
+.boot-mark {
+    width: 26px;
+    height: 26px;
+    border: 2px solid var(--signal);
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ------------------------------------------------------------------ shell */
+
+.shell {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 0.85rem;
+    height: 48px;
+    background: var(--bench-1);
+    border-bottom: 1px solid var(--rule);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding-right: 0.5rem;
+    white-space: nowrap;
+}
+
+/* The mark is a four-contact plan view: the robot, reduced to the thing the simulator actually
+   models. It doubles as a run indicator — the dots light when the loop is publishing. */
+.mark {
+    display: grid;
+    grid-template-columns: repeat(2, 5px);
+    gap: 3px;
+}
+
+.mark i {
+    width: 5px;
+    height: 5px;
+    border-radius: 1px;
+    background: var(--ink-2);
+    transition: background 160ms ease;
+}
+
+.running .mark i { background: var(--signal); }
+.running .mark i:nth-child(1) { animation: contact 0.8s ease-in-out infinite; }
+.running .mark i:nth-child(4) { animation: contact 0.8s ease-in-out infinite; }
+.running .mark i:nth-child(2) { animation: contact 0.8s ease-in-out 0.4s infinite; }
+.running .mark i:nth-child(3) { animation: contact 0.8s ease-in-out 0.4s infinite; }
+
+@keyframes contact { 50% { opacity: 0.28; } }
+
+.brand-name {
+    font-size: 0.8rem;
+    font-weight: 650;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.brand-name em {
+    font-style: normal;
+    color: var(--ink-2);
+    font-weight: 500;
+}
+
+.bar-spacer { margin-left: auto; }
+
+/* ------------------------------------------------------------- typography */
+
+.label {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+}
+
+.panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--rule);
+    min-height: 34px;
+}
+
+/* --------------------------------------------------------------- controls */
+
+.btn {
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 550;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.85rem;
+    min-height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--rule);
+    background: var(--bench-2);
+    color: var(--ink-0);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.btn:hover:not(:disabled) { background: var(--bench-3); border-color: var(--ink-2); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary {
+    background: var(--signal);
+    border-color: var(--signal);
+    color: #04121a;
+    font-weight: 650;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--signal) 84%, #ffffff);
+    border-color: color-mix(in srgb, var(--signal) 84%, #ffffff);
+}
+
+.btn-stop { border-color: color-mix(in srgb, var(--critical) 50%, var(--rule)); }
+.btn-icon { padding: 0.42rem 0.55rem; }
+
+:where(button, select, input, a):focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+}
+
+select.field, input.field {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.5rem;
+    min-height: 30px;
+    width: 100%;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--rule);
+    background: var(--bench-2);
+    color: var(--ink-0);
+}
+
+input.field { font-family: var(--mono); }
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--bench-2);
+    color: var(--ink-1);
+}
+
+.pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ink-2);
+}
+
+.pill-live { color: var(--ink-0); border-color: color-mix(in srgb, var(--signal) 45%, var(--rule)); }
+.pill-live::before { background: var(--signal); animation: pulse 1.4s ease-in-out infinite; }
+.pill-armed { color: var(--ink-0); border-color: color-mix(in srgb, var(--armed) 50%, var(--rule)); }
+.pill-armed::before { background: var(--armed); }
+
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* ------------------------------------------------------------------- body */
+
+.body {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr) 268px;
+    min-height: 0;
+}
+
+.rail {
+    background: var(--bench-1);
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.rail-right {
+    border-right: none;
+    border-left: 1px solid var(--rule);
+}
+
+.stage {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    background: var(--bench-0);
+}
+
+.section { border-bottom: 1px solid var(--rule); }
+.section-body { padding: 0.7rem 0.85rem; }
+
+/* ----------------------------------------------------------- model picker */
+
+.models { padding: 0.4rem; display: grid; gap: 2px; }
+
+.model {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink-1);
+    cursor: pointer;
+}
+
+.model:hover:not(:disabled) { background: var(--bench-2); color: var(--ink-0); }
+.model:disabled { opacity: 0.42; cursor: not-allowed; }
+
+.model-on {
+    background: var(--signal-dim);
+    border-color: color-mix(in srgb, var(--signal) 38%, transparent);
+    color: var(--ink-0);
+}
+
+.model-name { font-weight: 600; font-size: 0.86rem; }
+
+.model-meta {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--ink-2);
+}
+
+.model-kind {
+    font-size: 0.6rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    padding: 0.1rem 0.34rem;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+    color: var(--ink-2);
+}
+
+.model-on .model-kind { border-color: color-mix(in srgb, var(--signal) 35%, transparent); color: var(--signal); }
+
+/* --------------------------------------------------------------- readouts */
+
+.rows { display: grid; gap: 0.3rem; }
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+}
+
+.row > span:first-child { color: var(--ink-1); }
+.row > span:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.row-good > span:last-child { color: var(--good); }
+.row-warn > span:last-child { color: var(--warn); }
+.row-critical > span:last-child { color: var(--critical); }
+
+/* A meter is a bar plus a number, never a bar alone: the bar gives the trend, the number gives the
+   value, and a colour-blind reader loses neither. */
+.meter { display: grid; gap: 0.3rem; margin-bottom: 0.7rem; }
+
+.meter-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.meter-value {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.meter-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bench-3);
+    overflow: hidden;
+}
+
+.meter-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--signal);
+    transition: width 220ms ease;
+}
+
+.meter-good .meter-fill { background: var(--good); }
+.meter-warn .meter-fill { background: var(--warn); }
+.meter-critical .meter-fill { background: var(--critical); }
+.meter-warn .meter-value { color: var(--warn); }
+.meter-critical .meter-value { color: var(--critical); }
+
+/* Foot contacts read as a plan view of the robot, so left and right are where you expect them. */
+.contacts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.35rem;
+}
+
+.contacts-biped { grid-template-columns: repeat(2, 1fr); }
+
+.contact {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.4rem 0.45rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background: var(--bench-2);
+}
+
+.contact-name { font-size: 0.62rem; letter-spacing: 0.08em; color: var(--ink-2); font-weight: 600; }
+
+.contact-load {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+    color: var(--ink-2);
+}
+
+.contact-on {
+    border-color: color-mix(in srgb, var(--signal) 42%, transparent);
+    background: var(--signal-dim);
+}
+
+.contact-on .contact-load { color: var(--signal); }
+
+/* ------------------------------------------------------------- drive pad */
+
+.pad {
+    display: grid;
+    grid-template-areas:
+        ".    fwd  ."
+        "left stop right"
+        ".    back .";
+    gap: 0.3rem;
+}
+
+.pad button {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.55rem 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--rule);
+    background: var(--bench-2);
+    color: var(--ink-1);
+    cursor: pointer;
+    user-select: none;
+    min-height: 38px;
+}
+
+.pad button:hover:not(:disabled) { background: var(--bench-3); color: var(--ink-0); }
+.pad button:disabled { opacity: 0.35; cursor: not-allowed; }
+.pad button.held { background: var(--armed-dim); border-color: var(--armed); color: var(--ink-0); }
+
+.pad-fwd { grid-area: fwd; }
+.pad-left { grid-area: left; }
+.pad-stop { grid-area: stop; border-color: color-mix(in srgb, var(--critical) 45%, var(--rule)) !important; font-size: 0.68rem !important; font-weight: 650; letter-spacing: 0.06em; }
+.pad-right { grid-area: right; }
+.pad-back { grid-area: back; }
+
+/* --------------------------------------------------------------- viewport */
+
+.viewport { position: relative; min-height: 0; }
+.viewport canvas { display: block; width: 100%; height: 100%; }
+
+.viewport-hint {
+    position: absolute;
+    left: 0.85rem;
+    bottom: 0.75rem;
+    font-size: 0.7rem;
+    color: var(--ink-2);
+    pointer-events: none;
+}
+
+.viewport-idle {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    pointer-events: none;
+}
+
+.viewport-idle p { margin: 0; color: var(--ink-2); font-size: 0.82rem; max-width: 30ch; }
+
+/* ------------------------------------------------------- telemetry ribbon */
+
+/* The signature element. It is not decoration: each lane is a topic that is genuinely being
+   published, its measured rate, and a bar that fills as messages land. If the ribbon is dark, no
+   packets are leaving the process — which is the first thing you want to know. */
+.ribbon {
+    display: flex;
+    align-items: stretch;
+    gap: 1px;
+    background: var(--rule);
+    border-top: 1px solid var(--rule);
+    min-height: 54px;
+}
+
+.lane {
+    flex: 1 1 0;
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.5rem 0.8rem;
+    background: var(--bench-1);
+    min-width: 0;
+}
+
+.lane-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.lane-topic {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lane-rate {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink-0);
+    white-space: nowrap;
+}
+
+.lane-rate em { font-style: normal; font-weight: 400; color: var(--ink-2); font-size: 0.68rem; }
+
+.lane-bar { height: 3px; border-radius: 2px; background: var(--bench-3); overflow: hidden; }
+
+.lane-fill {
+    height: 100%;
+    width: 0;
+    background: var(--signal);
+    transition: width 300ms ease;
+}
+
+.lane-count {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.68rem;
+    color: var(--ink-2);
+}
+
+.lane-off .lane-rate { color: var(--ink-2); }
+.lane-off .lane-fill { background: var(--ink-2); }
+.lane-muted { opacity: 0.55; }
+
+/* -------------------------------------------------------------- log panel */
+
+.log {
+    background: var(--bench-1);
+    border-top: 1px solid var(--rule);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 176px;
+}
+
+.log-collapsed { height: 35px; grid-template-rows: auto; }
+
+.filters { display: flex; gap: 2px; }
+
+.filter {
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+}
+
+.filter:hover { color: var(--ink-0); background: var(--bench-2); }
+.filter-on { background: var(--bench-3); color: var(--ink-0); border-color: var(--rule); }
+
+.log-list {
+    overflow-y: auto;
+    padding: 0.3rem 0.85rem 0.6rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1.65;
+}
+
+.log-line {
+    display: grid;
+    grid-template-columns: 62px 74px 1fr;
+    gap: 0.7rem;
+    padding: 0.05rem 0;
+}
+
+.log-time { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.log-src { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
+.log-text { color: var(--ink-1); word-break: break-word; }
+
+.log-warning .log-text { color: var(--warn); }
+.log-error .log-text { color: var(--critical); }
+.log-warning .log-src::before,
+.log-error .log-src::before { content: "! "; font-weight: 700; }
+
+.log-empty { color: var(--ink-2); font-family: var(--sans); font-size: 0.8rem; padding: 0.4rem 0; }
+
+/* --------------------------------------------------------------- scrollbars */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bench-3); border-radius: 5px; border: 3px solid var(--bench-1); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-2); }
+
+/* --------------------------------------------------------- blazor chrome */
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 1000;
+    padding: 0.6rem 1.1rem;
+    background: var(--critical);
+    color: #ffffff;
+    font-size: 0.82rem;
+}
+
+#blazor-error-ui a { color: #ffffff; }
+#blazor-error-ui .dismiss { float: right; cursor: pointer; padding-left: 1rem; }
+
+/* --------------------------------------------------------------- narrow */
+
+@media (max-width: 1180px) {
+    .body { grid-template-columns: 196px minmax(0, 1fr) 230px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}

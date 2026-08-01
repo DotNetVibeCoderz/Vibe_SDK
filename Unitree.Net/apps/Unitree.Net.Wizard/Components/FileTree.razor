@@ -1,0 +1,71 @@
+@implements IDisposable
+@inject WizardState State
+
+<aside class="rail">
+
+    <div class="rail-head">
+        <span class="label" style="margin:0">@(State.CurrentProject?.Name ?? "Explorer")</span>
+        @if (State.CurrentProject is not null)
+        {
+            <button class="btn btn-ghost btn-sm" title="Reload from disk" @onclick="() => State.RefreshFiles()">⟳</button>
+        }
+    </div>
+
+    <div class="tree">
+        @if (State.CurrentProject is null)
+        {
+            <div class="empty">
+                <p>No project open.</p>
+                <p>Use <strong>File → New project</strong> to start from a template, or open one you
+                   already have.</p>
+                <p style="color:var(--ink-2);font-size:0.74rem">
+                    Every template runs against the simulator without a robot.
+                </p>
+            </div>
+        }
+        else
+        {
+            @foreach (ProjectFile file in State.ProjectFiles)
+            {
+                bool active = State.ActiveDocument?.File.AbsolutePath == file.AbsolutePath;
+                bool dirty = State.Documents.Any(document =>
+                    document.File.AbsolutePath == file.AbsolutePath && document.IsDirty);
+
+                <button type="button"
+                        class="tree-item @(active ? "tree-item-on" : null)"
+                        title="@file.RelativePath"
+                        @onclick="() => State.OpenDocumentAsync(file)">
+                    <span class="tree-icon">@Glyph(file)</span>
+                    <span class="tree-name">@file.RelativePath</span>
+                    @if (dirty)
+                    {
+                        <span class="tree-dirty" title="Unsaved changes">●</span>
+                    }
+                </button>
+            }
+        }
+    </div>
+
+</aside>
+
+@code {
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    // A glyph per file type rather than an icon font: it is one character, it needs no asset, and it
+    // survives a theme change without any work.
+    private static string Glyph(ProjectFile file) => Path.GetExtension(file.RelativePath).ToLowerInvariant() switch
+    {
+        ".cs" => "#",
+        ".csproj" => "▣",
+        ".json" => "{}",
+        ".razor" or ".html" => "<>",
+        ".css" => "§",
+        ".js" or ".ts" => "ƒ",
+        ".md" => "¶",
+        _ => "·",
+    };
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

@@ -1,0 +1,75 @@
+@inject WizardState State
+
+<div class="scrim" @onclick="Close">
+    <div class="modal modal-sm" @onclick:stopPropagation="true">
+
+        <div class="modal-head">
+            <span class="modal-title">About</span>
+            <button class="btn btn-ghost btn-sm" @onclick="Close">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="about">
+
+                <div class="about-id">
+                    <span class="about-mark">{|}</span>
+                    <div>
+                        <h2>Unitree Robot Wizard</h2>
+                        <span class="about-version">version @Version · .NET @Environment.Version.ToString(2)</span>
+                    </div>
+                </div>
+
+                <p>
+                    A code editor for building robot applications on the Unitree.Net SDK, with
+                    <strong>Jack The Code Bender</strong> alongside it — an assistant that reads your
+                    project, looks things up, and writes code against the real API.
+                </p>
+
+                <dl class="about-facts">
+                    <dt>Templates</dt>
+                    <dd>@TemplateCatalog.All.Count, all verified to compile</dd>
+
+                    <dt>Example prompts</dt>
+                    <dd>@PromptGallery.All.Count across @PromptGallery.Categories.Count categories</dd>
+
+                    <dt>Assistant</dt>
+                    <dd>@State.Settings.Provider · @ModelLabel</dd>
+
+                    <dt>Settings file</dt>
+                    @* The path is long and has no spaces, so it needs an explicit break rule — without
+                       one it refuses to wrap and pushes the whole dialog wider than its own box. *@
+                    <dd class="about-path">@WizardSettingsStore.ConfigPath</dd>
+                </dl>
+
+                <p class="about-credit">
+                    Dibuat oleh <strong>Gravicode Studios</strong><br />
+                    dipimpin <strong>Kang Fadhil</strong>
+                </p>
+
+                <p class="about-warning">
+                    Nothing in this SDK has been run against real hardware. Read
+                    <code>docs/safety.md</code> before a robot is involved.
+                </p>
+
+            </div>
+        </div>
+
+        <div class="modal-foot">
+            <span style="margin-left:auto"></span>
+            <button class="btn btn-primary" @onclick="Close">Close</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    /// <summary>Raised when the dialog should close.</summary>
+    [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+
+    private static string Version =>
+        typeof(WizardState).Assembly.GetName().Version?.ToString(3) ?? "0.1.0";
+
+    private string ModelLabel => State.Settings.ToAiOptions().GetEffectiveModelId();
+
+    private Task Close() => OnClose.InvokeAsync();
+}

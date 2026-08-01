@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>DDS CDR codec and the unitree_go / unitree_hg / unitree_api message types used by Unitree robots.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unitree.Net.Core\Unitree.Net.Core.csproj" />
+  </ItemGroup>
+
+</Project>

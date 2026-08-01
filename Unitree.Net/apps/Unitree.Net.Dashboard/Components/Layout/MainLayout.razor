@@ -1,0 +1,57 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject UnitreeRobot Robot
+
+<div class="shell">
+    <header class="shell-header">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-name">Unitree.Net</span>
+            <span class="brand-model">@Robot.Model</span>
+        </div>
+
+        <nav class="nav" aria-label="Primary">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Telemetry</NavLink>
+            <NavLink class="nav-link" href="control">Control</NavLink>
+        </nav>
+
+        <div class="link-state">
+            <ConnectionBadge State="@_state" />
+        </div>
+    </header>
+
+    <main class="shell-main">
+        @Body
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private ConnectionState _state = ConnectionState.Disconnected;
+    private Timer? _poller;
+
+    protected override void OnInitialized()
+    {
+        // The header's link state has to stay current even on a page that isn't otherwise re-rendering,
+        // so the layout owns its own low-rate poll rather than depending on the active page.
+        _poller = new Timer(_ =>
+        {
+            ConnectionState next = Robot.RefreshConnectionState();
+
+            if (next == _state)
+            {
+                return;
+            }
+
+            _state = next;
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    public void Dispose() => _poller?.Dispose();
+}

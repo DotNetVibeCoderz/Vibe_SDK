@@ -1,0 +1,125 @@
+@implements IDisposable
+@inject WizardState State
+@inject IJSRuntime Js
+
+<div class="shell">
+
+    <MenuBar OnNewProject="() => _dialog = Dialog.NewProject"
+             OnSettings="() => _dialog = Dialog.Settings"
+             OnAbout="() => _dialog = Dialog.About"
+             OnToggleTheme="ToggleThemeAsync"
+             OnEditorCommand="RunEditorCommandAsync" />
+
+    <div class="workspace @(State.Settings.ChatVisible ? null : "workspace-nochat")">
+        <FileTree />
+
+        <div class="center">
+            <EditorPane @ref="_editor" />
+            <OutputPanel />
+        </div>
+
+        @if (State.Settings.ChatVisible)
+        {
+            <ChatPanel />
+        }
+    </div>
+
+    <StatusBar />
+</div>
+
+@switch (_dialog)
+{
+    case Dialog.NewProject:
+        <NewProjectDialog OnClose="CloseDialog" />
+        break;
+
+    case Dialog.Settings:
+        <SettingsDialog OnClose="CloseDialog" />
+        break;
+
+    case Dialog.About:
+        <AboutDialog OnClose="CloseDialog" />
+        break;
+}
+
+@code {
+    private enum Dialog { None, NewProject, Settings, About }
+
+    private EditorPane? _editor;
+    private DotNetObjectReference<Root>? _self;
+    private Dialog _dialog = Dialog.None;
+
+    protected override void OnInitialized()
+    {
+        State.Changed += OnChanged;
+        State.FileWrittenByJack += OnFileWrittenByJack;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _self = DotNetObjectReference.Create(this);
+        await Js.InvokeVoidAsync("wizardAttachLog", _self);
+        await Js.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", State.Settings.Theme);
+    }
+
+    /// <summary>Receives an error reported by the page.</summary>
+    /// <param name="message">The error text.</param>
+    [JSInvokable]
+    public void OnWebError(string message)
+    {
+        State.Write(OutputLevel.Error, $"web: {message}");
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private Task RunEditorCommandAsync(string command) => command switch
+    {
+        "save" => State.SaveActiveAsync(),
+        "saveAll" => State.SaveAllAsync(),
+
+        // Line numbers take an argument, so they cannot go through the by-name path below.
+        "showLineNumbers" => Js.InvokeVoidAsync("unitreeEditor.setLineNumbers", true).AsTask(),
+        "hideLineNumbers" => Js.InvokeVoidAsync("unitreeEditor.setLineNumbers", false).AsTask(),
+
+        _ => Js.InvokeVoidAsync($"unitreeEditor.{command}").AsTask(),
+    };
+
+    private async Task ToggleThemeAsync()
+    {
+        State.Settings.Theme = State.Settings.Theme == "dark" ? "light" : "dark";
+        await Js.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", State.Settings.Theme);
+        await Js.InvokeVoidAsync("unitreeEditor.setTheme", State.Settings.Theme);
+        State.PersistSettings();
+    }
+
+    private void CloseDialog()
+    {
+        _dialog = Dialog.None;
+        StateHasChanged();
+    }
+
+    // Jack writing a file the editor already has open would otherwise leave a stale buffer that
+    // overwrites his work on the next save.
+    private void OnFileWrittenByJack(string relativePath) => _ = InvokeAsync(async () =>
+    {
+        if (_editor is not null)
+        {
+            await _editor.ReloadAsync(relativePath);
+        }
+
+        StateHasChanged();
+    });
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        State.FileWrittenByJack -= OnFileWrittenByJack;
+        _self?.Dispose();
+    }
+}

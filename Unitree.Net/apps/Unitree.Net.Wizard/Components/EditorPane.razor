@@ -1,0 +1,149 @@
+@implements IAsyncDisposable
+@inject WizardState State
+@inject IJSRuntime Js
+
+<div class="tabs">
+    @foreach (OpenDocument document in State.Documents)
+    {
+        bool active = State.ActiveDocument == document;
+
+        <div class="tab @(active ? "tab-on" : null)"
+             role="button"
+             tabindex="0"
+             @onclick="() => State.Activate(document)">
+            <span>@document.File.FileName</span>
+            @if (document.IsDirty)
+            {
+                <span class="tab-dirty" title="Unsaved changes">●</span>
+            }
+            <button type="button" class="tab-close" title="Close"
+                    @onclick:stopPropagation="true"
+                    @onclick="() => Close(document)">×</button>
+        </div>
+    }
+</div>
+
+<div class="editor-host">
+    <div id="editor"></div>
+
+    @if (State.ActiveDocument is null)
+    {
+        <div class="editor-empty">
+            <h2>@(State.CurrentProject is null ? "No project open" : "No file open")</h2>
+            <p>
+                @(State.CurrentProject is null
+                    ? "Create one from a template, or ask Jack to build something and he will scaffold it for you."
+                    : "Pick a file from the explorer on the left.")
+            </p>
+        </div>
+    }
+</div>
+
+@code {
+    private DotNetObjectReference<EditorPane>? _self;
+    private string? _shownPath;
+    private bool _ready;
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _self = DotNetObjectReference.Create(this);
+
+            _ready = await Js.InvokeAsync<bool>(
+                "unitreeEditor.init", "#editor", State.Settings.Theme, State.Settings.ShowLineNumbers, _self);
+
+            if (!_ready)
+            {
+                State.Write(OutputLevel.Error, "The code editor failed to load. Files can still be built and run.");
+            }
+        }
+
+        await SyncDocumentAsync();
+    }
+
+    /// <summary>
+    /// Shows whatever document is active, if it is not already shown.
+    /// </summary>
+    /// <remarks>
+    /// Guarded on the path because this runs after every render: without the check, every keystroke
+    /// would push the buffer back into Monaco and reset the cursor to the top of the file.
+    /// </remarks>
+    private async Task SyncDocumentAsync()
+    {
+        if (!_ready)
+        {
+            return;
+        }
+
+        if (State.ActiveDocument is not { } document)
+        {
+            _shownPath = null;
+            return;
+        }
+
+        if (_shownPath == document.File.AbsolutePath)
+        {
+            return;
+        }
+
+        _shownPath = document.File.AbsolutePath;
+
+        await Js.InvokeVoidAsync(
+            "unitreeEditor.open", document.File.AbsolutePath, document.Text, document.File.Language);
+    }
+
+    /// <summary>Pushes a file Jack rewrote back into the editor.</summary>
+    /// <param name="relativePath">Project-relative path of the changed file.</param>
+    public async Task ReloadAsync(string relativePath)
+    {
+        OpenDocument? document = State.Documents.FirstOrDefault(open =>
+            string.Equals(open.File.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase));
+
+        if (!_ready || document is null)
+        {
+            return;
+        }
+
+        await Js.InvokeVoidAsync(
+            "unitreeEditor.open", document.File.AbsolutePath, document.Text, document.File.Language);
+
+        _shownPath = document.File.AbsolutePath;
+    }
+
+    /// <summary>Receives an edit from the editor.</summary>
+    /// <param name="text">The buffer's new content.</param>
+    [JSInvokable]
+    public void OnEditorChanged(string text) => State.UpdateActiveText(text);
+
+    /// <summary>Receives a cursor move from the editor.</summary>
+    /// <param name="line">One-based line.</param>
+    /// <param name="column">One-based column.</param>
+    [JSInvokable]
+    public void OnCursorMoved(int line, int column) => State.SetCursor(line, column);
+
+    /// <summary>Handles Ctrl+S from inside the editor.</summary>
+    [JSInvokable]
+    public Task OnSaveRequested() => InvokeAsync(State.SaveActiveAsync);
+
+    private async Task Close(OpenDocument document)
+    {
+        State.CloseDocument(document);
+
+        if (_ready)
+        {
+            await Js.InvokeVoidAsync("unitreeEditor.close", document.File.AbsolutePath);
+        }
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        State.Changed -= OnChanged;
+        _self?.Dispose();
+        await ValueTask.CompletedTask;
+    }
+}

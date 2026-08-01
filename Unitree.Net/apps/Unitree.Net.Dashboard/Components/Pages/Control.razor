@@ -1,0 +1,256 @@
+@page "/control"
+@implements IAsyncDisposable
+@inject UnitreeRobot Robot
+@inject TelemetryHub Telemetry
+@inject ILogger<Control> Logger
+
+<PageTitle>Control — Unitree.Net</PageTitle>
+
+<h1 class="page-title">Control</h1>
+
+<div class="notice notice-caution">
+    <p class="notice-title"><span aria-hidden="true">!</span> This page moves a physical robot</p>
+    <p>
+        Commands take effect immediately. Make sure the area around the robot is clear before using
+        anything on this page. Every velocity command is clamped to the configured safety envelope
+        (@FormatEnvelope()), and the drive control stops the robot when you release it or navigate away.
+    </p>
+</div>
+
+<section class="panel" aria-label="Posture">
+    <h2 class="panel-title">Posture</h2>
+
+    <div class="button-row">
+        <button class="btn" disabled="@_busy" @onclick="StandUpAsync">Stand up</button>
+        <button class="btn" disabled="@_busy" @onclick="SitAsync">Sit</button>
+        <button class="btn" disabled="@_busy" @onclick="RecoverAsync">Recover stand</button>
+        <button class="btn btn-caution" disabled="@_busy" @onclick="DampAsync">Damp</button>
+    </div>
+
+    <p class="panel-note">
+        Damping is the safe way to end a session: the robot settles under gravity rather than dropping.
+    </p>
+</section>
+
+<section class="panel" aria-label="Drive">
+    <h2 class="panel-title">Drive</h2>
+
+    <div class="pad" role="group" aria-label="Directional control">
+        <button class="pad-btn pad-fwd" disabled="@(!_canDrive)"
+                @onpointerdown="() => Drive(_speed, 0, 0)" @onpointerup="StopDrive" @onpointerleave="StopDrive">
+            Forward
+        </button>
+        <button class="pad-btn pad-left" disabled="@(!_canDrive)"
+                @onpointerdown="() => Drive(0, 0, _turnRate)" @onpointerup="StopDrive" @onpointerleave="StopDrive">
+            Turn left
+        </button>
+        <button class="pad-btn pad-stop" @onclick="StopDrive">Stop</button>
+        <button class="pad-btn pad-right" disabled="@(!_canDrive)"
+                @onpointerdown="() => Drive(0, 0, -_turnRate)" @onpointerup="StopDrive" @onpointerleave="StopDrive">
+            Turn right
+        </button>
+        <button class="pad-btn pad-back" disabled="@(!_canDrive)"
+                @onpointerdown="() => Drive(-_speed, 0, 0)" @onpointerup="StopDrive" @onpointerleave="StopDrive">
+            Back
+        </button>
+    </div>
+
+    <div class="slider-row">
+        <label for="speed">Speed <span class="slider-value">@_speed.ToString("F2", CultureInfo.InvariantCulture) m/s</span></label>
+        <input id="speed" type="range" min="0.1" max="1.0" step="0.05" @bind="_speed" @bind:event="oninput" />
+    </div>
+
+    <div class="slider-row">
+        <label for="turn">Turn rate <span class="slider-value">@_turnRate.ToString("F2", CultureInfo.InvariantCulture) rad/s</span></label>
+        <input id="turn" type="range" min="0.1" max="1.5" step="0.05" @bind="_turnRate" @bind:event="oninput" />
+    </div>
+
+    @if (!_canDrive)
+    {
+        <p class="panel-note panel-note-warning">
+            <span aria-hidden="true">!</span> Driving is disabled: @_driveBlockedReason
+        </p>
+    }
+</section>
+
+@if (_log.Count > 0)
+{
+    <section class="panel" aria-label="Activity">
+        <h2 class="panel-title">Recent commands</h2>
+        <ul class="log">
+            @foreach (var entry in _log)
+            {
+                <li class="log-entry @(entry.Failed ? "log-entry-failed" : null)">
+                    <span class="log-time">@entry.At.ToString("HH:mm:ss", CultureInfo.InvariantCulture)</span>
+                    <span class="log-text">@entry.Text</span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    private readonly List<LogEntry> _log = [];
+    private VelocityStream? _stream;
+    private float _speed = 0.3f;
+    private float _turnRate = 0.5f;
+    private bool _busy;
+    private bool _canDrive;
+    private string _driveBlockedReason = "the robot is not connected";
+    private Timer? _poller;
+
+    protected override void OnInitialized()
+    {
+        _poller = new Timer(_ =>
+        {
+            (bool canDrive, string reason) = EvaluateDriveReadiness();
+
+            if (canDrive == _canDrive)
+            {
+                return;
+            }
+
+            _canDrive = canDrive;
+            _driveBlockedReason = reason;
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    private (bool CanDrive, string Reason) EvaluateDriveReadiness()
+    {
+        if (Robot.RefreshConnectionState() != ConnectionState.Connected)
+        {
+            return (false, "the robot is not connected");
+        }
+
+        if (Robot.LowLevel.IsEmergencyStopped)
+        {
+            return (false, "an emergency stop is latched");
+        }
+
+        TelemetrySnapshot? snapshot = Telemetry.GetSnapshot();
+
+        if (snapshot is null)
+        {
+            return (false, "no telemetry has been received");
+        }
+
+        RobotSafetyOptions safety = Robot.Options.Safety;
+        TelemetrySnapshot value = snapshot.Value;
+
+        if (value.Battery.StateOfChargePercent is > 0 and var soc && soc < safety.MinBatterySocPercent)
+        {
+            return (false, $"the battery is at {soc}%, below the {safety.MinBatterySocPercent}% floor");
+        }
+
+        if (value.MaxMotorTemperatureCelsius > safety.MaxMotorTemperatureCelsius)
+        {
+            return (false, $"motors are at {value.MaxMotorTemperatureCelsius} °C, above the limit");
+        }
+
+        return (true, string.Empty);
+    }
+
+    private Task StandUpAsync() => RunAsync("Stand up", async ct =>
+    {
+        await Robot.Sport.StandUpAsync(ct);
+
+        // Balanced standing is the mode that accepts velocity commands. Standing without it leaves the
+        // drive pad looking functional while every command is silently ignored.
+        await Robot.Sport.BalanceStandAsync(ct);
+    });
+
+    private Task SitAsync() => RunAsync("Sit", Robot.Sport.SitAsync);
+
+    private Task RecoverAsync() => RunAsync("Recover stand", Robot.Sport.RecoveryStandAsync);
+
+    private Task DampAsync() => RunAsync("Damp", Robot.Sport.DampAsync);
+
+    private async Task RunAsync(string label, Func<CancellationToken, Task> action)
+    {
+        _busy = true;
+
+        try
+        {
+            await action(CancellationToken.None);
+            Append($"{label} — sent");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Command '{Label}' failed.", label);
+            Append($"{label} — failed: {ex.Message}", failed: true);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void Drive(float forward, float lateral, float yawRate)
+    {
+        if (!_canDrive)
+        {
+            return;
+        }
+
+        try
+        {
+            // An explicit command timeout, which is not the default. The thing driving here is a
+            // finger on a button in a browser, over a network: if the tab closes or the circuit drops
+            // mid-press, StopDrive never runs and nothing else would ever stop the robot. Each
+            // assignment refreshes it, so holding the button keeps the robot going.
+            _stream ??= Robot.Sport.StartVelocityStream(
+                commandTimeout: Robot.Options.Safety.CommandWatchdog);
+            _stream.Command = new VelocityCommand(forward, lateral, yawRate);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to send a drive command.");
+            Append($"Drive — failed: {ex.Message}", failed: true);
+        }
+    }
+
+    private void StopDrive()
+    {
+        try
+        {
+            _stream?.Stop();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to send a stop command.");
+        }
+    }
+
+    private void Append(string text, bool failed = false)
+    {
+        _log.Insert(0, new LogEntry(DateTimeOffset.Now, text, failed));
+
+        if (_log.Count > 8)
+        {
+            _log.RemoveAt(_log.Count - 1);
+        }
+    }
+
+    private string FormatEnvelope()
+    {
+        VelocityLimits limits = Robot.Options.Safety.Velocity;
+
+        return $"{limits.MaxForward.ToString("F1", CultureInfo.InvariantCulture)} m/s forward, " +
+               $"{limits.MaxYawRate.ToString("F1", CultureInfo.InvariantCulture)} rad/s turn";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _poller?.Dispose();
+
+        // Disposing the stream sends a final stop. Leaving a robot in motion because a browser tab was
+        // closed is not an acceptable failure mode.
+        _stream?.Dispose();
+        _stream = null;
+
+        await ValueTask.CompletedTask;
+    }
+
+    private readonly record struct LogEntry(DateTimeOffset At, string Text, bool Failed);
+}

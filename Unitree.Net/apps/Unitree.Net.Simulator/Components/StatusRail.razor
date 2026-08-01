@@ -1,0 +1,204 @@
+@implements IDisposable
+@inject SimulatorState State
+
+<aside class="rail rail-right">
+
+    <section class="section">
+        <div class="panel-head">
+            <span class="label">Status</span>
+            <span class="label">@GaitLabel</span>
+        </div>
+        <div class="section-body">
+            @if (State.Snapshot is { } snapshot)
+            {
+                <div class="meter @BatteryClass(snapshot.BatterySoc)">
+                    <div class="meter-top">
+                        <span class="label">Battery</span>
+                        <span class="meter-value">@snapshot.BatterySoc.ToString("0", Ci)%</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill" style="width:@snapshot.BatterySoc.ToString("0.#", Ci)%"></div>
+                    </div>
+                </div>
+
+                <div class="meter @TemperatureClass(snapshot.MaxMotorTemperature)">
+                    <div class="meter-top">
+                        <span class="label">Hottest motor</span>
+                        <span class="meter-value">@snapshot.MaxMotorTemperature.ToString("0", Ci) °C</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill" style="width:@TemperatureWidth(snapshot.MaxMotorTemperature)%"></div>
+                    </div>
+                </div>
+
+                <div class="rows">
+                    <div class="row"><span>Pack</span><span>@snapshot.PackVoltage.ToString("0.0", Ci) V</span></div>
+                    <div class="row"><span>Current</span><span>@snapshot.PackCurrent.ToString("0.0", Ci) A</span></div>
+                    <div class="row"><span>Speed</span><span>@snapshot.Speed.ToString("0.00", Ci) m/s</span></div>
+                    <div class="row"><span>Body height</span><span>@snapshot.Height.ToString("0.000", Ci) m</span></div>
+                    <div class="row"><span>Uptime</span><span>@FormatUptime(snapshot.ElapsedSeconds)</span></div>
+                </div>
+            }
+            else
+            {
+                <p style="margin:0;font-size:0.8rem;color:var(--ink-2)">No telemetry yet.</p>
+            }
+        </div>
+    </section>
+
+    @* Drive sits directly under Status because it is the only interactive panel here. Putting the
+       readouts first pushed it below the fold on a 768-pixel display, where it may as well not exist. *@
+    <section class="section">
+        <div class="panel-head"><span class="label">Drive</span></div>
+        <div class="section-body">
+            <div class="pad">
+                <button class="pad-fwd @Held(_forward > 0)" disabled="@Disabled" @onclick="() => Nudge(0.6f, 0f, 0f)">↑</button>
+                <button class="pad-left @Held(_yaw > 0)" disabled="@Disabled" @onclick="() => Nudge(0f, 0f, 0.6f)">↰</button>
+                <button class="pad-stop" disabled="@Disabled" @onclick="Halt">STOP</button>
+                <button class="pad-right @Held(_yaw < 0)" disabled="@Disabled" @onclick="() => Nudge(0f, 0f, -0.6f)">↱</button>
+                <button class="pad-back @Held(_forward < 0)" disabled="@Disabled" @onclick="() => Nudge(-0.4f, 0f, 0f)">↓</button>
+            </div>
+
+            <div class="rows" style="margin-top:0.6rem">
+                <div class="row"><span>Forward</span><span>@_forward.ToString("0.00", Ci) m/s</span></div>
+                <div class="row"><span>Yaw rate</span><span>@_yaw.ToString("0.00", Ci) rad/s</span></div>
+            </div>
+
+            <div style="display:flex;gap:0.35rem;margin-top:0.6rem">
+                <button class="btn" style="flex:1" disabled="@(!State.IsRunning)" @onclick="StandUp">Stand</button>
+                <button class="btn" style="flex:1" disabled="@(!State.IsRunning)" @onclick="StandDown">Rest</button>
+                <button class="btn" disabled="@(!State.IsRunning)" @onclick="DrainBattery"
+                        title="Forces the pack to 12% so downstream low-battery handling can be exercised">12%</button>
+            </div>
+        </div>
+    </section>
+
+    @if (State.Snapshot is { } pose)
+    {
+        <section class="section">
+            <div class="panel-head"><span class="label">Pose</span></div>
+            <div class="section-body rows">
+                <div class="row"><span>Roll</span><span>@Degrees(pose.Roll)</span></div>
+                <div class="row"><span>Pitch</span><span>@Degrees(pose.Pitch)</span></div>
+                <div class="row"><span>Yaw</span><span>@Degrees(pose.Yaw)</span></div>
+                <div class="row"><span>Odometry</span><span>@pose.Position.X.ToString("0.0", Ci), @pose.Position.Y.ToString("0.0", Ci) m</span></div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="panel-head">
+                <span class="label">Ground contact</span>
+                <span class="label">@LoadedCount(pose) / @pose.Contacts.Count</span>
+            </div>
+            <div class="section-body">
+                <div class="contacts">
+                    @for (int i = 0; i < pose.Contacts.Count; i++)
+                    {
+                        float load = pose.Contacts[i];
+                        <div class="contact @(load > 5f ? "contact-on" : null)">
+                            <span class="contact-name">@ContactName(i)</span>
+                            <span class="contact-load">@load.ToString("0", Ci) N</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    }
+
+</aside>
+
+@code {
+    private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+
+    private float _forward;
+    private float _yaw;
+
+    private bool Disabled => !State.IsRunning || State.Snapshot is null or { Gait: SimulatedGait.Resting };
+
+    private string GaitLabel => State.Snapshot?.Gait switch
+    {
+        SimulatedGait.Walking => "Walking",
+        SimulatedGait.Standing => "Standing",
+        SimulatedGait.Resting => "Resting",
+        _ => "Offline",
+    };
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    private void Nudge(float forward, float lateral, float yaw)
+    {
+        // Each press adds to the command and the pad clamps, so the operator can build up a speed the
+        // same way they would lean a stick — rather than the robot jumping to full speed on one tap.
+        _forward = Math.Clamp(_forward + forward, -1.2f, 1.8f);
+        _yaw = Math.Clamp(_yaw + yaw, -1.8f, 1.8f);
+        State.SetCommand(_forward, lateral, _yaw);
+    }
+
+    private void Halt()
+    {
+        _forward = 0f;
+        _yaw = 0f;
+        State.SetCommand(0f, 0f, 0f);
+    }
+
+    private void StandUp() => State.StandUp();
+
+    private void StandDown()
+    {
+        _forward = 0f;
+        _yaw = 0f;
+        State.StandDown();
+    }
+
+    private void DrainBattery() => State.SetBattery(12f);
+
+    private string? Held(bool active) => active ? "held" : null;
+
+    private string ContactName(int index) => State.Rig.ContactLinks.Count == 4
+        ? index switch { 0 => "FR", 1 => "FL", 2 => "RR", _ => "RL" }
+        : index == 0 ? "LEFT" : "RIGHT";
+
+    private static int LoadedCount(SimulationSnapshot snapshot)
+    {
+        int loaded = 0;
+
+        foreach (float force in snapshot.Contacts)
+        {
+            if (force > 5f)
+            {
+                loaded++;
+            }
+        }
+
+        return loaded;
+    }
+
+    private static string Degrees(float radians) =>
+        $"{(radians * 180f / MathF.PI).ToString("0.0", Ci)}°";
+
+    private static string FormatUptime(double seconds) =>
+        TimeSpan.FromSeconds(seconds).ToString(seconds >= 3600 ? @"h\:mm\:ss" : @"mm\:ss", Ci);
+
+    // Thresholds match the SDK's own battery guidance: 20% is where motion should be reconsidered,
+    // 10% is where it should stop.
+    private static string BatteryClass(float soc) => soc switch
+    {
+        < 10f => "meter-critical",
+        < 20f => "meter-warn",
+        _ => "meter-good",
+    };
+
+    private static string TemperatureClass(float celsius) => celsius switch
+    {
+        >= 80f => "meter-critical",
+        >= 65f => "meter-warn",
+        _ => "meter-good",
+    };
+
+    private static string TemperatureWidth(float celsius) =>
+        Math.Clamp((celsius - 20f) / 70f * 100f, 0f, 100f).ToString("0.#", Ci);
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

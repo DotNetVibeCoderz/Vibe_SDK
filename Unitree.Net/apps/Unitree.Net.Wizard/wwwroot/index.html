@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unitree Robot Wizard</title>
+    <base href="/" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="lib/highlight/github-dark.min.css" id="hljs-theme" />
+
+    <script>
+        // Collects anything that goes wrong before or during boot so the C# side can put it in the
+        // output panel. A JavaScript error that only reaches the dev-tools console is invisible in a
+        // desktop application, which is exactly where it is hardest to notice.
+        window.__wizardBoot = { errors: [], sink: null };
+
+        function record(what) {
+            const text = String(what).slice(0, 500);
+            if (window.__wizardBoot.sink) window.__wizardBoot.sink(text);
+            else window.__wizardBoot.errors.push(text);
+        }
+
+        window.addEventListener('error', (e) => {
+            if (e.target && e.target.src) record('failed to load ' + e.target.src);
+            else record(e.message || 'script error');
+        }, true);
+
+        window.addEventListener('unhandledrejection', (e) => record(e.reason?.message ?? e.reason));
+
+        window.wizardAttachLog = (reference) => {
+            window.__wizardBoot.sink = (text) => reference.invokeMethodAsync('OnWebError', text);
+            window.__wizardBoot.errors.splice(0).forEach(window.__wizardBoot.sink);
+        };
+    </script>
+</head>
+<body>
+
+    <div id="app">
+        <div class="boot">
+            <span class="boot-mark"></span>
+            <span>Starting the wizard&hellip;</span>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        The wizard hit an error.
+        <a href="" class="reload">Reload</a>
+        <span class="dismiss">&times;</span>
+    </div>
+
+    <!-- Vendored, and loaded in dependency order. Nothing here reaches the network: the WebView has
+         no reason to have one, and an editor that needs a CDN to open a file is not an editor. -->
+    <script src="lib/marked/marked.min.js"></script>
+    <script src="lib/dompurify/purify.min.js"></script>
+    <script src="lib/highlight/highlight.min.js"></script>
+    <script src="js/markdown.js"></script>
+
+    <script src="lib/monaco/vs/loader.js"></script>
+    <script src="js/editor.js"></script>
+
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script>
+        // Blazor waits for Monaco, which is the one dependency a component calls into on first
+        // render. The timeout means a broken editor produces a usable window with a dead pane rather
+        // than a splash screen that never goes away.
+        let started = false;
+
+        function start(reason) {
+            if (started) return;
+            started = true;
+            if (reason) record(reason);
+            Blazor.start();
+        }
+
+        window.addEventListener('unitree:editor-ready', () => start());
+        setTimeout(() => start('the editor did not load within 8 s'), 8000);
+    </script>
+
+</body>
+</html>

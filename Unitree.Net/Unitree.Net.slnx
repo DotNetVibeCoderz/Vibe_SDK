@@ -1,0 +1,38 @@
+<Solution>
+  <Folder Name="/apps/">
+    <Project Path="apps/Unitree.Net.Cli/Unitree.Net.Cli.csproj" />
+    <Project Path="apps/Unitree.Net.Dashboard/Unitree.Net.Dashboard.csproj" />
+    <!-- WPF shells, and therefore Windows-only. The engines behind them — Unitree.Net.Simulation and
+         Unitree.Net.Wizard.Core — are plain net10.0 and build everywhere. -->
+    <Project Path="apps/Unitree.Net.Simulator/Unitree.Net.Simulator.csproj" />
+    <Project Path="apps/Unitree.Net.Wizard/Unitree.Net.Wizard.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Unitree.Net.Samples.LowLevelControl/Unitree.Net.Samples.LowLevelControl.csproj" />
+    <Project Path="samples/Unitree.Net.Samples.PatrolRobot/Unitree.Net.Samples.PatrolRobot.csproj" />
+    <Project Path="samples/Unitree.Net.Samples.VirtualRobot/Unitree.Net.Samples.VirtualRobot.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Unitree.Net.Ai/Unitree.Net.Ai.csproj" />
+    <Project Path="src/Unitree.Net.Control/Unitree.Net.Control.csproj" />
+    <Project Path="src/Unitree.Net.Core/Unitree.Net.Core.csproj" />
+    <Project Path="src/Unitree.Net.Dds/Unitree.Net.Dds.csproj" />
+    <Project Path="src/Unitree.Net.Diagnostics/Unitree.Net.Diagnostics.csproj" />
+    <Project Path="src/Unitree.Net.Extensions.DependencyInjection/Unitree.Net.Extensions.DependencyInjection.csproj" />
+    <Project Path="src/Unitree.Net.Firmware/Unitree.Net.Firmware.csproj" />
+    <Project Path="src/Unitree.Net.Interop/Unitree.Net.Interop.csproj" />
+    <Project Path="src/Unitree.Net.Manipulation/Unitree.Net.Manipulation.csproj" />
+    <Project Path="src/Unitree.Net.Messages/Unitree.Net.Messages.csproj" />
+    <Project Path="src/Unitree.Net.Ml/Unitree.Net.Ml.csproj" />
+    <Project Path="src/Unitree.Net.Ros2/Unitree.Net.Ros2.csproj" />
+    <Project Path="src/Unitree.Net.Sensors/Unitree.Net.Sensors.csproj" />
+    <Project Path="src/Unitree.Net.Simulation/Unitree.Net.Simulation.csproj" />
+    <Project Path="src/Unitree.Net.Wizard.Core/Unitree.Net.Wizard.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Unitree.Net.Tests/Unitree.Net.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Unitree.Net.TemplateCheck/Unitree.Net.TemplateCheck.csproj" />
+  </Folder>
+</Solution>

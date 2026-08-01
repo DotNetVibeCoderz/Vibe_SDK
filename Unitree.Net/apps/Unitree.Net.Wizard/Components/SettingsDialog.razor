@@ -1,0 +1,320 @@
+@inject WizardState State
+@inject NativeDialogs Dialogs
+
+<div class="scrim" @onclick="Cancel">
+    <div class="modal" @onclick:stopPropagation="true">
+
+        <div class="modal-head">
+            <span class="modal-title">Settings</span>
+            <button class="btn btn-ghost btn-sm" @onclick="Cancel">✕</button>
+        </div>
+
+        <div class="modal-body">
+
+            <div class="kinds">
+                @foreach (string tab in Tabs)
+                {
+                    <button class="kind @(_tab == tab ? "kind-on" : null)" @onclick="() => _tab = tab">@tab</button>
+                }
+            </div>
+
+            @if (_tab == "Assistant")
+            {
+                <div class="form-grid">
+                    <div class="form-row">
+                        <div>
+                            <label class="label" for="provider">Provider</label>
+                            <select id="provider" class="field" @bind="_settings.Provider">
+                                @foreach (LlmProvider provider in Enum.GetValues<LlmProvider>())
+                                {
+                                    <option value="@provider">@provider</option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label" for="model">Model</label>
+                            <input id="model" class="field field-mono" @bind="_settings.ModelId"
+                                   placeholder="@DefaultModel" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div>
+                            <label class="label" for="apikey">API key</label>
+                            <input id="apikey" class="field field-mono" type="password" @bind="_settings.ApiKey"
+                                   placeholder="@KeyHint" />
+                        </div>
+                        <div>
+                            <label class="label" for="endpoint">Endpoint</label>
+                            <input id="endpoint" class="field field-mono" @bind="_settings.Endpoint"
+                                   placeholder="@EndpointHint" />
+                        </div>
+                    </div>
+
+                    <p class="form-note">
+                        Ollama needs no key and nothing leaves the machine. For the hosted providers you
+                        can leave the key blank here and set <code>UNITREE_WIZARD_APIKEY</code> in your
+                        environment instead — an <code>app.config</code> gets copied and committed more
+                        often than anyone intends.
+                    </p>
+
+                    <div class="form-row">
+                        <div>
+                            <label class="label" for="temperature">Temperature — @_settings.Temperature.ToString("0.0", Ci)</label>
+                            <input id="temperature" class="field" type="range" min="0" max="1.5" step="0.1"
+                                   value="@_settings.Temperature"
+                                   @onchange="OnTemperatureChanged" />
+                        </div>
+                        <div>
+                            <label class="label" for="maxtokens">Max tokens per reply</label>
+                            <input id="maxtokens" class="field field-mono" type="number" min="256" max="32000"
+                                   @bind="_settings.MaxTokens" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="label" for="persona">System prompt (persona)</label>
+                        <textarea id="persona" class="field field-mono" style="min-height:190px;font-size:0.74rem"
+                                  @bind="_settings.SystemPrompt"></textarea>
+                        <p class="form-note">
+                            <button class="btn btn-sm" @onclick="ResetPersona">Restore the default persona</button>
+                        </p>
+                    </div>
+
+                    <label class="check">
+                        <input type="checkbox" @bind="_settings.AllowAutomaticFunctionCalling" />
+                        Let Jack use his tools without asking each time
+                    </label>
+                    <p class="form-note">
+                        His tools read files, search the web and write code into the open project. None of
+                        them move a robot — that is a separate SDK setting, off by default.
+                    </p>
+                </div>
+            }
+            else if (_tab == "Tools")
+            {
+                <div class="form-grid">
+                    <div>
+                        <label class="label" for="tavily">Tavily API key</label>
+                        <input id="tavily" class="field field-mono" type="password" @bind="_settings.TavilyApiKey"
+                               placeholder="tvly-…" />
+                        <p class="form-note">
+                            Enables <code>search_web</code>. Without it Jack says search is unavailable
+                            rather than guessing; <code>fetch_page</code> and
+                            <code>read_file_from_url</code> work regardless.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="label">Always available</label>
+                        <p class="form-note" style="margin:0">
+                            fetch_page · read_file_from_url · get_current_time · date_difference ·
+                            calculate · convert_units · get_project_info · read_project_file ·
+                            write_project_file · search_project · describe_sdk · list_templates ·
+                            get_template_code · scaffold_from_template
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="label" for="workspace">Workspace folder</label>
+                        <div style="display:flex;gap:0.35rem">
+                            <input id="workspace" class="field field-mono" @bind="_settings.WorkspacePath" />
+                            <button class="btn btn-sm" @onclick="BrowseWorkspace">Browse…</button>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="form-grid">
+                    <div class="form-row">
+                        <div>
+                            <label class="label" for="host">Robot host</label>
+                            <input id="host" class="field field-mono" @bind="_settings.Deployment.Host" />
+                        </div>
+                        <div>
+                            <label class="label" for="port">SSH port</label>
+                            <input id="port" class="field field-mono" type="number" @bind="_settings.Deployment.Port" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div>
+                            <label class="label" for="user">User</label>
+                            <input id="user" class="field field-mono" @bind="_settings.Deployment.User" />
+                        </div>
+                        <div>
+                            <label class="label" for="password">Password</label>
+                            <input id="password" class="field field-mono" type="password"
+                                   @bind="_settings.Deployment.Password" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="label" for="key">Private key</label>
+                        <div style="display:flex;gap:0.35rem">
+                            <input id="key" class="field field-mono" @bind="_settings.Deployment.PrivateKeyPath"
+                                   placeholder="preferred over a password" />
+                            <button class="btn btn-sm" @onclick="BrowseKey">Browse…</button>
+                        </div>
+                        <p class="form-note">A key is used whenever one is configured, in preference to the password.</p>
+                    </div>
+
+                    <div>
+                        <label class="label" for="remote">Remote directory</label>
+                        <input id="remote" class="field field-mono" @bind="_settings.Deployment.RemoteDirectory" />
+                    </div>
+
+                    <label class="check">
+                        <input type="checkbox" @bind="_settings.Deployment.InstallService" />
+                        Install a systemd unit so the application starts on boot
+                    </label>
+
+                    <p class="form-note">
+                        Deployment has never been run against a real robot. See <code>PROGRESS.md</code>.
+                    </p>
+
+                    <div>
+                        <button class="btn btn-sm" disabled="@State.IsBusy" @onclick="TestAsync">
+                            Test connection
+                        </button>
+                    </div>
+                </div>
+            }
+
+        </div>
+
+        <div class="modal-foot">
+            <p class="form-note" style="margin:0">
+                Stored in <code>@Path.GetFileName(WizardSettingsStore.ConfigPath)</code>
+            </p>
+            <span style="margin-left:auto"></span>
+            <button class="btn" @onclick="Cancel">Cancel</button>
+            <button class="btn btn-primary" @onclick="SaveAsync">Save</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+    private static readonly string[] Tabs = ["Assistant", "Tools", "Deployment"];
+
+    private WizardSettings _settings = new();
+    private string _tab = "Assistant";
+
+    /// <summary>Raised when the dialog should close.</summary>
+    [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+
+    private string DefaultModel => new WizardSettings { Provider = _settings.Provider }
+        .ToAiOptions().GetEffectiveModelId();
+
+    // Kept out of the markup: a conditional with string literals inside a double-quoted Razor
+    // attribute does not parse.
+    private string KeyHint =>
+        _settings.Provider == LlmProvider.Ollama ? "not needed for Ollama" : "required";
+
+    private string EndpointHint =>
+        _settings.Provider == LlmProvider.Ollama ? "http://localhost:11434" : "optional";
+
+    protected override void OnInitialized()
+    {
+        // Edited on a copy so Cancel genuinely cancels. Binding straight to the live settings would
+        // apply every keystroke and leave nothing to cancel.
+        WizardSettings live = State.Settings;
+
+        _settings = new WizardSettings
+        {
+            Provider = live.Provider,
+            ModelId = live.ModelId,
+            ApiKey = live.ApiKey,
+            Endpoint = live.Endpoint,
+            Temperature = live.Temperature,
+            MaxTokens = live.MaxTokens,
+            SystemPrompt = live.SystemPrompt,
+            AllowAutomaticFunctionCalling = live.AllowAutomaticFunctionCalling,
+            TavilyApiKey = live.TavilyApiKey,
+            MaxHistoryTurns = live.MaxHistoryTurns,
+            WorkspacePath = live.WorkspacePath,
+            RunTarget = live.RunTarget,
+            Theme = live.Theme,
+            ShowLineNumbers = live.ShowLineNumbers,
+            ChatVisible = live.ChatVisible,
+            Deployment = new DeploymentOptions
+            {
+                Host = live.Deployment.Host,
+                Port = live.Deployment.Port,
+                User = live.Deployment.User,
+                Password = live.Deployment.Password,
+                PrivateKeyPath = live.Deployment.PrivateKeyPath,
+                RemoteDirectory = live.Deployment.RemoteDirectory,
+                InstallService = live.Deployment.InstallService,
+            },
+        };
+    }
+
+    private void OnTemperatureChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), Ci, out double temperature))
+        {
+            _settings.Temperature = temperature;
+        }
+    }
+
+    private void ResetPersona() => _settings.SystemPrompt = WizardSettings.DefaultSystemPrompt;
+
+    private void BrowseWorkspace()
+    {
+        if (Dialogs.PickFolder("Workspace folder", _settings.WorkspacePath) is { } folder)
+        {
+            _settings.WorkspacePath = folder;
+        }
+    }
+
+    private void BrowseKey()
+    {
+        if (Dialogs.PickPrivateKey() is { } path)
+        {
+            _settings.Deployment.PrivateKeyPath = path;
+        }
+    }
+
+    private async Task TestAsync()
+    {
+        Apply();
+        await State.TestConnectionAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        Apply();
+        State.ApplySettings();
+        await OnClose.InvokeAsync();
+    }
+
+    private void Apply()
+    {
+        WizardSettings live = State.Settings;
+
+        live.Provider = _settings.Provider;
+        live.ModelId = _settings.ModelId;
+        live.ApiKey = _settings.ApiKey;
+        live.Endpoint = _settings.Endpoint;
+        live.Temperature = _settings.Temperature;
+        live.MaxTokens = _settings.MaxTokens;
+        live.SystemPrompt = _settings.SystemPrompt;
+        live.AllowAutomaticFunctionCalling = _settings.AllowAutomaticFunctionCalling;
+        live.TavilyApiKey = _settings.TavilyApiKey;
+        live.WorkspacePath = _settings.WorkspacePath;
+
+        live.Deployment.Host = _settings.Deployment.Host;
+        live.Deployment.Port = _settings.Deployment.Port;
+        live.Deployment.User = _settings.Deployment.User;
+        live.Deployment.Password = _settings.Deployment.Password;
+        live.Deployment.PrivateKeyPath = _settings.Deployment.PrivateKeyPath;
+        live.Deployment.RemoteDirectory = _settings.Deployment.RemoteDirectory;
+        live.Deployment.InstallService = _settings.Deployment.InstallService;
+    }
+
+    private Task Cancel() => OnClose.InvokeAsync();
+}

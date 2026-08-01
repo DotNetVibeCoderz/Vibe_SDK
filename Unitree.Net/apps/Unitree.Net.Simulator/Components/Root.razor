@@ -1,0 +1,112 @@
+@implements IDisposable
+@inject SimulatorState State
+@inject IJSRuntime Js
+
+<div class="shell @(State.IsRunning ? "running" : null)">
+
+    <header class="bar">
+        <div class="brand">
+            <span class="mark"><i></i><i></i><i></i><i></i></span>
+            <span class="brand-name">Unitree.Net <em>Simulator</em></span>
+        </div>
+
+        <span class="pill @RunPillClass">@RunLabel</span>
+
+        @if (State.IsRunning)
+        {
+            <span class="pill @(IsArmed ? "pill-armed" : null)">@(IsArmed ? "Armed" : "Idle")</span>
+        }
+
+        <div class="bar-spacer"></div>
+
+        <button class="btn btn-icon" @onclick="ToggleTheme" title="@(_theme == "dark" ? "Switch to light" : "Switch to dark")">
+            @(_theme == "dark" ? "☀" : "☾")
+        </button>
+
+        @if (State.IsRunning)
+        {
+            <button class="btn btn-stop" @onclick="StopAsync">Stop</button>
+        }
+        else
+        {
+            <button class="btn btn-primary" @onclick="StartAsync">Start simulation</button>
+        }
+    </header>
+
+    <div class="body">
+        <ModelRail />
+        <div class="stage">
+            <Viewport @ref="_viewport" />
+            <TelemetryRibbon />
+        </div>
+        <StatusRail />
+    </div>
+
+    <LogPanel />
+</div>
+
+@code {
+    private Viewport? _viewport;
+    private DotNetObjectReference<Root>? _self;
+    private string _theme = "dark";
+
+    private bool IsArmed => State.Snapshot is { Gait: SimulatedGait.Walking };
+
+    private string RunPillClass => State.IsRunning ? "pill-live" : string.Empty;
+
+    private string RunLabel => State.IsRunning ? "Publishing" : "Stopped";
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        // Route browser errors into the system log. Without this a broken script is invisible in a
+        // desktop app — there is no console anyone is going to look at.
+        _self = DotNetObjectReference.Create(this);
+        await Js.InvokeVoidAsync("unitreeAttachLog", _self);
+    }
+
+    /// <summary>Receives an error reported by the page.</summary>
+    /// <param name="message">The error text.</param>
+    [JSInvokable]
+    public void OnWebError(string message)
+    {
+        State.Log.Error("web", message);
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StartAsync()
+    {
+        await State.StartAsync();
+
+        // The scene is rebuilt on start rather than on selection: rebuilding it every time the picker
+        // moves would churn WebGL resources for a choice the operator has not committed to yet.
+        if (_viewport is not null)
+        {
+            await _viewport.RebuildAsync(_theme);
+        }
+    }
+
+    private Task StopAsync() => State.StopAsync();
+
+    private async Task ToggleTheme()
+    {
+        _theme = _theme == "dark" ? "light" : "dark";
+        await Js.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", _theme);
+        await Js.InvokeVoidAsync("unitreeViewport.setTheme", _theme);
+    }
+
+    // Timer callbacks arrive off the renderer's thread, so the render has to be marshalled back.
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        _self?.Dispose();
+    }
+}

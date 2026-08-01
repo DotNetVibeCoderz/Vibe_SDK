@@ -1,0 +1,975 @@
+/* Unitree Robot Wizard — "bench instrument", the same system as the simulator.
+
+   The rule that holds it together: anything the machine produced is set in the mono face with tabular
+   figures; anything a person wrote is set in the sans. In an editor that distinction is doing real
+   work — file paths, build output and Jack's code are machine text; menus, prose and Jack's
+   explanations are not.
+
+   Two accents rather than one. Signal cyan means live or selected; amber means armed — a running
+   process, an unsaved buffer, a deploy that will touch a real robot. */
+
+:root {
+    color-scheme: dark;
+
+    --bench-0: #0f1319;
+    --bench-1: #161c24;
+    --bench-2: #1e2631;
+    --bench-3: #263140;
+    --rule: #2a3543;
+
+    --ink-0: #e6edf6;
+    --ink-1: #93a3b8;
+    --ink-2: #62718a;
+
+    --signal: #38cfe0;
+    --signal-dim: rgba(56, 207, 224, 0.15);
+    --armed: #f2a33c;
+    --armed-dim: rgba(242, 163, 60, 0.15);
+
+    --good: #3fbf3f;
+    --warn: #fab219;
+    --critical: #e05555;
+
+    --radius: 8px;
+    --radius-sm: 5px;
+
+    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", "Cascadia Code", ui-monospace, Consolas, "SF Mono", monospace;
+
+    --rail: 232px;
+    --chat: 400px;
+    --output: 172px;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --bench-0: #ffffff;
+    --bench-1: #f4f3ef;
+    --bench-2: #eae8e2;
+    --bench-3: #dedbd3;
+    --rule: #d5d2c9;
+
+    --ink-0: #10161d;
+    --ink-1: #4e5a68;
+    --ink-2: #7d8896;
+
+    --signal: #0b7c8a;
+    --signal-dim: rgba(11, 124, 138, 0.12);
+    --armed: #a2650a;
+    --armed-dim: rgba(162, 101, 10, 0.12);
+
+    --good: #0ca30c;
+    --warn: #a97400;
+    --critical: #d03b3b;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; overflow: hidden; }
+
+body {
+    font-family: var(--sans);
+    font-size: 13px;
+    background: var(--bench-0);
+    color: var(--ink-0);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+}
+
+#app { height: 100vh; }
+
+.boot {
+    height: 100vh;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 1rem;
+    color: var(--ink-2);
+}
+
+.boot-mark {
+    width: 26px; height: 26px;
+    border: 2px solid var(--signal);
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ------------------------------------------------------------------- layout */
+
+.shell {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 38px minmax(0, 1fr) 26px;
+}
+
+.workspace {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr) var(--chat);
+    min-height: 0;
+}
+
+.workspace-nochat { grid-template-columns: var(--rail) minmax(0, 1fr); }
+
+/* Three rows, because EditorPane contributes two children of its own — the tab strip and the editor
+   host. Declaring only two lets the tab strip claim the 1fr row and pushes the editor over the
+   output panel. */
+.center {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
+    border-inline: 1px solid var(--rule);
+}
+
+/* --------------------------------------------------------------- menu bar */
+
+.menubar {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0 0.5rem;
+    background: var(--bench-1);
+    border-bottom: 1px solid var(--rule);
+    user-select: none;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-right: 0.85rem;
+    margin-right: 0.35rem;
+    border-right: 1px solid var(--rule);
+    white-space: nowrap;
+}
+
+/* A wrench glyph would be generic. This is a bracket pair with a cursor between them: the wizard
+   writes code, and the mark says so without a logo. */
+.brand-mark {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--signal);
+    letter-spacing: -0.06em;
+}
+
+.brand-name {
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.brand-name em { font-style: normal; color: var(--ink-2); font-weight: 500; }
+
+.menu { position: relative; }
+
+.menu-label {
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.65rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink-1);
+    cursor: pointer;
+}
+
+.menu-label:hover { background: var(--bench-2); color: var(--ink-0); }
+.menu-open > .menu-label { background: var(--bench-3); color: var(--ink-0); }
+
+.menu-drop {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    z-index: 60;
+    min-width: 244px;
+    padding: 0.3rem;
+    background: var(--bench-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    width: 100%;
+    font: inherit;
+    font-size: 0.8rem;
+    text-align: left;
+    padding: 0.35rem 0.55rem;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink-0);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.menu-item:hover:not(:disabled) { background: var(--signal-dim); }
+.menu-item:disabled { color: var(--ink-2); opacity: 0.55; cursor: not-allowed; }
+.menu-item kbd {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--ink-2);
+    background: none;
+    border: none;
+}
+
+.menu-sep { height: 1px; margin: 0.3rem 0.25rem; background: var(--rule); }
+
+.menu-heading {
+    padding: 0.4rem 0.55rem 0.2rem;
+    font-size: 0.62rem;
+    font-weight: 650;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+}
+
+.menu-scrim { position: fixed; inset: 0; z-index: 50; }
+
+.bar-spacer { margin-left: auto; }
+
+/* --------------------------------------------------------------- controls */
+
+.btn {
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 550;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    min-height: 26px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--rule);
+    background: var(--bench-2);
+    color: var(--ink-0);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) { background: var(--bench-3); border-color: var(--ink-2); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary { background: var(--signal); border-color: var(--signal); color: #04121a; font-weight: 650; }
+.btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--signal) 84%, #fff); }
+.btn-armed { border-color: color-mix(in srgb, var(--armed) 55%, var(--rule)); color: var(--armed); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--ink-1); }
+.btn-ghost:hover:not(:disabled) { background: var(--bench-2); color: var(--ink-0); }
+.btn-sm { font-size: 0.72rem; padding: 0.2rem 0.5rem; min-height: 22px; }
+
+:where(button, select, input, textarea, a, [tabindex]):focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 1px;
+}
+
+.field {
+    font: inherit;
+    font-size: 0.8rem;
+    width: 100%;
+    padding: 0.35rem 0.55rem;
+    min-height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--rule);
+    background: var(--bench-0);
+    color: var(--ink-0);
+}
+
+.field-mono { font-family: var(--mono); }
+textarea.field { min-height: 72px; resize: vertical; line-height: 1.5; }
+
+.label {
+    display: block;
+    font-size: 0.64rem;
+    font-weight: 650;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin-bottom: 0.25rem;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    color: var(--ink-1);
+}
+
+.pill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-2); }
+.pill-live::before { background: var(--signal); animation: pulse 1.4s ease-in-out infinite; }
+.pill-live { color: var(--ink-0); border-color: color-mix(in srgb, var(--signal) 45%, var(--rule)); }
+.pill-armed::before { background: var(--armed); }
+.pill-armed { color: var(--ink-0); border-color: color-mix(in srgb, var(--armed) 50%, var(--rule)); }
+
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* ------------------------------------------------------------------ rail */
+
+.rail {
+    background: var(--bench-1);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+}
+
+.rail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    min-height: 32px;
+}
+
+.tree { overflow-y: auto; padding: 0.35rem; }
+
+.tree-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    text-align: left;
+    padding: 0.3rem 0.45rem;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink-1);
+    cursor: pointer;
+}
+
+.tree-item:hover { background: var(--bench-2); color: var(--ink-0); }
+.tree-item-on { background: var(--signal-dim); color: var(--ink-0); }
+.tree-icon { color: var(--ink-2); font-size: 0.7rem; width: 12px; text-align: center; flex: none; }
+.tree-item-on .tree-icon { color: var(--signal); }
+.tree-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-dirty { margin-left: auto; color: var(--armed); font-size: 0.9rem; line-height: 1; }
+
+.empty {
+    padding: 1.25rem 0.85rem;
+    color: var(--ink-2);
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.empty p { margin: 0 0 0.75rem; }
+
+/* ------------------------------------------------------------------ tabs */
+
+.tabs {
+    display: flex;
+    align-items: stretch;
+    background: var(--bench-1);
+    border-bottom: 1px solid var(--rule);
+    overflow-x: auto;
+    scrollbar-width: none;
+    min-height: 31px;
+}
+
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 0 0.5rem 0 0.75rem;
+    border: none;
+    border-right: 1px solid var(--rule);
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tab:hover { color: var(--ink-1); }
+
+.tab-on {
+    background: var(--bench-0);
+    color: var(--ink-0);
+    /* The active tab is marked by a rule at the top, so the tab strip does not need a second
+       background tone to be read. */
+    box-shadow: inset 0 2px 0 var(--signal);
+}
+
+.tab-close {
+    font: inherit;
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 0.1rem 0.25rem;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: inherit;
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+.tab-close:hover { opacity: 1; background: var(--bench-3); }
+.tab-dirty { color: var(--armed); font-size: 1rem; line-height: 1; }
+
+.editor-host { position: relative; min-height: 0; background: var(--bench-0); }
+.editor-host > div { position: absolute; inset: 0; }
+
+.editor-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.6rem;
+    text-align: center;
+    color: var(--ink-2);
+    background: var(--bench-0);
+    z-index: 5;
+}
+
+.editor-empty h2 { margin: 0; font-size: 1rem; font-weight: 600; color: var(--ink-1); }
+.editor-empty p { margin: 0; font-size: 0.82rem; max-width: 44ch; line-height: 1.6; }
+
+/* ---------------------------------------------------------------- output */
+
+.output {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: var(--output);
+    background: var(--bench-1);
+    border-top: 1px solid var(--rule);
+}
+
+.output-collapsed { height: 31px; grid-template-rows: auto; }
+
+.panel-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    min-height: 30px;
+}
+
+.output-list {
+    overflow-y: auto;
+    padding: 0.3rem 0.7rem 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    line-height: 1.6;
+}
+
+.output-line { display: flex; gap: 0.6rem; }
+.output-time { color: var(--ink-2); font-variant-numeric: tabular-nums; flex: none; }
+.output-text { color: var(--ink-1); white-space: pre-wrap; word-break: break-word; }
+
+.output-warning .output-text { color: var(--warn); }
+.output-error .output-text { color: var(--critical); }
+.output-step .output-text { color: var(--ink-0); font-weight: 600; }
+
+/* ------------------------------------------------------------ status bar */
+
+.statusbar {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0 0.75rem;
+    background: var(--bench-1);
+    border-top: 1px solid var(--rule);
+    font-size: 0.72rem;
+    color: var(--ink-2);
+    user-select: none;
+}
+
+.status-item { display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+.status-item strong { font-weight: 600; color: var(--ink-1); }
+.status-mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-2); flex: none; }
+.status-busy .status-dot { background: var(--armed); animation: pulse 1s ease-in-out infinite; }
+.status-good .status-dot { background: var(--good); }
+.status-bad .status-dot { background: var(--critical); }
+
+.status-button {
+    font: inherit;
+    font-size: 0.72rem;
+    padding: 0.1rem 0.45rem;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.status-button:hover { background: var(--bench-3); color: var(--ink-0); }
+
+/* -------------------------------------------------------------- chat panel */
+
+.chat {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    background: var(--bench-1);
+    min-height: 0;
+}
+
+.chat-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    min-height: 40px;
+}
+
+/* Jack gets a face. A chat panel with a name and no identity reads as a text box; the mark makes it
+   an assistant you are talking to, which is what it is. */
+.jack-mark {
+    display: grid;
+    place-items: center;
+    width: 24px; height: 24px;
+    flex: none;
+    border-radius: 6px;
+    background: linear-gradient(145deg, var(--signal), color-mix(in srgb, var(--signal) 55%, var(--armed)));
+    color: #04121a;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.jack-name { font-size: 0.82rem; font-weight: 650; letter-spacing: -0.01em; }
+.jack-model { font-family: var(--mono); font-size: 0.66rem; color: var(--ink-2); }
+
+.sessions {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.sessions::-webkit-scrollbar { display: none; }
+
+.session {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font: inherit;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+    max-width: 190px;
+}
+
+.session:hover { color: var(--ink-0); background: var(--bench-2); }
+.session-on { background: var(--signal-dim); border-color: color-mix(in srgb, var(--signal) 40%, transparent); color: var(--ink-0); }
+.session-title { overflow: hidden; text-overflow: ellipsis; }
+
+.session-x {
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1;
+    border: none;
+    background: none;
+    color: inherit;
+    opacity: 0.5;
+    cursor: pointer;
+    padding: 0;
+}
+
+.session-x:hover { opacity: 1; color: var(--critical); }
+
+.thread { overflow-y: auto; padding: 0.85rem 0.7rem; display: grid; gap: 0.85rem; align-content: start; }
+
+/* min-width:0 on both, or a wide code block forces the grid column wider than the panel and the whole
+   thread scrolls sideways instead of the block scrolling inside itself. Grid items default to
+   min-width:auto, which refuses to shrink below their content. */
+.msg { display: grid; gap: 0.3rem; min-width: 0; }
+
+.msg-who {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.62rem;
+    font-weight: 650;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+}
+
+.msg-user .msg-body {
+    background: var(--bench-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 0.55rem 0.75rem;
+}
+
+.msg-body { font-size: 0.82rem; line-height: 1.62; color: var(--ink-0); overflow-wrap: anywhere; min-width: 0; }
+.msg-body > :first-child { margin-top: 0; }
+.msg-body > :last-child { margin-bottom: 0; }
+.msg-body p { margin: 0 0 0.6rem; }
+.msg-body ul, .msg-body ol { margin: 0 0 0.6rem; padding-left: 1.25rem; }
+.msg-body li { margin-bottom: 0.2rem; }
+.msg-body h1, .msg-body h2, .msg-body h3 { font-size: 0.88rem; font-weight: 650; margin: 0.9rem 0 0.4rem; }
+.msg-body a { color: var(--signal); }
+.msg-body blockquote {
+    margin: 0 0 0.6rem;
+    padding-left: 0.7rem;
+    border-left: 2px solid var(--rule);
+    color: var(--ink-1);
+}
+
+.msg-body :not(pre) > code {
+    font-family: var(--mono);
+    font-size: 0.9em;
+    padding: 0.08em 0.32em;
+    border-radius: 3px;
+    background: var(--bench-2);
+    border: 1px solid var(--rule);
+}
+
+.msg-body img, .msg-body video { max-width: 100%; border-radius: var(--radius-sm); display: block; }
+.msg-body audio { width: 100%; }
+
+.msg-body .code {
+    margin: 0 0 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bench-0);
+}
+
+.msg-body .code figcaption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.25rem 0.35rem 0.25rem 0.6rem;
+    background: var(--bench-2);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    color: var(--ink-2);
+}
+
+.code-copy {
+    font: inherit;
+    font-size: 0.66rem;
+    padding: 0.12rem 0.45rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--bench-1);
+    color: var(--ink-1);
+    cursor: pointer;
+}
+
+.code-copy:hover { color: var(--ink-0); border-color: var(--ink-2); }
+.code-copy.copied { color: var(--good); border-color: var(--good); }
+
+.msg-body .code pre { margin: 0; padding: 0.6rem 0.7rem; overflow-x: auto; }
+.msg-body .code code { font-family: var(--mono); font-size: 0.74rem; line-height: 1.6; background: none; border: none; padding: 0; }
+
+.msg-body .table-scroll { overflow-x: auto; margin: 0 0 0.7rem; }
+.msg-body table { border-collapse: collapse; font-size: 0.76rem; min-width: 100%; }
+.msg-body th, .msg-body td { border: 1px solid var(--rule); padding: 0.3rem 0.55rem; text-align: left; }
+.msg-body th { background: var(--bench-2); font-weight: 600; }
+
+.attachments { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.4rem; }
+
+.attachment {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    padding: 0.18rem 0.45rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--bench-1);
+    color: var(--ink-1);
+}
+
+.attachment img { width: 20px; height: 20px; object-fit: cover; border-radius: 2px; }
+
+.thinking { display: flex; align-items: center; gap: 0.4rem; color: var(--ink-2); font-size: 0.76rem; }
+.thinking i { width: 5px; height: 5px; border-radius: 50%; background: var(--signal); animation: bounce 1.1s ease-in-out infinite; }
+.thinking i:nth-child(2) { animation-delay: 0.18s; }
+.thinking i:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes bounce { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+
+.composer { border-top: 1px solid var(--rule); padding: 0.55rem 0.7rem 0.7rem; display: grid; gap: 0.45rem; }
+
+.composer textarea {
+    font: inherit;
+    font-size: 0.82rem;
+    width: 100%;
+    min-height: 62px;
+    max-height: 190px;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background: var(--bench-0);
+    color: var(--ink-0);
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.composer-row { display: flex; align-items: center; gap: 0.4rem; }
+.composer-hint { font-size: 0.66rem; color: var(--ink-2); margin-left: auto; }
+
+/* Prompt gallery — the empty state. A blank chat box teaches nothing about what Jack can do. */
+.gallery { display: grid; gap: 0.9rem; }
+.gallery-intro { font-size: 0.82rem; color: var(--ink-1); line-height: 1.6; margin: 0; }
+.gallery-group { display: grid; gap: 0.3rem; }
+
+.gallery-card {
+    display: grid;
+    gap: 0.15rem;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background: var(--bench-2);
+    color: var(--ink-1);
+    cursor: pointer;
+}
+
+.gallery-card:hover { border-color: color-mix(in srgb, var(--signal) 45%, var(--rule)); background: var(--signal-dim); color: var(--ink-0); }
+.gallery-title { font-size: 0.78rem; font-weight: 600; color: var(--ink-0); }
+.gallery-text { font-size: 0.7rem; color: var(--ink-2); line-height: 1.5; }
+
+/* ------------------------------------------------------------------ modal */
+
+.scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 2rem 1rem;
+    background: rgba(6, 9, 12, 0.62);
+    backdrop-filter: blur(2px);
+}
+
+.modal {
+    width: min(880px, 100%);
+    max-height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    background: var(--bench-1);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+}
+
+.modal-sm { width: min(520px, 100%); }
+
+.modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--rule);
+    min-width: 0;
+}
+
+.modal-title { font-size: 0.95rem; font-weight: 650; letter-spacing: -0.01em; }
+
+/* min-width:0 on every row. A grid item defaults to min-width:auto and refuses to shrink below its
+   content, so one long unbreakable string — a file path, typically — silently widens the dialog past
+   its own box and the right edge of everything gets clipped. */
+.modal-body { padding: 1.1rem; overflow-y: auto; overflow-x: hidden; min-width: 0; }
+
+.modal-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.1rem;
+    border-top: 1px solid var(--rule);
+    background: var(--bench-2);
+    min-width: 0;
+}
+
+/* Long paths in a footer truncate rather than push. */
+.modal-foot .status-mono {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.form-grid { display: grid; gap: 0.85rem; }
+.form-row { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.form-note { font-size: 0.72rem; color: var(--ink-2); line-height: 1.55; margin: 0.2rem 0 0; }
+
+.check { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; color: var(--ink-1); cursor: pointer; }
+.check input { accent-color: var(--signal); width: 15px; height: 15px; }
+
+/* Template gallery in New Project. */
+.kinds { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+
+.kind {
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+}
+
+.kind:hover { color: var(--ink-0); background: var(--bench-2); }
+.kind-on { background: var(--signal-dim); border-color: color-mix(in srgb, var(--signal) 45%, transparent); color: var(--ink-0); }
+
+.templates {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+    gap: 0.6rem;
+}
+
+.template {
+    display: grid;
+    gap: 0.3rem;
+    align-content: start;
+    text-align: left;
+    font: inherit;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--bench-2);
+    color: var(--ink-1);
+    cursor: pointer;
+}
+
+.template:hover { border-color: var(--ink-2); }
+.template-on { border-color: var(--signal); background: var(--signal-dim); color: var(--ink-0); }
+
+.template-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.template-name { font-size: 0.84rem; font-weight: 650; color: var(--ink-0); }
+
+.template-kind {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+    color: var(--ink-2);
+    text-transform: uppercase;
+    flex: none;
+}
+
+.template-on .template-kind { color: var(--signal); border-color: color-mix(in srgb, var(--signal) 40%, transparent); }
+.template-summary { font-size: 0.74rem; line-height: 1.5; color: var(--ink-2); }
+
+.template-tags { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.15rem; }
+.template-tag { font-family: var(--mono); font-size: 0.62rem; color: var(--ink-2); }
+.template-tag::before { content: "#"; opacity: 0.6; }
+
+/* About.
+   Everything here is min-width:0 and left-aligned. The previous version centred the content in a grid
+   with no minimum, so the settings path — one long unbreakable string — pushed the whole dialog wider
+   than its own 520 px box and the right-hand side of every line was cut off. */
+.about { display: grid; gap: 1rem; min-width: 0; }
+
+.about-id { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+
+.about-mark {
+    font-family: var(--mono);
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--signal);
+    letter-spacing: -0.06em;
+    flex: none;
+}
+
+.about h2 { margin: 0; font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em; }
+.about-version { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-2); }
+
+.about p { margin: 0; font-size: 0.82rem; color: var(--ink-1); line-height: 1.6; min-width: 0; }
+.about strong { color: var(--ink-0); }
+.about code { font-family: var(--mono); font-size: 0.9em; color: var(--ink-1); }
+
+.about-facts {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.3rem 0.9rem;
+    margin: 0;
+    padding: 0.85rem 0;
+    border-block: 1px solid var(--rule);
+    font-size: 0.78rem;
+    min-width: 0;
+}
+
+.about-facts dt { color: var(--ink-2); white-space: nowrap; }
+.about-facts dd { margin: 0; color: var(--ink-0); min-width: 0; }
+
+/* The one string in here that cannot wrap on its own. */
+.about-path { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-1); overflow-wrap: anywhere; }
+
+.about-credit { font-size: 0.85rem; color: var(--ink-1); }
+.about-warning { font-size: 0.75rem; color: var(--ink-2); }
+
+/* ------------------------------------------------------------ scrollbars */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bench-3); border-radius: 5px; border: 3px solid var(--bench-1); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-2); }
+
+/* -------------------------------------------------------- blazor chrome */
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 1000;
+    padding: 0.5rem 1rem;
+    background: var(--critical);
+    color: #fff;
+    font-size: 0.78rem;
+}
+
+#blazor-error-ui a { color: #fff; }
+#blazor-error-ui .dismiss { float: right; cursor: pointer; padding-left: 1rem; }
+
+@media (max-width: 1400px) { :root { --chat: 350px; --rail: 208px; } }
+@media (max-width: 1180px) { :root { --chat: 310px; --rail: 184px; } }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}

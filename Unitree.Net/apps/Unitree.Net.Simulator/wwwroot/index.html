@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unitree.Net Simulator</title>
+    <base href="/" />
+    <link rel="stylesheet" href="app.css" />
+
+    <!-- OrbitControls imports bare 'three', so the specifier has to resolve to the vendored build.
+         Everything is local: the WebView has no network and should not need one.
+
+         This has to sit in the head, before anything can start loading a module. An import map that
+         appears after the first module has begun fetching is ignored, and the only symptom is a
+         resolution failure that looks like a missing file. -->
+    <script type="importmap">
+        { "imports": { "three": "/lib/three/three.module.js" } }
+    </script>
+
+    <script>
+        // Collects anything that goes wrong before or during boot so the C# side can put it in the
+        // system log. A JavaScript error that only reaches the dev-tools console is invisible in a
+        // desktop app, which is exactly where it is hardest to notice.
+        window.__unitreeBoot = { errors: [], sink: null };
+
+        function record(what) {
+            const text = String(what).slice(0, 500);
+
+            // Once Blazor is up the entries go straight to the log panel. Before that they queue, so
+            // nothing that happens during boot — which is when most of this fires — gets lost.
+            if (window.__unitreeBoot.sink) {
+                window.__unitreeBoot.sink(text);
+            } else {
+                window.__unitreeBoot.errors.push(text);
+            }
+        }
+
+        window.addEventListener('error', (e) => {
+            if (e.target && e.target.src) record('failed to load ' + e.target.src);
+            else record(e.message || 'script error');
+        }, true);
+
+        window.addEventListener('unhandledrejection', (e) => record(e.reason?.message ?? e.reason));
+
+        window.unitreeAttachLog = (reference) => {
+            window.__unitreeBoot.sink = (text) => reference.invokeMethodAsync('OnWebError', text);
+            window.__unitreeBoot.errors.splice(0).forEach(window.__unitreeBoot.sink);
+        };
+    </script>
+</head>
+<body>
+
+    <div id="app">
+        <div class="boot">
+            <span class="boot-mark"></span>
+            <span class="boot-text">Starting simulator&hellip;</span>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        The simulator hit an error.
+        <a href="" class="reload">Reload</a>
+        <span class="dismiss">&times;</span>
+    </div>
+
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script type="module" src="js/viewport.js"></script>
+    <script>
+        // Blazor is started by hand so the viewport module has a chance to register
+        // window.unitreeViewport before any component calls into it.
+        //
+        // The fallback matters more than it looks: gating startup on a module means any import error
+        // leaves the splash on screen forever with no explanation. Starting anyway turns a blank
+        // window into a working UI with a dead viewport, which is diagnosable.
+        let started = false;
+
+        function start(reason) {
+            if (started) return;
+            started = true;
+            if (reason) record(reason);
+            Blazor.start();
+        }
+
+        window.addEventListener('unitree:viewport-ready', () => start());
+        setTimeout(() => start('viewport.js did not register within 4 s'), 4000);
+    </script>
+
+</body>
+</html>

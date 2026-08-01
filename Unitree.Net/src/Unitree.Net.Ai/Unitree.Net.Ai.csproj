@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Semantic Kernel workflow engine for Unitree robots, with pluggable OpenAI, Anthropic, Gemini and Ollama providers and safety-gated robot plugins.</Description>
+    <!-- SKEXP0001: experimental SK abstractions. SKEXP0070: the Google and Ollama connectors.
+         Both are pre-release surfaces we deliberately depend on to support the required providers. -->
+    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0070</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unitree.Net.Core\Unitree.Net.Core.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Control\Unitree.Net.Control.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Sensors\Unitree.Net.Sensors.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Anthropic.SDK" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;xUnit1051</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Unitree.Net.Core\Unitree.Net.Core.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Messages\Unitree.Net.Messages.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Dds\Unitree.Net.Dds.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Control\Unitree.Net.Control.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Manipulation\Unitree.Net.Manipulation.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Sensors\Unitree.Net.Sensors.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Ros2\Unitree.Net.Ros2.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Firmware\Unitree.Net.Firmware.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Simulation\Unitree.Net.Simulation.csproj" />
+    <ProjectReference Include="..\..\src\Unitree.Net.Wizard.Core\Unitree.Net.Wizard.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

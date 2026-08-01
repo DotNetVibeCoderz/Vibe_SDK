@@ -1,0 +1,89 @@
+@implements IDisposable
+@inject WizardState State
+@inject IJSRuntime Js
+
+<section class="output @(_collapsed ? "output-collapsed" : null)">
+
+    <div class="panel-head">
+        <span class="label" style="margin:0">Output</span>
+
+        <div class="filters" style="display:flex;gap:2px">
+            <button class="status-button @(_errorsOnly ? null : "")" style="@(_errorsOnly ? "color:var(--critical)" : null)"
+                    @onclick="() => _errorsOnly = !_errorsOnly">
+                @(_errorsOnly ? "Errors only" : "All")
+            </button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:0.35rem;margin-left:auto">
+            @if (_counts.Errors > 0)
+            {
+                <span class="status-item" style="color:var(--critical)">@_counts.Errors error(s)</span>
+            }
+            @if (_counts.Warnings > 0)
+            {
+                <span class="status-item" style="color:var(--warn)">@_counts.Warnings warning(s)</span>
+            }
+            <button class="status-button" @onclick="() => State.ClearOutput()">Clear</button>
+            <button class="status-button" @onclick="() => _collapsed = !_collapsed">@(_collapsed ? "Show" : "Hide")</button>
+        </div>
+    </div>
+
+    @if (!_collapsed)
+    {
+        <div class="output-list" id="output-list">
+            @foreach (OutputLine line in Visible())
+            {
+                <div class="output-line output-@line.Level.ToString().ToLowerInvariant()">
+                    <span class="output-time">@line.Timestamp.ToString("HH:mm:ss", Ci)</span>
+                    <span class="output-text">@line.Text</span>
+                </div>
+            }
+        </div>
+    }
+
+</section>
+
+@code {
+    private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+
+    private bool _collapsed;
+    private bool _errorsOnly;
+    private bool _pinnedToBottom = true;
+    private (int Errors, int Warnings) _counts;
+
+    protected override void OnInitialized() => State.OutputWritten += OnOutputWritten;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Following the tail is what makes a build readable as it happens. Only when the panel is
+        // actually showing something — scrolling a hidden element throws.
+        if (_pinnedToBottom && !_collapsed)
+        {
+            _pinnedToBottom = false;
+            await Js.InvokeVoidAsync("unitreeMarkdown.scrollToBottom", "#output-list");
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private IReadOnlyList<OutputLine> Visible()
+    {
+        IReadOnlyList<OutputLine> all = State.Output;
+
+        _counts = (
+            all.Count(line => line.Level == OutputLevel.Error),
+            all.Count(line => line.Level == OutputLevel.Warning));
+
+        return _errorsOnly
+            ? [.. all.Where(line => line.Level is OutputLevel.Error or OutputLevel.Warning)]
+            : all;
+    }
+
+    private void OnOutputWritten(OutputLine line) => _ = InvokeAsync(() =>
+    {
+        _pinnedToBottom = true;
+        StateHasChanged();
+    });
+
+    public void Dispose() => State.OutputWritten -= OnOutputWritten;
+}

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Firmware package management for Unitree robots: verified staging, activation, health gating and automatic rollback.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unitree.Net.Core\Unitree.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Version comparison is deliberately internal: it is lenient by design and not something callers
+         should depend on. The test suite still needs to pin its ordering behaviour. -->
+    <InternalsVisibleTo Include="Unitree.Net.Tests" />
+  </ItemGroup>
+
+</Project>

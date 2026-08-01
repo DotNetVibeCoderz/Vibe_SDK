@@ -1,0 +1,257 @@
+@implements IDisposable
+@inject WizardState State
+@inject NativeDialogs Dialogs
+
+<header class="menubar">
+
+    <div class="brand">
+        <span class="brand-mark">{|}</span>
+        <span class="brand-name">Unitree <em>Robot Wizard</em></span>
+    </div>
+
+    @foreach (string name in MenuNames)
+    {
+        <div class="menu @(_open == name ? "menu-open" : null)">
+            <button type="button" class="menu-label" @onclick="() => Toggle(name)">@name</button>
+
+            @if (_open == name)
+            {
+                <div class="menu-drop">
+                    @switch (name)
+                    {
+                        case "File": @FileMenu; break;
+                        case "Edit": @EditMenu; break;
+                        case "Build": @BuildMenu; break;
+                        case "Help": @HelpMenu; break;
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    <div class="bar-spacer"></div>
+
+    @if (State.IsBusy)
+    {
+        <span class="pill pill-armed">@State.StatusText</span>
+    }
+
+    <button class="btn btn-ghost btn-sm" title="Toggle theme" @onclick="OnToggleTheme">
+        @(State.Settings.Theme == "dark" ? "☀" : "☾")
+    </button>
+
+    <button class="btn btn-ghost btn-sm" title="Show or hide Jack" @onclick="ToggleChat">
+        @(State.Settings.ChatVisible ? "Hide Jack" : "Show Jack")
+    </button>
+
+    <button class="btn btn-sm" disabled="@(!CanBuild)" @onclick="() => State.BuildAsync()">Build</button>
+
+    @if (State.IsBusy)
+    {
+        <button class="btn btn-sm btn-armed" @onclick="() => State.StopTool()">Stop</button>
+    }
+    else
+    {
+        <button class="btn btn-primary btn-sm" disabled="@(!CanBuild)" @onclick="() => State.RunAsync()">
+            Run ▸ @State.Settings.RunTarget
+        </button>
+    }
+
+</header>
+
+@if (_open is not null)
+{
+    <div class="menu-scrim" @onclick="Close"></div>
+}
+
+@code {
+    private static readonly string[] MenuNames = ["File", "Edit", "Build", "Help"];
+
+    private string? _open;
+
+    /// <summary>Raised when New Project is chosen.</summary>
+    [Parameter, EditorRequired] public EventCallback OnNewProject { get; set; }
+
+    /// <summary>Raised when Settings is chosen.</summary>
+    [Parameter, EditorRequired] public EventCallback OnSettings { get; set; }
+
+    /// <summary>Raised when About is chosen.</summary>
+    [Parameter, EditorRequired] public EventCallback OnAbout { get; set; }
+
+    /// <summary>Raised when the theme toggle is pressed.</summary>
+    [Parameter, EditorRequired] public EventCallback OnToggleTheme { get; set; }
+
+    /// <summary>Raised with the name of an editor command to run.</summary>
+    [Parameter, EditorRequired] public EventCallback<string> OnEditorCommand { get; set; }
+
+    private bool HasProject => State.CurrentProject is not null;
+
+    private bool HasDocument => State.ActiveDocument is not null;
+
+    private bool CanBuild => HasProject && !State.IsBusy;
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    private RenderFragment FileMenu => @<text>
+        <button class="menu-item" @onclick="Choose(OnNewProject.InvokeAsync)">New project… <kbd>Ctrl+Shift+N</kbd></button>
+        <button class="menu-item" @onclick="Choose(OpenProject)">Open project… <kbd>Ctrl+O</kbd></button>
+        <button class="menu-item" disabled="@(!HasProject)" @onclick="Choose(CloseProject)">Close project</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("save")'>Save <kbd>Ctrl+S</kbd></button>
+        <button class="menu-item" disabled="@(!HasProject)" @onclick='Cmd("saveAll")'>Save all</button>
+
+        @if (State.Settings.RecentProjects.Count > 0)
+        {
+            <div class="menu-sep"></div>
+            <div class="menu-heading">Recent</div>
+
+            @foreach (string path in State.Settings.RecentProjects.Take(6))
+            {
+                <button class="menu-item" @onclick="Choose(() => OpenRecent(path))">
+                    @Path.GetFileNameWithoutExtension(path)
+                    <kbd>@Shorten(Path.GetDirectoryName(path))</kbd>
+                </button>
+            }
+        }
+    </text>;
+
+    private RenderFragment EditMenu => @<text>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("undo")'>Undo <kbd>Ctrl+Z</kbd></button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("redo")'>Redo <kbd>Ctrl+Y</kbd></button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("cut")'>Cut <kbd>Ctrl+X</kbd></button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("copy")'>Copy <kbd>Ctrl+C</kbd></button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("paste")'>Paste <kbd>Ctrl+V</kbd></button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("selectAll")'>Select all <kbd>Ctrl+A</kbd></button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("find")'>Find… <kbd>Ctrl+F</kbd></button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("replace")'>Replace… <kbd>Ctrl+H</kbd></button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("gotoLine")'>Go to line… <kbd>Ctrl+G</kbd></button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("format")'>Format document <kbd>Alt+Shift+F</kbd></button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick="Choose(ToggleLineNumbers)">
+            @(State.Settings.ShowLineNumbers ? "Hide" : "Show") line numbers
+        </button>
+        <button class="menu-item" disabled="@(!HasDocument)" @onclick='Cmd("commandPalette")'>Command palette <kbd>F1</kbd></button>
+    </text>;
+
+    private RenderFragment BuildMenu => @<text>
+        <button class="menu-item" disabled="@(!CanBuild)" @onclick="Choose(() => State.BuildAsync())">Build <kbd>Ctrl+B</kbd></button>
+        <button class="menu-item" disabled="@(!CanBuild)" @onclick="Choose(() => State.RunAsync())">Run <kbd>F5</kbd></button>
+        <button class="menu-item" disabled="@(!State.IsBusy)" @onclick="Choose(() => { State.StopTool(); return Task.CompletedTask; })">Stop</button>
+        <div class="menu-sep"></div>
+        <div class="menu-heading">Run against</div>
+        <button class="menu-item" @onclick="Choose(() => SetTarget(RunTarget.Simulator))">
+            Simulator @(State.Settings.RunTarget == RunTarget.Simulator ? "✓" : string.Empty)
+        </button>
+        <button class="menu-item" @onclick="Choose(() => SetTarget(RunTarget.Robot))">
+            Real robot @(State.Settings.RunTarget == RunTarget.Robot ? "✓" : string.Empty)
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" disabled="@(!CanBuild)" @onclick="Choose(() => State.DeployAsync())">Deploy to robot…</button>
+        <button class="menu-item" disabled="@State.IsBusy" @onclick="Choose(() => State.TestConnectionAsync())">Test robot connection</button>
+    </text>;
+
+    private RenderFragment HelpMenu => @<text>
+        <button class="menu-item" @onclick="Choose(OnSettings.InvokeAsync)">Settings…</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" @onclick="Choose(ShowConfigPath)">Where are my settings?</button>
+        <button class="menu-item" @onclick="Choose(OnAbout.InvokeAsync)">About</button>
+    </text>;
+
+    private void Toggle(string name) => _open = _open == name ? null : name;
+
+    private void Close() => _open = null;
+
+    // Every menu item closes the menu first. Doing it in each handler would be four dozen chances to
+    // forget one.
+    private EventCallback Cmd(string command) => Choose(() => OnEditorCommand.InvokeAsync(command));
+
+    private EventCallback Choose(Func<Task> action) =>
+        EventCallback.Factory.Create(this, async () =>
+        {
+            _open = null;
+            await action();
+        });
+
+    private Task OpenProject()
+    {
+        if (Dialogs.PickProjectFile(State.Settings.WorkspacePath) is { } path)
+        {
+            State.OpenProjectFile(path);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenRecent(string path)
+    {
+        if (File.Exists(path))
+        {
+            State.OpenProjectFile(path);
+        }
+        else
+        {
+            State.Write(OutputLevel.Warning, $"{path} no longer exists.");
+            State.Settings.RecentProjects.Remove(path);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task CloseProject()
+    {
+        State.CloseProject(save: State.HasUnsavedChanges);
+        return Task.CompletedTask;
+    }
+
+    private Task SetTarget(RunTarget target)
+    {
+        State.Settings.RunTarget = target;
+        State.PersistSettings();
+
+        if (target == RunTarget.Robot)
+        {
+            // Worth saying out loud. The difference between these two is whether a mistake moves a
+            // real machine.
+            State.Write(OutputLevel.Warning,
+                "Run target is now a real robot. Commands will reach hardware on the configured network.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ToggleLineNumbers()
+    {
+        State.Settings.ShowLineNumbers = !State.Settings.ShowLineNumbers;
+        State.PersistSettings();
+        await OnEditorCommand.InvokeAsync(State.Settings.ShowLineNumbers ? "showLineNumbers" : "hideLineNumbers");
+    }
+
+    private void ToggleChat()
+    {
+        State.Settings.ChatVisible = !State.Settings.ChatVisible;
+        State.PersistSettings();
+    }
+
+    private Task ShowConfigPath()
+    {
+        State.Write(OutputLevel.Info, $"Settings file: {WizardSettingsStore.ConfigPath}");
+        return Task.CompletedTask;
+    }
+
+    private static string Shorten(string? directory)
+    {
+        if (string.IsNullOrEmpty(directory))
+        {
+            return string.Empty;
+        }
+
+        string? parent = Path.GetFileName(Path.GetDirectoryName(directory));
+        return parent is { Length: > 0 } ? $"…/{parent}" : directory;
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

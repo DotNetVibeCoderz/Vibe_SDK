@@ -1,0 +1,51 @@
+@* A single headline number with its unit and an optional status cue.
+
+   Per the form heuristic, one number needs no chart. The tile is the chart. *@
+
+<article class="tile @(Tone is not null ? $"tile-{Tone}" : null)">
+    <h3 class="tile-label">@Label</h3>
+
+    <p class="tile-value">
+        <span class="tile-number">@Value</span>
+        @if (!string.IsNullOrEmpty(Unit))
+        {
+            <span class="tile-unit">@Unit</span>
+        }
+    </p>
+
+    @if (!string.IsNullOrEmpty(Detail))
+    {
+        <p class="tile-detail">
+            @if (Tone is "warning" or "critical")
+            {
+                @* Status is never colour-alone: the glyph and the wording carry it too. *@
+                <span class="tile-detail-icon" aria-hidden="true">@(Tone == "critical" ? "✕" : "!")</span>
+            }
+            @Detail
+        </p>
+    }
+</article>
+
+@code {
+    /// <summary>What the number measures.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>The formatted value.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Value { get; set; } = string.Empty;
+
+    /// <summary>Unit suffix, rendered smaller than the value.</summary>
+    [Parameter]
+    public string? Unit { get; set; }
+
+    /// <summary>Supporting detail shown beneath the value.</summary>
+    [Parameter]
+    public string? Detail { get; set; }
+
+    /// <summary>Status tone: <c>good</c>, <c>warning</c>, <c>critical</c>, or null for neutral.</summary>
+    [Parameter]
+    public string? Tone { get; set; }
+}

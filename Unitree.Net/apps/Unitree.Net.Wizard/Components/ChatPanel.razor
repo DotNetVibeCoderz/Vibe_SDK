@@ -1,0 +1,379 @@
+@implements IDisposable
+@inject WizardState State
+@inject IJSRuntime Js
+
+<aside class="chat">
+
+    <div class="chat-head">
+        <span class="jack-mark">J</span>
+        <div style="min-width:0">
+            <div class="jack-name">Jack The Code Bender</div>
+            <div class="jack-model">@State.Settings.Provider · @ModelLabel</div>
+        </div>
+
+        <div style="display:flex;gap:0.25rem;margin-left:auto">
+            <button class="btn btn-ghost btn-sm" title="New session" @onclick="() => State.NewSession()">+</button>
+            <button class="btn btn-ghost btn-sm" title="Clear this session" @onclick="() => State.ResetSession()">⟲</button>
+        </div>
+    </div>
+
+    <div class="sessions">
+        @foreach (ChatSession session in State.Sessions)
+        {
+            bool active = State.ActiveSession == session;
+
+            <div class="session @(active ? "session-on" : null)"
+                 role="button"
+                 tabindex="0"
+                 title="@session.Title"
+                 @onclick="() => State.SelectSession(session)">
+                <span class="session-title">@session.Title</span>
+                <button type="button" class="session-x" title="Delete session"
+                        @onclick:stopPropagation="true"
+                        @onclick="() => State.DeleteSession(session)">×</button>
+            </div>
+        }
+    </div>
+
+    <div class="thread" id="thread">
+        @if (State.ActiveSession.IsEmpty)
+        {
+            <div class="gallery">
+                <p class="gallery-intro">
+                    I write robot applications with the Unitree.Net SDK. I can read and edit the files
+                    in your project, look things up, and scaffold from a template.
+                </p>
+
+                @if (!State.Jack.IsReady)
+                {
+                    <div class="template" style="border-color:var(--warn);cursor:default">
+                        <div class="template-name" style="color:var(--warn)">Not configured yet</div>
+                        <div class="template-summary">@(State.Jack.LastError ?? "Choose a provider in Help → Settings.")</div>
+                    </div>
+                }
+
+                @if (_allPrompts)
+                {
+                    @foreach (string category in PromptGallery.Categories)
+                    {
+                        <div class="gallery-group">
+                            <span class="label" style="margin:0 0 0.15rem">@category</span>
+
+                            @foreach (PromptExample example in PromptGallery.InCategory(category))
+                            {
+                                <button type="button" class="gallery-card" @onclick="() => Use(example)">
+                                    <span class="gallery-title">@example.Title</span>
+                                    <span class="gallery-text">@Preview(example.Prompt)</span>
+                                </button>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    @* One per category rather than a random sample, so the first thing anyone sees is
+                       the breadth of what Jack does rather than four variations on walking. *@
+                    <div class="gallery-group">
+                        @foreach (PromptExample example in PromptGallery.Featured(9))
+                        {
+                            <button type="button" class="gallery-card" @onclick="() => Use(example)">
+                                <span class="gallery-title">@example.Title</span>
+                                <span class="gallery-text">@Preview(example.Prompt)</span>
+                            </button>
+                        }
+                    </div>
+                }
+
+                <button class="btn btn-sm" @onclick="() => _allPrompts = !_allPrompts">
+                    @(_allPrompts ? "Show fewer" : $"Show all {PromptGallery.All.Count} examples")
+                </button>
+            </div>
+        }
+        else
+        {
+            @* A snapshot, because the streaming reply is rewritten from another thread while this
+               renders. Enumerating the live list throws "collection was modified" mid-answer. *@
+            @foreach (ChatMessage message in State.ActiveSession.Snapshot())
+            {
+                <div class="msg msg-@message.Role.ToString().ToLowerInvariant()">
+                    <div class="msg-who">
+                        <span>@(message.Role == ChatRole.User ? "You" : "Jack")</span>
+                        <span style="opacity:.6">@message.Timestamp.ToString("HH:mm", Ci)</span>
+                    </div>
+
+                    @if (message.Role == ChatRole.User)
+                    {
+                        @* The operator's own text is shown verbatim. Rendering it as Markdown would
+                           mangle a pasted code fragment, which is most of what gets pasted here. *@
+                        <div class="msg-body" style="white-space:pre-wrap">@message.Text</div>
+                    }
+                    else if (message.Text.Length == 0)
+                    {
+                        <div class="thinking"><i></i><i></i><i></i> <span>thinking…</span></div>
+                    }
+                    else if (_rendered.TryGetValue(message.Text, out string? html))
+                    {
+                        <div class="msg-body">@((MarkupString)html)</div>
+                    }
+                    else
+                    {
+                        @* Shown for the one frame before the rendered HTML comes back. Plain text is
+                           a better placeholder than nothing, and it is what a reader would see in a
+                           terminal anyway. *@
+                        <div class="msg-body" style="white-space:pre-wrap">@message.Text</div>
+                    }
+
+                    @if (message.Attachments.Count > 0)
+                    {
+                        <div class="attachments">
+                            @foreach (ChatAttachment attachment in message.Attachments)
+                            {
+                                <span class="attachment">
+                                    @if (attachment.Kind == AttachmentKind.Image)
+                                    {
+                                        <img src="@attachment.ToDataUri()" alt="@attachment.FileName" />
+                                    }
+                                    else
+                                    {
+                                        <span>¶</span>
+                                    }
+                                    <span>@attachment.FileName</span>
+                                </span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    <div class="composer">
+        @if (_pending.Count > 0)
+        {
+            <div class="attachments">
+                @foreach (ChatAttachment attachment in _pending)
+                {
+                    <span class="attachment">
+                        @if (attachment.Kind == AttachmentKind.Image)
+                        {
+                            <img src="@attachment.ToDataUri()" alt="@attachment.FileName" />
+                        }
+                        else
+                        {
+                            <span>¶</span>
+                        }
+                        <span>@attachment.FileName</span>
+                        <button type="button" class="session-x" @onclick="() => _pending.Remove(attachment)">×</button>
+                    </span>
+                }
+            </div>
+        }
+
+        <textarea id="composer"
+                  placeholder="Ask Jack to build something. Enter sends, Shift+Enter adds a line."
+                  @bind="_draft"
+                  @bind:event="oninput"
+                  @onkeydown="OnKeyDown"></textarea>
+
+        <div class="composer-row">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="Attach images or documents">
+                Attach
+                <InputFile OnChange="OnFilesChosen" multiple style="display:none" />
+            </label>
+
+            @if (State.IsJackThinking)
+            {
+                <button class="btn btn-armed btn-sm" @onclick="Stop">Stop</button>
+            }
+            else
+            {
+                <button class="btn btn-primary btn-sm" disabled="@(!CanSend)" @onclick="SendAsync">Send</button>
+            }
+
+            <span class="composer-hint">@Hint</span>
+        </div>
+    </div>
+
+</aside>
+
+@code {
+    private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+
+    private readonly List<ChatAttachment> _pending = [];
+    private readonly Dictionary<string, string> _rendered = new(StringComparer.Ordinal);
+
+    private CancellationTokenSource? _turn;
+    private string _draft = string.Empty;
+    private bool _allPrompts;
+    private bool _pinned;
+
+    private bool CanSend => !State.IsJackThinking && (_draft.Trim().Length > 0 || _pending.Count > 0);
+
+    private string ModelLabel => State.Settings.ToAiOptions().GetEffectiveModelId();
+
+    private string Hint => State.IsJackThinking
+        ? "working…"
+        : State.CurrentProject is null
+            ? "no project open"
+            : State.CurrentProject.Name;
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        bool added = await RenderPendingAsync();
+
+        // Never on an empty session: the prompt gallery is meant to be read from the top, and
+        // scrolling it to the bottom hides everything the operator would have picked from.
+        if (_pinned && !State.ActiveSession.IsEmpty)
+        {
+            _pinned = false;
+            await Js.InvokeVoidAsync("unitreeMarkdown.scrollToBottom", "#thread");
+        }
+
+        if (added)
+        {
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Renders any assistant message whose Markdown has not been converted yet.
+    /// </summary>
+    /// <returns>Whether anything new was rendered, and so whether a re-render is needed.</returns>
+    /// <remarks>
+    /// <para>
+    /// Asynchronous because a Blazor Hybrid <see cref="IJSRuntime"/> is <em>not</em> an
+    /// <c>IJSInProcessRuntime</c> — interop goes over the WebView's message channel even though the
+    /// JavaScript runs in the same process. Assuming otherwise silently falls back to plain text, and
+    /// every code block and table arrives as raw Markdown.
+    /// </para>
+    /// <para>
+    /// Cached by exact text: streaming re-renders the whole thread on each chunk, and without the
+    /// cache every completed message above the one being written is parsed again dozens of times a
+    /// second.
+    /// </para>
+    /// </remarks>
+    private async Task<bool> RenderPendingAsync()
+    {
+        bool added = false;
+
+        foreach (ChatMessage message in State.ActiveSession.Snapshot())
+        {
+            if (message.Role != ChatRole.Assistant
+                || message.Text.Length == 0
+                || _rendered.ContainsKey(message.Text))
+            {
+                continue;
+            }
+
+            try
+            {
+                _rendered[message.Text] = await Js.InvokeAsync<string>(
+                    "unitreeMarkdown.render", message.Text);
+
+                added = true;
+            }
+            catch (JSException exception)
+            {
+                State.Write(OutputLevel.Error, $"Markdown rendering failed: {exception.Message}");
+                _rendered[message.Text] = System.Net.WebUtility.HtmlEncode(message.Text);
+                added = true;
+            }
+        }
+
+        // Bounded, because a streamed message leaves one entry per chunk behind and none of the
+        // partial ones will ever be asked for again.
+        if (_rendered.Count > 600)
+        {
+            _rendered.Clear();
+        }
+
+        return added;
+    }
+
+    private static string Preview(string prompt) =>
+        prompt.Length <= 96 ? prompt : prompt[..95].TrimEnd() + "…";
+
+    private void Use(PromptExample example)
+    {
+        _draft = example.Prompt;
+        _ = Js.InvokeVoidAsync("unitreeMarkdown.focus", "#composer");
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        // Enter sends, Shift+Enter breaks the line. The opposite convention makes multi-line
+        // instructions — which is most of what gets typed here — painful.
+        if (e.Key == "Enter" && !e.ShiftKey && CanSend)
+        {
+            await SendAsync();
+        }
+    }
+
+    private async Task OnFilesChosen(InputFileChangeEventArgs e)
+    {
+        const long MaxBytes = 12L * 1024 * 1024;
+
+        foreach (IBrowserFile file in e.GetMultipleFiles(8))
+        {
+            if (file.Size > MaxBytes)
+            {
+                State.Write(OutputLevel.Warning, $"{file.Name} is larger than 12 MB and was skipped.");
+                continue;
+            }
+
+            try
+            {
+                await using Stream content = file.OpenReadStream(MaxBytes);
+                _pending.Add(await State.ChatStore.StoreAttachmentAsync(file.Name, content));
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException)
+            {
+                State.Write(OutputLevel.Error, $"Could not attach {file.Name}: {exception.Message}");
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SendAsync()
+    {
+        if (!CanSend)
+        {
+            return;
+        }
+
+        string text = _draft.Trim();
+        ChatAttachment[] attachments = [.. _pending];
+
+        _draft = string.Empty;
+        _pending.Clear();
+        _pinned = true;
+
+        _turn?.Dispose();
+        _turn = new CancellationTokenSource();
+
+        await State.SendToJackAsync(text, attachments, _turn.Token);
+    }
+
+    private void Stop() => _turn?.Cancel();
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        // Only follow the tail while Jack is writing. Scrolling on every state change would yank the
+        // panel back down while someone is reading an earlier reply.
+        if (State.IsJackThinking)
+        {
+            _pinned = true;
+        }
+
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        _turn?.Dispose();
+    }
+}

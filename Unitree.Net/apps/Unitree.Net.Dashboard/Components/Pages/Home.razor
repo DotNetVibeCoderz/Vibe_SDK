@@ -1,0 +1,200 @@
+@page "/"
+@implements IDisposable
+@inject UnitreeRobot Robot
+@inject TelemetryHub Telemetry
+@inject TelemetryRecorder Recorder
+
+<PageTitle>Telemetry — Unitree.Net</PageTitle>
+
+<h1 class="page-title">Telemetry</h1>
+
+@if (_snapshot is null)
+{
+    <div class="notice">
+        <p class="notice-title">No telemetry yet</p>
+        <p>
+            The dashboard is attached to transport <code>@Robot.Participant.Transport.Name</code>
+            but has not received a state message. Confirm the robot is powered and that
+            <code>Unitree:NetworkInterface</code> names the robot-facing adapter.
+        </p>
+    </div>
+}
+else
+{
+    var snapshot = _snapshot.Value;
+    var safety = Robot.Options.Safety;
+
+    <section class="tiles" aria-label="Current readings">
+        <StatTile Label="Battery"
+                  Value="@snapshot.Battery.StateOfChargePercent.ToString(CultureInfo.InvariantCulture)"
+                  Unit="%"
+                  Tone="@BatteryTone(snapshot.Battery, safety)"
+                  Detail="@BatteryDetail(snapshot.Battery)" />
+
+        <StatTile Label="Hottest motor"
+                  Value="@snapshot.MaxMotorTemperatureCelsius.ToString(CultureInfo.InvariantCulture)"
+                  Unit="°C"
+                  Tone="@TemperatureTone(snapshot.MaxMotorTemperatureCelsius, safety)"
+                  Detail="@($"limit {safety.MaxMotorTemperatureCelsius} °C")" />
+
+        <StatTile Label="Speed"
+                  Value="@snapshot.Velocity.Length().ToString("F2", CultureInfo.InvariantCulture)"
+                  Unit="m/s"
+                  Detail="@($"body height {snapshot.BodyHeight.ToString("F2", CultureInfo.InvariantCulture)} m")" />
+
+        <StatTile Label="Feet loaded"
+                  Value="@snapshot.FootContact.ContactCount.ToString(CultureInfo.InvariantCulture)"
+                  Unit="/ 4"
+                  Detail="@FootDetail(snapshot.FootContact)" />
+    </section>
+
+    <section class="charts" aria-label="History">
+        <TimeSeriesChart Title="Battery state of charge"
+                         Series="Recorder.BatterySoc"
+                         Unit=" %"
+                         Decimals="0"
+                         FixedMinimum="0"
+                         FixedMaximum="100" />
+
+        <TimeSeriesChart Title="Hottest motor temperature"
+                         Series="Recorder.MotorTemperature"
+                         Unit=" °C"
+                         Decimals="0" />
+
+        <TimeSeriesChart Title="Body speed"
+                         Series="Recorder.Speed"
+                         Unit=" m/s"
+                         Decimals="2"
+                         FixedMinimum="0" />
+    </section>
+
+    <section class="detail-grid" aria-label="Detail">
+        <div class="panel">
+            <h2 class="panel-title">Attitude</h2>
+            <dl class="readout">
+                <dt>Roll</dt>
+                <dd>@Degrees(snapshot.Orientation.Roll)</dd>
+                <dt>Pitch</dt>
+                <dd>@Degrees(snapshot.Orientation.Pitch)</dd>
+                <dt>Yaw</dt>
+                <dd>@Degrees(snapshot.Orientation.Yaw)</dd>
+            </dl>
+        </div>
+
+        <div class="panel">
+            <h2 class="panel-title">Odometry</h2>
+            <dl class="readout">
+                <dt>X</dt>
+                <dd>@Metres(snapshot.OdometryPosition.X)</dd>
+                <dt>Y</dt>
+                <dd>@Metres(snapshot.OdometryPosition.Y)</dd>
+                <dt>Z</dt>
+                <dd>@Metres(snapshot.OdometryPosition.Z)</dd>
+            </dl>
+            <p class="panel-note">Dead-reckoned; drifts with distance and resets on power cycle.</p>
+        </div>
+
+        <div class="panel">
+            <h2 class="panel-title">Battery pack</h2>
+            <dl class="readout">
+                <dt>Voltage</dt>
+                <dd>@snapshot.Battery.PackVoltage.ToString("F1", CultureInfo.InvariantCulture) V</dd>
+                <dt>Current</dt>
+                <dd>@snapshot.Battery.CurrentAmps.ToString("F2", CultureInfo.InvariantCulture) A</dd>
+                <dt>Cycles</dt>
+                <dd>@snapshot.Battery.CycleCount</dd>
+                <dt>Cell spread</dt>
+                <dd>@snapshot.Battery.CellImbalanceMillivolts mV</dd>
+            </dl>
+            @if (snapshot.Battery.HasCellImbalanceWarning)
+            {
+                <p class="panel-note panel-note-warning">
+                    <span aria-hidden="true">!</span>
+                    Cell spread is above the 50 mV healthy threshold — an early sign of a failing cell.
+                </p>
+            }
+        </div>
+
+        <div class="panel">
+            <h2 class="panel-title">Link</h2>
+            <dl class="readout">
+                <dt>Transport</dt>
+                <dd>@Robot.Participant.Transport.Name</dd>
+                <dt>Low-state msgs</dt>
+                <dd>@Telemetry.LowStateCount.ToString("N0", CultureInfo.InvariantCulture)</dd>
+                <dt>Samples held</dt>
+                <dd>@Recorder.BatterySoc.Count / @Recorder.BatterySoc.Capacity</dd>
+            </dl>
+        </div>
+    </section>
+}
+
+@code {
+    private TelemetrySnapshot? _snapshot;
+
+    protected override void OnInitialized()
+    {
+        _snapshot = Telemetry.GetSnapshot();
+
+        // Re-render on the recorder's cadence rather than on every incoming message. The robot publishes
+        // at 500 Hz; pushing that through a Blazor circuit would saturate the websocket to no benefit,
+        // since a person cannot read faster than about once a second anyway.
+        Recorder.Sampled += OnSampled;
+    }
+
+    private void OnSampled()
+    {
+        _snapshot = Telemetry.GetSnapshot();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Recorder.Sampled -= OnSampled;
+
+    private static string BatteryTone(BatteryStatus battery, RobotSafetyOptions safety)
+    {
+        if (battery.StateOfChargePercent == 0)
+        {
+            return string.Empty;
+        }
+
+        return battery.StateOfChargePercent < safety.MinBatterySocPercent
+            ? "critical"
+            : battery.StateOfChargePercent < safety.MinBatterySocPercent * 2
+                ? "warning"
+                : "good";
+    }
+
+    private static string BatteryDetail(BatteryStatus battery)
+    {
+        if (battery.IsCharging)
+        {
+            return "charging";
+        }
+
+        TimeSpan? remaining = battery.EstimateRemaining();
+
+        return remaining is null
+            ? "idle"
+            : $"about {remaining.Value.TotalMinutes.ToString("F0", CultureInfo.InvariantCulture)} min left";
+    }
+
+    private static string TemperatureTone(int celsius, RobotSafetyOptions safety) =>
+        celsius > safety.MaxMotorTemperatureCelsius
+            ? "critical"
+            : celsius > safety.MaxMotorTemperatureCelsius - 10
+                ? "warning"
+                : "good";
+
+    private static string FootDetail(FootContactState contact) => contact switch
+    {
+        { IsFullStance: true } => "full stance",
+        { IsAirborne: true } => "airborne",
+        _ => "stepping",
+    };
+
+    private static string Degrees(float radians) =>
+        float.RadiansToDegrees(radians).ToString("F1", CultureInfo.InvariantCulture) + "°";
+
+    private static string Metres(float value) =>
+        value.ToString("F2", CultureInfo.InvariantCulture) + " m";
+}

@@ -1,0 +1,144 @@
+@implements IAsyncDisposable
+@inject SimulatorState State
+@inject IJSRuntime Js
+
+<div class="viewport">
+    <div id="scene" style="width:100%;height:100%"></div>
+
+    @if (!State.IsRunning)
+    {
+        <div class="viewport-idle">
+            <span class="label">@State.Rig.DisplayName</span>
+            <p>@State.Rig.Summary</p>
+            <p>Press <strong>Start simulation</strong> to publish telemetry and drive the model.</p>
+        </div>
+    }
+    else
+    {
+        <span class="viewport-hint">Drag to orbit · scroll to zoom · grid squares are 1&nbsp;m</span>
+    }
+</div>
+
+@code {
+    private bool _built;
+    private RobotModel? _builtModel;
+    private float[]? _angleBuffer;
+    private float[]? _contactBuffer;
+
+    protected override void OnInitialized()
+    {
+        State.PoseSampled += OnPoseSampled;
+
+        // Without this the idle overlay never clears: the pose samples drive the scene directly
+        // through interop and never touch the render tree.
+        State.Changed += OnChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RebuildAsync("dark");
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the scene for the currently selected rig.
+    /// </summary>
+    /// <param name="theme">"dark" or "light".</param>
+    /// <remarks>
+    /// A missing or broken viewport module must not take the application with it. Everything else here
+    /// — telemetry, publishing, the log — works without WebGL, so the 3D view is treated as optional
+    /// and its absence is reported rather than thrown.
+    /// </remarks>
+    public async Task RebuildAsync(string theme)
+    {
+        // Rebuilding the same rig would throw away and re-upload every buffer for no visible change.
+        if (_built && _builtModel == State.SelectedModel)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await Js.InvokeAsync<bool>("eval", "typeof window.unitreeViewport === 'object'"))
+            {
+                State.Log.Warning("viewport", "3D viewport unavailable — the scene module did not load.");
+                _built = false;
+                return;
+            }
+
+            ViewportRig rig = ViewportRig.From(State.Rig);
+            _built = await Js.InvokeAsync<bool>("unitreeViewport.init", "#scene", rig.ToJson(), theme);
+
+            if (_built)
+            {
+                _builtModel = State.SelectedModel;
+                State.Log.Info("viewport", $"Scene built for {State.Rig.DisplayName}: {State.Rig.Links.Count} links.");
+            }
+        }
+        catch (JSException exception)
+        {
+            State.Log.Error("viewport", $"Scene build failed: {exception.Message}");
+            _built = false;
+        }
+    }
+
+    private void OnPoseSampled(SimulationSnapshot snapshot)
+    {
+        if (!_built)
+        {
+            return;
+        }
+
+        // Reused buffers: this runs 50 times a second, and a fresh pair of arrays per frame would put
+        // the UI thread into a steady drip of gen-0 collections for no reason.
+        if (_angleBuffer is null || _angleBuffer.Length != snapshot.JointAngles.Count)
+        {
+            _angleBuffer = new float[snapshot.JointAngles.Count];
+        }
+
+        if (_contactBuffer is null || _contactBuffer.Length != snapshot.Contacts.Count)
+        {
+            _contactBuffer = new float[snapshot.Contacts.Count];
+        }
+
+        for (int i = 0; i < _angleBuffer.Length; i++)
+        {
+            _angleBuffer[i] = snapshot.JointAngles[i];
+        }
+
+        for (int i = 0; i < _contactBuffer.Length; i++)
+        {
+            _contactBuffer[i] = snapshot.Contacts[i];
+        }
+
+        // Fire and forget: a dropped pose frame is invisible, whereas awaiting here would couple the
+        // sampling timer to the WebView's message pump and make the whole thing stutter.
+        _ = Js.InvokeVoidAsync(
+            "unitreeViewport.setPose",
+            _angleBuffer,
+            snapshot.Height,
+            snapshot.Roll,
+            snapshot.Pitch,
+            snapshot.Yaw,
+            _contactBuffer);
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        State.PoseSampled -= OnPoseSampled;
+        State.Changed -= OnChanged;
+
+        try
+        {
+            await Js.InvokeVoidAsync("unitreeViewport.dispose");
+        }
+        catch (JSDisconnectedException)
+        {
+            // The WebView is already gone; there is nothing left to dispose.
+        }
+    }
+}

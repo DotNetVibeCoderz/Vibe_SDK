@@ -1,0 +1,161 @@
+@* A single-series time-series line over a fixed history window.
+
+   One series, so no legend box — the title names it (dataviz check 6). The final
+   point is direct-labelled rather than every point, and the gridline/axis ink is
+   recessive against the mark. *@
+
+<figure class="chart">
+    <figcaption class="chart-head">
+        <span class="chart-title">@Title</span>
+        <span class="chart-current">@FormatValue(_latest)<span class="chart-unit">@Unit</span></span>
+    </figcaption>
+
+    @if (_points.Length < 2)
+    {
+        <div class="chart-empty">Waiting for telemetry…</div>
+    }
+    else
+    {
+        <svg class="chart-svg"
+             viewBox="0 0 @ViewWidth @ViewHeight"
+             preserveAspectRatio="none"
+             role="img"
+             aria-label="@($"{Title}: {FormatValue(_min)} to {FormatValue(_max)} {Unit} over the last {_spanSeconds:0} seconds")">
+
+            @* Recessive gridlines: three horizontal rules, hairline weight. *@
+            @foreach (double fraction in GridFractions)
+            {
+                double y = PlotTop + ((PlotHeight) * fraction);
+                <line class="chart-grid" x1="0" y1="@Fmt(y)" x2="@ViewWidth" y2="@Fmt(y)" />
+            }
+
+            <path class="chart-area" d="@_areaPath" />
+            <path class="chart-line" d="@_linePath" />
+
+            @* Only the most recent point is marked, at ≥8px effective diameter. *@
+            <circle class="chart-dot" cx="@Fmt(_lastX)" cy="@Fmt(_lastY)" r="4" />
+        </svg>
+
+        <div class="chart-axis">
+            <span>@FormatValue(_min)</span>
+            <span class="chart-axis-span">last @($"{_spanSeconds:0}") s</span>
+            <span>@FormatValue(_max)</span>
+        </div>
+    }
+</figure>
+
+@code {
+    private const int ViewWidth = 600;
+    private const int ViewHeight = 140;
+    private const int PlotTop = 8;
+    private const int PlotHeight = ViewHeight - 16;
+
+    private static readonly double[] GridFractions = [0.0, 0.5, 1.0];
+
+    private HistoryPoint[] _points = [];
+    private string _linePath = string.Empty;
+    private string _areaPath = string.Empty;
+    private double _min;
+    private double _max;
+    private double _latest;
+    private double _lastX;
+    private double _lastY;
+    private double _spanSeconds;
+
+    /// <summary>What the series measures; also serves as the accessible name.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The series to plot.</summary>
+    [Parameter]
+    [EditorRequired]
+    public HistorySeries Series { get; set; } = null!;
+
+    /// <summary>Unit suffix for the current-value readout and axis labels.</summary>
+    [Parameter]
+    public string Unit { get; set; } = string.Empty;
+
+    /// <summary>Decimal places used when formatting values.</summary>
+    [Parameter]
+    public int Decimals { get; set; }
+
+    /// <summary>Forces the y-axis floor, e.g. zero for a percentage.</summary>
+    [Parameter]
+    public double? FixedMinimum { get; set; }
+
+    /// <summary>Forces the y-axis ceiling, e.g. 100 for a percentage.</summary>
+    [Parameter]
+    public double? FixedMaximum { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _points = Series.Snapshot();
+
+        if (_points.Length == 0)
+        {
+            return;
+        }
+
+        _latest = _points[^1].Value;
+        _spanSeconds = (_points[^1].Timestamp - _points[0].Timestamp).TotalSeconds;
+
+        if (_points.Length < 2)
+        {
+            return;
+        }
+
+        double dataMin = _points.Min(p => p.Value);
+        double dataMax = _points.Max(p => p.Value);
+
+        _min = FixedMinimum ?? dataMin;
+        _max = FixedMaximum ?? dataMax;
+
+        // A flat series would collapse the range to zero and divide by it. Padding by a unit keeps the
+        // line centred rather than pinned to an edge, which is what a constant value should look like.
+        if (_max - _min < 1e-6)
+        {
+            _min -= 1;
+            _max += 1;
+        }
+
+        BuildPaths();
+    }
+
+    private void BuildPaths()
+    {
+        double range = _max - _min;
+        double stepX = (double)ViewWidth / (_points.Length - 1);
+
+        var line = new System.Text.StringBuilder(_points.Length * 16);
+        var area = new System.Text.StringBuilder(_points.Length * 16);
+
+        area.Append(CultureInfo.InvariantCulture, $"M 0 {ViewHeight:0.##} ");
+
+        for (int i = 0; i < _points.Length; i++)
+        {
+            double x = i * stepX;
+            double normalised = (_points[i].Value - _min) / range;
+            double y = PlotTop + (PlotHeight * (1 - Math.Clamp(normalised, 0, 1)));
+
+            line.Append(CultureInfo.InvariantCulture, $"{(i == 0 ? "M" : "L")} {x:0.##} {y:0.##} ");
+            area.Append(CultureInfo.InvariantCulture, $"L {x:0.##} {y:0.##} ");
+
+            if (i == _points.Length - 1)
+            {
+                _lastX = x;
+                _lastY = y;
+            }
+        }
+
+        area.Append(CultureInfo.InvariantCulture, $"L {ViewWidth:0.##} {ViewHeight:0.##} Z");
+
+        _linePath = line.ToString();
+        _areaPath = area.ToString();
+    }
+
+    private string FormatValue(double value) =>
+        value.ToString($"F{Decimals}", CultureInfo.InvariantCulture);
+
+    private static string Fmt(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

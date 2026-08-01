@@ -1,0 +1,65 @@
+@implements IDisposable
+@inject WizardState State
+
+<footer class="statusbar @StatusClass">
+
+    <span class="status-item">
+        <span class="status-dot"></span>
+        <strong>@State.StatusText</strong>
+    </span>
+
+    @if (State.CurrentProject is { } project)
+    {
+        <span class="status-item">@project.Name <span style="opacity:.6">·</span> @project.Kind</span>
+    }
+
+    @if (State.ActiveDocument is { } document)
+    {
+        <span class="status-item status-mono">@document.File.RelativePath@(document.IsDirty ? " ●" : string.Empty)</span>
+        <span class="status-item status-mono">Ln @State.CursorLine, Col @State.CursorColumn</span>
+        <span class="status-item">@document.File.Language</span>
+    }
+
+    <span style="margin-left:auto"></span>
+
+    @* Which machine Run will actually reach. Worth a permanent place on screen: it is the difference
+       between a mistake costing nothing and a mistake moving fifteen kilograms of robot. *@
+    <span class="status-item" title="Where Run sends commands">
+        Run ▸ <strong style="@(State.Settings.RunTarget == RunTarget.Robot ? "color:var(--armed)" : null)">
+            @(State.Settings.RunTarget == RunTarget.Robot ? "REAL ROBOT" : "Simulator")
+        </strong>
+    </span>
+
+    <span class="status-item" title="@(State.Jack.IsReady ? "Jack is configured" : State.Jack.LastError)">
+        Jack ▸ <strong>@State.Settings.Provider</strong>
+        <span class="status-mono">@ModelLabel</span>
+    </span>
+
+    <span class="status-item status-mono">@State.Documents.Count open</span>
+
+</footer>
+
+@code {
+    private string StatusClass => State.IsBusy
+        ? "status-busy"
+        : State.StatusText.Contains("fail", StringComparison.OrdinalIgnoreCase)
+            ? "status-bad"
+            : State.StatusText.Contains("succeed", StringComparison.OrdinalIgnoreCase)
+                ? "status-good"
+                : string.Empty;
+
+    private string ModelLabel
+    {
+        get
+        {
+            var options = State.Settings.ToAiOptions();
+            return options.GetEffectiveModelId();
+        }
+    }
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

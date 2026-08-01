@@ -1,0 +1,121 @@
+@implements IDisposable
+@inject SimulatorState State
+
+@* The ribbon is the honest answer to "is anything actually happening?". Each lane is a topic that is
+   genuinely being published, with its measured rate rather than its configured one — the difference
+   between the two is exactly what you want to see when the loop is struggling. *@
+<div class="ribbon">
+
+    <div class="lane @(_lowStateRate > 0 ? null : "lane-off") @(PublishesLowState ? null : "lane-muted")">
+        <div class="lane-head">
+            <span class="lane-topic">rt/lowstate</span>
+            <span class="lane-rate">@Rate(_lowStateRate) <em>Hz</em></span>
+        </div>
+        <div class="lane-bar"><div class="lane-fill" style="width:@Fill(_lowStateRate, State.Options.LowStateRateHz)%"></div></div>
+        <span class="lane-count">
+            @if (PublishesLowState)
+            {
+                @($"{State.Statistics.LowStateCount:N0} msgs")
+            }
+            else
+            {
+                @("unitree_hg not implemented")
+            }
+        </span>
+    </div>
+
+    <div class="lane @(_sportRate > 0 ? null : "lane-off")">
+        <div class="lane-head">
+            <span class="lane-topic">rt/sportmodestate</span>
+            <span class="lane-rate">@Rate(_sportRate) <em>Hz</em></span>
+        </div>
+        <div class="lane-bar"><div class="lane-fill" style="width:@Fill(_sportRate, SportTarget)%"></div></div>
+        <span class="lane-count">@($"{State.Statistics.SportStateCount:N0} msgs")</span>
+    </div>
+
+    <div class="lane @(State.IsRunning ? null : "lane-off")">
+        <div class="lane-head">
+            <span class="lane-topic">loop jitter</span>
+            <span class="lane-rate">@State.Statistics.MeanJitterMicroseconds.ToString("0", Ci) <em>µs</em></span>
+        </div>
+        @* A quarter of the tick period is the point at which jitter stops being noise and starts
+           being a timing problem, so that is what the bar is scaled against. *@
+        <div class="lane-bar"><div class="lane-fill" style="width:@JitterFill()%"></div></div>
+        <span class="lane-count">max @State.Statistics.MaxJitterMicroseconds.ToString("0", Ci) µs</span>
+    </div>
+
+    <div class="lane @(State.IsRunning ? null : "lane-off")">
+        <div class="lane-head">
+            <span class="lane-topic">transport</span>
+            <span class="lane-rate">@(State.Statistics.PublishFailureCount == 0 ? "OK" : "ERR")</span>
+        </div>
+        <div class="lane-bar"><div class="lane-fill" style="width:@(State.IsRunning ? 100 : 0)%"></div></div>
+        <span class="lane-count">@State.Statistics.TransportName</span>
+    </div>
+
+</div>
+
+@code {
+    private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+
+    private long _lastLowState;
+    private long _lastSport;
+    private DateTimeOffset _lastSampled = DateTimeOffset.UtcNow;
+    private double _lowStateRate;
+    private double _sportRate;
+
+    private bool PublishesLowState => RobotModelInfo.IsQuadruped(State.SelectedModel);
+
+    private int SportTarget => Math.Max(1, State.Options.LowStateRateHz / State.Options.SportStateDivisor);
+
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    private void Sample()
+    {
+        SimulationStatistics stats = State.Statistics;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        double elapsed = (now - _lastSampled).TotalSeconds;
+
+        if (elapsed < 0.15)
+        {
+            return;
+        }
+
+        if (!State.IsRunning)
+        {
+            _lowStateRate = 0;
+            _sportRate = 0;
+        }
+        else
+        {
+            _lowStateRate = Math.Max(0, (stats.LowStateCount - _lastLowState) / elapsed);
+            _sportRate = Math.Max(0, (stats.SportStateCount - _lastSport) / elapsed);
+        }
+
+        _lastLowState = stats.LowStateCount;
+        _lastSport = stats.SportStateCount;
+        _lastSampled = now;
+    }
+
+    private static string Rate(double hz) => hz >= 1000
+        ? (hz / 1000).ToString("0.00", Ci) + "k"
+        : hz.ToString("0", Ci);
+
+    private static string Fill(double actual, int target) =>
+        Math.Clamp(target <= 0 ? 0 : actual / target * 100, 0, 100).ToString("0.#", Ci);
+
+    private string JitterFill()
+    {
+        double periodMicroseconds = 1_000_000.0 / Math.Max(1, State.Options.LowStateRateHz);
+        double budget = periodMicroseconds * 0.25;
+        return Math.Clamp(State.Statistics.MeanJitterMicroseconds / budget * 100, 0, 100).ToString("0.#", Ci);
+    }
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        Sample();
+        StateHasChanged();
+    });
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

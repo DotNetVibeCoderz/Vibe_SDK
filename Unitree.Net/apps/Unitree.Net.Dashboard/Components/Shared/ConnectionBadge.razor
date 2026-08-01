@@ -1,0 +1,29 @@
+@* Link state, carried by an icon glyph and a word — never by colour alone. *@
+
+<span class="badge badge-@_tone" role="status">
+    <span class="badge-icon" aria-hidden="true">@_glyph</span>
+    <span class="badge-label">@_label</span>
+</span>
+
+@code {
+    /// <summary>The connection state to display.</summary>
+    [Parameter]
+    [EditorRequired]
+    public ConnectionState State { get; set; }
+
+    private string _tone = "muted";
+    private string _glyph = "○";
+    private string _label = "Disconnected";
+
+    protected override void OnParametersSet()
+    {
+        (_tone, _glyph, _label) = State switch
+        {
+            ConnectionState.Connected => ("good", "●", "Connected"),
+            ConnectionState.Connecting => ("warning", "◐", "Connecting"),
+            ConnectionState.Stale => ("warning", "◔", "Stale"),
+            ConnectionState.Faulted => ("critical", "✕", "Faulted"),
+            _ => ("muted", "○", "Disconnected"),
+        };
+    }
+}

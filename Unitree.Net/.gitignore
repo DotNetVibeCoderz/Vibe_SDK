@@ -1,0 +1,19 @@
+bin/
+obj/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+artifacts/
+TestResults/
+native/**/build/
+*.nupkg
+*.snupkg
+appsettings.Local.json
+.env
+
+# The wizard writes its settings — including API keys, if you put them there — back into its own
+# app.config. Ignored so a working configuration cannot be committed by accident. Prefer the
+# UNITREE_WIZARD_APIKEY and UNITREE_WIZARD_TAVILYKEY environment variables instead.
+apps/Unitree.Net.Wizard/App.config

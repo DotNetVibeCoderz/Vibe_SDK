@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>
+      Project scaffolding, build orchestration, robot deployment and the Jack assistant that back the
+      Unitree Robot Wizard. Kept free of any UI framework so it can be tested and reused.
+    </Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unitree.Net.Ai\Unitree.Net.Ai.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Core\Unitree.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="SSH.NET" />
+  </ItemGroup>
+
+</Project>

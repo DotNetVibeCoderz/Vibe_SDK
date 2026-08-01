@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Unitree Robot Wizard settings — template.
+
+     Copy to App.config and edit, or just run the wizard and use Help → Settings, which writes this
+     file for you. App.config itself is gitignored so a working configuration with keys in it cannot
+     be committed by accident.
+
+     API keys: leave them empty here and set UNITREE_WIZARD_APIKEY and UNITREE_WIZARD_TAVILYKEY in
+     the environment instead. An app.config gets copied between machines and committed more often
+     than anyone intends. -->
+<configuration>
+  <appSettings>
+
+    <!-- Jack The Code Bender. Provider is one of OpenAI, Anthropic, Gemini, Ollama.
+         Ollama is the default because it needs no key and nothing leaves the machine. -->
+    <add key="Ai.Provider" value="Ollama" />
+    <add key="Ai.ModelId" value="" />
+    <add key="Ai.ApiKey" value="" />
+    <add key="Ai.Endpoint" value="" />
+    <add key="Ai.Temperature" value="0.3" />
+    <add key="Ai.MaxTokens" value="4096" />
+    <add key="Ai.MaxHistoryTurns" value="24" />
+    <add key="Ai.AllowAutomaticFunctionCalling" value="True" />
+    <!-- Empty uses the built-in persona, which carries the safety instructions. The prompt below is
+         only read when SystemPromptIsCustom is True — otherwise the built-in one wins, so improving
+         it in the SDK reaches everyone instead of being frozen in this file. -->
+    <add key="Ai.SystemPrompt" value="" />
+    <add key="Ai.SystemPromptIsCustom" value="False" />
+
+    <!-- Without a Tavily key, web search reports that it is unavailable rather than guessing.
+         fetch_page and read_file_from_url work regardless. -->
+    <add key="Tools.TavilyApiKey" value="" />
+
+    <!-- Where New Project creates projects. Empty uses Documents\UnitreeProjects. -->
+    <add key="Workspace.Path" value="" />
+    <add key="Workspace.Recent" value="" />
+
+    <!-- Simulator or Robot. This is what the status bar reports, and it is the difference between a
+         mistake costing nothing and a mistake moving a real machine. -->
+    <add key="Run.Target" value="Simulator" />
+
+    <!-- Deploy over SSH. 192.168.123.18 is Unitree's default address on the wired link.
+         A private key is used in preference to a password whenever one is configured. -->
+    <add key="Deploy.Host" value="192.168.123.18" />
+    <add key="Deploy.Port" value="22" />
+    <add key="Deploy.User" value="unitree" />
+    <add key="Deploy.Password" value="" />
+    <add key="Deploy.PrivateKeyPath" value="" />
+    <add key="Deploy.RemoteDirectory" value="/home/unitree/apps" />
+    <add key="Deploy.InstallService" value="False" />
+
+    <add key="Ui.Theme" value="dark" />
+    <add key="Ui.ShowLineNumbers" value="True" />
+    <add key="Ui.ChatVisible" value="True" />
+
+  </appSettings>
+</configuration>

@@ -1,0 +1,292 @@
+{
+  "name": "unitree-net",
+  "displayName": "Unitree.Net Robot Tools",
+  "description": "Create, run, debug and deploy Unitree robot applications from VS Code, with live robot status and logs.",
+  "version": "0.1.0",
+  "publisher": "gravicode",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "unitree",
+    "robotics",
+    "go2",
+    "g1",
+    "dds",
+    "ros2"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "unitree",
+          "title": "Unitree",
+          "icon": "media/robot.svg"
+        }
+      ]
+    },
+    "views": {
+      "unitree": [
+        {
+          "id": "unitree.status",
+          "name": "Robot status",
+          "icon": "media/robot.svg"
+        },
+        {
+          "id": "unitree.templates",
+          "name": "Templates",
+          "icon": "media/robot.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "unitree.status",
+        "contents": "No robot connected.\n\nStart the simulator, then connect — no hardware needed.\n\n[Start simulator](command:unitree.startSimulator)\n[Connect](command:unitree.connect)\n\nIf nothing connects, run diagnostics. It needs no robot and names the usual cause.\n[Run diagnostics](command:unitree.diagnose)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "unitree.newProject",
+        "title": "New Robot Project…",
+        "category": "Unitree",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "unitree.connect",
+        "title": "Connect to Robot",
+        "category": "Unitree",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "unitree.disconnect",
+        "title": "Disconnect",
+        "category": "Unitree",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "unitree.refreshStatus",
+        "title": "Refresh Robot Status",
+        "category": "Unitree",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "unitree.setTarget",
+        "title": "Set Run Target (Simulator or Robot)",
+        "category": "Unitree",
+        "icon": "$(target)"
+      },
+      {
+        "command": "unitree.startSimulator",
+        "title": "Start Simulator",
+        "category": "Unitree",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "unitree.stopSimulator",
+        "title": "Stop Simulator",
+        "category": "Unitree",
+        "icon": "$(stop-circle)"
+      },
+      {
+        "command": "unitree.build",
+        "title": "Build Robot App",
+        "category": "Unitree",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "unitree.run",
+        "title": "Run Robot App",
+        "category": "Unitree",
+        "icon": "$(play)"
+      },
+      {
+        "command": "unitree.debug",
+        "title": "Debug Robot App",
+        "category": "Unitree",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "unitree.deploy",
+        "title": "Deploy to Robot…",
+        "category": "Unitree",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "unitree.diagnose",
+        "title": "Run Diagnostics",
+        "category": "Unitree",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "unitree.openLogs",
+        "title": "Show Logs",
+        "category": "Unitree",
+        "icon": "$(output)"
+      },
+      {
+        "command": "unitree.openWizard",
+        "title": "Open Robot Wizard",
+        "category": "Unitree",
+        "icon": "$(window)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "unitree.connect",
+          "when": "view == unitree.status && !unitree.connected",
+          "group": "navigation@1"
+        },
+        {
+          "command": "unitree.disconnect",
+          "when": "view == unitree.status && unitree.connected",
+          "group": "navigation@1"
+        },
+        {
+          "command": "unitree.refreshStatus",
+          "when": "view == unitree.status",
+          "group": "navigation@2"
+        },
+        {
+          "command": "unitree.openLogs",
+          "when": "view == unitree.status",
+          "group": "navigation@3"
+        },
+        {
+          "command": "unitree.newProject",
+          "when": "view == unitree.templates",
+          "group": "navigation@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "unitree.stopSimulator",
+          "when": "unitree.simulatorRunning"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Unitree.Net",
+      "properties": {
+        "unitree.sdkRoot": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to the Unitree.Net repository. Leave empty to search upward from the open folder. Generated projects reference the SDK by relative path, so this has to be right."
+        },
+        "unitree.cliPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to a published `unitree` executable. Leave empty to run the CLI from source with `dotnet run`, which is slower but always matches the repository."
+        },
+        "unitree.model": {
+          "type": "string",
+          "default": "Go2",
+          "enum": ["Go2", "Go2W", "B2", "B2W", "G1", "H1", "H12", "R1"],
+          "description": "Robot platform."
+        },
+        "unitree.transport": {
+          "type": "string",
+          "default": "ManagedMulticast",
+          "enum": ["ManagedMulticast", "CycloneNative", "Loopback"],
+          "markdownDescription": "`ManagedMulticast` reaches the simulator but **not** robot firmware. Real hardware needs `CycloneNative` and the native shim."
+        },
+        "unitree.multicastAddress": {
+          "type": "string",
+          "default": "239.255.0.1",
+          "description": "Multicast group the robot or simulator publishes on."
+        },
+        "unitree.multicastPort": {
+          "type": "number",
+          "default": 7447,
+          "description": "Multicast port."
+        },
+        "unitree.networkInterface": {
+          "type": "string",
+          "default": "",
+          "description": "Network interface address to bind. Empty uses the default route — the single most common reason nothing connects."
+        },
+        "unitree.pollIntervalMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "maximum": 10000,
+          "description": "How often the status panel refreshes while connected."
+        },
+        "unitree.runTarget": {
+          "type": "string",
+          "default": "Simulator",
+          "enum": ["Simulator", "Robot"],
+          "markdownDescription": "Where Run sends commands. Shown permanently in the status bar, because it is the difference between a mistake costing nothing and a mistake moving a real machine."
+        },
+        "unitree.deploy.host": {
+          "type": "string",
+          "default": "192.168.123.18",
+          "description": "Robot hostname or address. 192.168.123.18 is Unitree's default on the wired link."
+        },
+        "unitree.deploy.port": {
+          "type": "number",
+          "default": 22,
+          "description": "SSH port."
+        },
+        "unitree.deploy.user": {
+          "type": "string",
+          "default": "unitree",
+          "description": "SSH user."
+        },
+        "unitree.deploy.privateKeyPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to an SSH private key. Preferred over a password — it is the only option that does not put a robot password in your settings file."
+        },
+        "unitree.deploy.remoteDirectory": {
+          "type": "string",
+          "default": "/home/unitree/apps",
+          "description": "Directory on the robot that applications are deployed into."
+        },
+        "unitree.deploy.installService": {
+          "type": "boolean",
+          "default": false,
+          "description": "Install a systemd unit so the application starts on boot."
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "unitree-dotnet",
+        "owner": "unitree",
+        "fileLocation": ["absolute"],
+        "pattern": {
+          "regexp": "^\\s*(.*?)\\((\\d+),(\\d+)\\):\\s+(error|warning)\\s+(\\w+\\d+):\\s+(.*?)\\s+\\[.*\\]$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.7.2"
+  }
+}

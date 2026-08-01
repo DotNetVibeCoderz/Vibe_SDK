@@ -1,0 +1,106 @@
+@implements IDisposable
+@inject SimulatorState State
+
+<section class="log @(_collapsed ? "log-collapsed" : null)">
+
+    <div class="panel-head">
+        <span class="label">System log</span>
+
+        <div class="filters">
+            @foreach ((string name, SimulationLogLevel? level) in Filters)
+            {
+                <button type="button"
+                        class="filter @(_filter == level ? "filter-on" : null)"
+                        @onclick="() => _filter = level">@name</button>
+            }
+        </div>
+
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-left:auto">
+            @if (State.Log.DroppedCount > 0)
+            {
+                <span class="label" title="Older entries were discarded to bound memory">
+                    @State.Log.DroppedCount dropped
+                </span>
+            }
+            <button class="filter" @onclick="Clear">Clear</button>
+            <button class="filter" @onclick="() => _collapsed = !_collapsed">@(_collapsed ? "Show" : "Hide")</button>
+        </div>
+    </div>
+
+    @if (!_collapsed)
+    {
+        <div class="log-list">
+            @{
+                IReadOnlyList<SimulationLogEntry> entries = Visible();
+            }
+
+            @if (entries.Count == 0)
+            {
+                <p class="log-empty">Nothing at this level.</p>
+            }
+            else
+            {
+                @foreach (SimulationLogEntry entry in entries)
+                {
+                    <div class="log-line log-@entry.Level.ToString().ToLowerInvariant()">
+                        <span class="log-time">@entry.Timestamp.ToString("HH:mm:ss", Ci)</span>
+                        <span class="log-src">@entry.Source</span>
+                        <span class="log-text">@entry.Message</span>
+                    </div>
+                }
+            }
+        </div>
+    }
+
+</section>
+
+@code {
+    private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
+
+    private static readonly (string Name, SimulationLogLevel? Level)[] Filters =
+    [
+        ("All", null),
+        ("Info", SimulationLogLevel.Info),
+        ("Warn", SimulationLogLevel.Warning),
+        ("Error", SimulationLogLevel.Error),
+    ];
+
+    private SimulationLogLevel? _filter;
+    private bool _collapsed;
+
+    protected override void OnInitialized() => State.Log.EntryWritten += OnEntryWritten;
+
+    private IReadOnlyList<SimulationLogEntry> Visible()
+    {
+        IReadOnlyList<SimulationLogEntry> all = State.Log.Snapshot();
+
+        if (_filter is not { } level)
+        {
+            return [.. all.Reverse()];
+        }
+
+        // Filtering by level shows that level and worse, which is what an operator means by "warnings":
+        // an error they cannot see because they narrowed to warnings would be a trap.
+        var filtered = new List<SimulationLogEntry>();
+
+        for (int i = all.Count - 1; i >= 0; i--)
+        {
+            if (all[i].Level >= level)
+            {
+                filtered.Add(all[i]);
+            }
+        }
+
+        return filtered;
+    }
+
+    private void Clear()
+    {
+        State.Log.Clear();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnEntryWritten(object? sender, SimulationLogEntry entry) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Log.EntryWritten -= OnEntryWritten;
+}

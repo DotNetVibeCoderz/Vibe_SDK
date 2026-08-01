@@ -1,0 +1,212 @@
+@inject WizardState State
+@inject NativeDialogs Dialogs
+
+<div class="scrim" @onclick="Cancel">
+    <div class="modal" @onclick:stopPropagation="true">
+
+        <div class="modal-head">
+            <span class="modal-title">New project</span>
+            <button class="btn btn-ghost btn-sm" @onclick="Cancel">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="form-grid" style="margin-bottom:1.1rem">
+                <div class="form-row">
+                    <div>
+                        <label class="label" for="project-name">Project name</label>
+                        <input id="project-name" class="field field-mono" @bind="_name" @bind:event="oninput"
+                               placeholder="PatrolBot" />
+                    </div>
+                    <div>
+                        <label class="label" for="project-where">Created in</label>
+                        <div style="display:flex;gap:0.35rem">
+                            <input id="project-where" class="field field-mono" @bind="_location" />
+                            <button class="btn btn-sm" @onclick="Browse">Browse…</button>
+                        </div>
+                    </div>
+                </div>
+
+                @if (_error is { Length: > 0 })
+                {
+                    <p class="form-note" style="color:var(--critical)">@_error</p>
+                }
+                else if (_name.Length > 0)
+                {
+                    <p class="form-note">Will be created at <code>@Path.Combine(_location, _name)</code></p>
+                }
+            </div>
+
+            <div class="kinds">
+                <button class="kind @(_blank ? "kind-on" : null)" @onclick="() => _blank = true">Blank</button>
+                <button class="kind @(_blank ? null : "kind-on")" @onclick="() => _blank = false">From template</button>
+            </div>
+
+            @if (_blank)
+            {
+                <div class="templates">
+                    @foreach (ProjectKind kind in Kinds)
+                    {
+                        <button type="button" class="template @(_kind == kind ? "template-on" : null)"
+                                @onclick="() => _kind = kind">
+                            <div class="template-top">
+                                <span class="template-name">@kind</span>
+                                <span class="template-kind">@kind.ToString().ToUpperInvariant()</span>
+                            </div>
+                            <span class="template-summary">@Describe(kind)</span>
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.7rem">
+                    <input class="field" style="max-width:280px" placeholder="Search templates…"
+                           @bind="_search" @bind:event="oninput" />
+
+                    <div class="kinds" style="margin:0">
+                        <button class="kind @(_filter is null ? "kind-on" : null)" @onclick="() => _filter = null">All</button>
+                        @foreach (ProjectKind kind in Kinds)
+                        {
+                            <button class="kind @(_filter == kind ? "kind-on" : null)" @onclick="() => _filter = kind">@kind</button>
+                        }
+                    </div>
+                </div>
+
+                <div class="templates">
+                    @foreach (ProjectTemplate template in Filtered())
+                    {
+                        <button type="button" class="template @(_template?.Id == template.Id ? "template-on" : null)"
+                                @onclick="() => Select(template)">
+                            <div class="template-top">
+                                <span class="template-name">@template.Name</span>
+                                <span class="template-kind">@template.Kind</span>
+                            </div>
+                            <span class="template-summary">@template.Summary</span>
+                            <span class="template-tags">
+                                @foreach (string tag in template.Tags)
+                                {
+                                    <span class="template-tag">@tag</span>
+                                }
+                            </span>
+                        </button>
+                    }
+                </div>
+
+                @if (Filtered().Count == 0)
+                {
+                    <p class="form-note">Nothing matches “@_search”.</p>
+                }
+            }
+        </div>
+
+        <div class="modal-foot">
+            <p class="form-note" style="margin:0">
+                Every template runs against the simulator without a robot.
+            </p>
+            <span style="margin-left:auto"></span>
+            <button class="btn" @onclick="Cancel">Cancel</button>
+            <button class="btn btn-primary" disabled="@(!CanCreate)" @onclick="CreateAsync">Create project</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private static readonly ProjectKind[] Kinds =
+        [ProjectKind.Console, ProjectKind.Desktop, ProjectKind.Web, ProjectKind.Embedded];
+
+    private string _name = string.Empty;
+    private string _location = string.Empty;
+    private string _search = string.Empty;
+    private string? _error;
+    private bool _blank;
+    private ProjectKind _kind = ProjectKind.Console;
+    private ProjectKind? _filter;
+    private ProjectTemplate? _template;
+
+    /// <summary>Raised when the dialog should close.</summary>
+    [Parameter, EditorRequired] public EventCallback OnClose { get; set; }
+
+    private bool CanCreate =>
+        _name.Trim().Length > 0 && _location.Trim().Length > 0 && (_blank || _template is not null);
+
+    protected override void OnInitialized()
+    {
+        _location = State.Settings.WorkspacePath;
+        _template = TemplateCatalog.All[0];
+    }
+
+    private IReadOnlyList<ProjectTemplate> Filtered()
+    {
+        IReadOnlyList<ProjectTemplate> templates = TemplateCatalog.Search(_search);
+
+        return _filter is { } kind
+            ? [.. templates.Where(template => template.Kind == kind)]
+            : templates;
+    }
+
+    private void Select(ProjectTemplate template)
+    {
+        _template = template;
+
+        // Naming the project after the template is right far more often than not, and it is trivial
+        // to change. An empty name field with a template selected is just a step to forget.
+        if (_name.Length == 0)
+        {
+            _name = new string([.. template.Name.Where(char.IsLetterOrDigit)]);
+        }
+    }
+
+    private void Browse()
+    {
+        if (Dialogs.PickFolder("Where should the project be created?", _location) is { } folder)
+        {
+            _location = folder;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        _error = null;
+        string name = _name.Trim();
+        string location = _location.Trim();
+
+        if (name.AsSpan().IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            _error = "A project name cannot contain path characters.";
+            return;
+        }
+
+        if (char.IsDigit(name[0]))
+        {
+            _error = "A project name cannot start with a digit — it would produce an invalid namespace.";
+            return;
+        }
+
+        string target = Path.Combine(location, name);
+
+        if (Directory.Exists(target) && Directory.EnumerateFileSystemEntries(target).Any())
+        {
+            _error = $"{target} already exists and is not empty.";
+            return;
+        }
+
+        // Remembered so the next project lands in the same place.
+        State.Settings.WorkspacePath = location;
+        State.PersistSettings();
+
+        await State.CreateProjectAsync(location, name, _blank ? null : _template, _kind);
+        await OnClose.InvokeAsync();
+    }
+
+    private static string Describe(ProjectKind kind) => kind switch
+    {
+        ProjectKind.Console => "A command-line application run from your machine, talking to the robot over the network.",
+        ProjectKind.Desktop => "A windowed operator console.",
+        ProjectKind.Web => "An ASP.NET Core application — a dashboard or an HTTP API.",
+        ProjectKind.Embedded => "Published self-contained for the robot's ARM64 module and deployed over SSH.",
+        _ => string.Empty,
+    };
+
+    private Task Cancel() => OnClose.InvokeAsync();
+}
