@@ -1,0 +1,169 @@
+{
+  "DepthAI: buka perangkat": {
+    "prefix": "dai-open",
+    "description": "Membuka perangkat OAK pertama yang tersedia.",
+    "body": [
+      "await using var device = await DepthAiDevice.OpenAsync();",
+      "Console.WriteLine($\"Terhubung ke {device.Info.Name}\");",
+      "$0"
+    ]
+  },
+
+  "DepthAI: pipeline kamera warna": {
+    "prefix": "dai-pipeline-rgb",
+    "description": "Pipeline kamera warna dengan satu stream preview.",
+    "body": [
+      "var pipeline = Pipeline.CreateBuilder()",
+      "    .AddColorCamera(\"rgb\", camera => camera.WithPreview(${1:640}, ${2:480}))",
+      "    .StreamOut(\"rgb.preview\", \"video\")",
+      "    .Build(device.Capabilities);",
+      "$0"
+    ]
+  },
+
+  "DepthAI: pipeline stereo depth": {
+    "prefix": "dai-pipeline-depth",
+    "description": "Stereo depth yang diselaraskan ke kamera warna.",
+    "body": [
+      "var pipeline = Pipeline.CreateBuilder()",
+      "    .AddColorCamera(\"rgb\", camera => camera.WithPreview(640, 400))",
+      "    .AddStereoDepth(\"stereo\", depth =>",
+      "    {",
+      "        depth.Preset = DepthPreset.${1|HighDensity,HighAccuracy,Default,FastAccuracy|};",
+      "        depth.AlignTo = CameraSocket.Rgb;",
+      "    })",
+      "    .StreamOut(\"rgb.preview\", \"video\")",
+      "    .StreamOut(\"stereo.depth\", \"depth\")",
+      "    .Build(device.Capabilities);",
+      "$0"
+    ]
+  },
+
+  "DepthAI: pipeline deteksi objek": {
+    "prefix": "dai-pipeline-detect",
+    "description": "Detection network pada preview kamera warna.",
+    "body": [
+      "var model = await NeuralModel.LoadFromFileAsync(\"${1:model.blob}\");",
+      "",
+      "var pipeline = Pipeline.CreateBuilder()",
+      "    .AddColorCamera(\"rgb\", camera => camera.WithPreview(640, 480))",
+      "    .AddObjectDetection(model, \"rgb.preview\", \"detector\")",
+      "    .StreamOut(\"rgb.preview\", \"video\")",
+      "    .StreamOut(\"detector.detections\", \"detections\")",
+      "    .Build(device.Capabilities);",
+      "$0"
+    ]
+  },
+
+  "DepthAI: pipeline deteksi spasial": {
+    "prefix": "dai-pipeline-spatial",
+    "description": "Deteksi objek dengan koordinat 3D per objek.",
+    "body": [
+      "var pipeline = Pipeline.CreateBuilder()",
+      "    .AddColorCamera(\"rgb\", camera => camera.WithPreview(640, 400))",
+      "    .AddSpatialObjectDetection(model, \"rgb.preview\", \"detector\")",
+      "    .StreamOut(\"detector.detections\", \"detections\")",
+      "    .StreamOut(\"detector_stereo.depth\", \"depth\")",
+      "    .Build(device.Capabilities);",
+      "$0"
+    ]
+  },
+
+  "DepthAI: langgan stream gambar": {
+    "prefix": "dai-sub-image",
+    "description": "Berlangganan stream gambar.",
+    "body": [
+      "using var ${1:subscription} = device.GetStream<ImageFrame>(\"${2:video}\").Subscribe(frame =>",
+      "{",
+      "    $0",
+      "});"
+    ]
+  },
+
+  "DepthAI: langgan stream deteksi": {
+    "prefix": "dai-sub-detect",
+    "description": "Berlangganan hasil deteksi.",
+    "body": [
+      "using var ${1:subscription} = device.GetStream<DetectionFrame>(\"${2:detections}\").Subscribe(frame =>",
+      "{",
+      "    foreach (var detection in frame.Detections)",
+      "    {",
+      "        $0",
+      "    }",
+      "});"
+    ]
+  },
+
+  "DepthAI: langgan stream kedalaman": {
+    "prefix": "dai-sub-depth",
+    "description": "Berlangganan peta kedalaman dan membaca jarak.",
+    "body": [
+      "using var ${1:subscription} = device.GetStream<DepthFrame>(\"${2:depth}\").Subscribe(frame =>",
+      "{",
+      "    // GetDistanceMeters mengembalikan null untuk piksel tanpa pengukuran.",
+      "    var distance = frame.GetDistanceMeters(frame.Width / 2, frame.Height / 2);",
+      "    $0",
+      "});"
+    ]
+  },
+
+  "DepthAI: simpan frame untuk dipakai nanti": {
+    "prefix": "dai-clone",
+    "description": "Menyalin frame supaya bisa hidup lebih lama dari callback.",
+    "body": [
+      "// Frame milik stream dibuang begitu callback selesai, jadi disalin dulu.",
+      "var ${1:copy} = frame.Clone();",
+      "var previous = Interlocked.Exchange(ref ${2:_latest}, ${1:copy});",
+      "previous?.Dispose();",
+      "$0"
+    ]
+  },
+
+  "DepthAI: model placeholder untuk simulasi": {
+    "prefix": "dai-model-placeholder",
+    "description": "Model metadata-saja untuk dikembangkan tanpa berkas .blob.",
+    "body": [
+      "var model = NeuralModel.CreatePlaceholder(",
+      "    ModelFamily.${1|MobileNetSsd,Yolo,Classification,Segmentation|},",
+      "    labels: [${2:\"person\", \"bottle\", \"chair\"}],",
+      "    inputWidth: ${3:300},",
+      "    inputHeight: ${4:300});",
+      "$0"
+    ]
+  },
+
+  "DepthAI: await foreach frame": {
+    "prefix": "dai-await-foreach",
+    "description": "Mengonsumsi stream sebagai IAsyncEnumerable.",
+    "body": [
+      "await foreach (var frame in device.GetStream<${1:ImageFrame}>(\"${2:video}\").ToAsyncEnumerable(cancellationToken: ${3:token}))",
+      "{",
+      "    $0",
+      "}"
+    ]
+  },
+
+  "DepthAI: pantau hotplug perangkat": {
+    "prefix": "dai-watch",
+    "description": "Memantau perangkat dicolok dan dicabut.",
+    "body": [
+      "await using var watcher = new DeviceWatcher();",
+      "watcher.DeviceConnected += (_, e) => Console.WriteLine($\"terhubung: {e.Device}\");",
+      "watcher.DeviceDisconnected += (_, e) => Console.WriteLine($\"terputus: {e.Device}\");",
+      "watcher.Start();",
+      "$0"
+    ]
+  },
+
+  "DepthAI: gambar overlay deteksi": {
+    "prefix": "dai-overlay",
+    "description": "Menggambar kotak deteksi di atas frame.",
+    "body": [
+      "var pixels = PixelConverter.ToBgr888(frame);",
+      "FrameOverlay.DrawDetections(pixels, frame.Width, frame.Height, ${1:detections});",
+      "",
+      "using var annotated = ImageFrame.Wrap(pixels, frame.Width, frame.Height, PixelFormat.Bgr888);",
+      "$0"
+    ]
+  }
+}

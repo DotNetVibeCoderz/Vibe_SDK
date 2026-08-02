@@ -1,0 +1,16 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+artifacts/
+node_modules/
+*.vsix
+.DS_Store
+appsettings.Local.json
+app.local.config
+secrets.json
+
+# app.config wizard memuat kunci API pengguna; yang di-commit adalah contohnya.
+src/DepthAI.Net.Wizard/app.config

@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DepthAI.Wizard.App.Views.NewProjectDialog"
+        Width="920" Height="640"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SurfaceAbyss}"
+        Title="Proyek Baru">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Kepala: pilihan Blank atau From Template. -->
+    <StackPanel Grid.Row="0" Margin="24,20,24,0" Spacing="14">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Proyek Baru" FontSize="20" FontWeight="SemiBold"
+                   Foreground="{DynamicResource InkBright}" />
+        <TextBlock Classes="caption"
+                   Text="Mulai dari nol, atau ambil template yang sudah berisi pipeline dan kode yang berjalan." />
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <ToggleButton x:Name="BlankToggle" Click="OnModeChanged" Padding="16,8"
+                      Background="{DynamicResource SurfaceMid}" CornerRadius="5">Kosong</ToggleButton>
+        <ToggleButton x:Name="TemplateToggle" Click="OnModeChanged" IsChecked="True" Padding="16,8"
+                      Background="{DynamicResource SurfaceMid}" CornerRadius="5">Dari Template</ToggleButton>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Galeri template. -->
+    <Grid Grid.Row="1" Margin="24,16,24,0" ColumnDefinitions="180,*">
+
+      <StackPanel Grid.Column="0" Spacing="2">
+        <TextBlock Classes="panel-label" Text="KATEGORI" />
+        <ListBox x:Name="CategoryList" Background="Transparent" BorderThickness="0"
+                 SelectionChanged="OnCategoryChanged">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}" FontSize="12" Padding="2,4" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </StackPanel>
+
+      <ScrollViewer Grid.Column="1" Margin="12,0,0,0">
+        <ItemsControl x:Name="TemplateList">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Width="228" Height="150" Margin="0,0,10,10" Padding="14"
+                      CornerRadius="8" Background="{Binding CardBackground}"
+                      BorderBrush="{Binding CardBorder}" BorderThickness="1"
+                      PointerPressed="OnTemplatePressed" Tag="{Binding}" Cursor="Hand">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                              Margin="0,0,0,8">
+                    <TextBlock Text="{Binding Icon}" FontSize="16" />
+                    <TextBlock Text="{Binding KindLabel}" Classes="caption" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" FontSize="13"
+                             FontWeight="SemiBold" Foreground="{DynamicResource InkBright}"
+                             TextWrapping="Wrap" Margin="0,0,0,6" />
+                  <TextBlock Text="{Binding Description}" Classes="caption" TextWrapping="Wrap"
+                             VerticalAlignment="Top" />
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- Kaki: nama, lokasi, aksi. -->
+    <Border Grid.Row="2" Margin="0,16,0,0" Padding="24,16"
+            Background="{DynamicResource SurfaceDeep}"
+            BorderBrush="{DynamicResource HairLine}" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="*,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
+          <TextBlock Classes="caption" Text="Nama proyek" />
+          <TextBox x:Name="NameBox" Text="VisiSaya" TextChanged="OnNameChanged" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+          <TextBlock Classes="caption" Text="Lokasi" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" x:Name="LocationBox" />
+            <Button Grid.Column="1" Classes="tool" Click="OnBrowse" Margin="4,0,0,0">…</Button>
+          </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                    VerticalAlignment="Bottom">
+          <Button Classes="ghost" Click="OnCancel">Batal</Button>
+          <Button Classes="primary" x:Name="CreateButton" Click="OnCreate">Buat Proyek</Button>
+        </StackPanel>
+
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="3" x:Name="FooterText" Classes="caption"
+                   Margin="0,10,0,0" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+  </Grid>
+</Window>

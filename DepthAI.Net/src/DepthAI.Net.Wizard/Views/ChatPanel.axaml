@@ -1,0 +1,134 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="DepthAI.Wizard.App.Views.ChatPanel"
+             Background="{DynamicResource SurfaceDeep}">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Kepala sesi -->
+    <Border Grid.Row="0" Padding="14,12" BorderBrush="{DynamicResource HairLine}"
+            BorderThickness="0,0,0,1">
+      <StackPanel Spacing="10">
+
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="3">
+            <TextBlock Text="JACK THE CODE BENDER" FontSize="11" FontWeight="SemiBold"
+                       LetterSpacing="1.6" Foreground="{DynamicResource AccentNear}" />
+            <TextBlock x:Name="ProviderText" Classes="caption" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="tool" Click="OnHide" ToolTip.Tip="Sembunyikan panel"
+                  VerticalAlignment="Top">✕</Button>
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+          <ComboBox Grid.Column="0" x:Name="SessionBox" HorizontalAlignment="Stretch"
+                    SelectionChanged="OnSessionChanged">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Spacing="1" Margin="0,2">
+                  <TextBlock Text="{Binding Title}" FontSize="12"
+                             Foreground="{DynamicResource InkBright}" />
+                  <TextBlock Text="{Binding Preview}" FontSize="10"
+                             Foreground="{DynamicResource InkFaint}"
+                             TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Grid.Column="1" Classes="tool" Click="OnNewSession" ToolTip.Tip="Sesi baru">+</Button>
+          <Button Grid.Column="2" Classes="tool" Click="OnResetSession"
+                  ToolTip.Tip="Kosongkan sesi ini">⟳</Button>
+          <Button Grid.Column="3" Classes="tool" Click="OnDeleteSession"
+                  ToolTip.Tip="Hapus sesi">🗑</Button>
+        </Grid>
+
+      </StackPanel>
+    </Border>
+
+    <!-- Alur pesan -->
+    <ScrollViewer Grid.Row="1" x:Name="ThreadScroller" Padding="14,12">
+      <StackPanel Spacing="14">
+
+        <!-- Keadaan kosong: galeri prompt, bukan sekadar teks "belum ada pesan". -->
+        <StackPanel x:Name="EmptyState" Spacing="14">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Mau bangun apa hari ini?" FontSize="15" FontWeight="SemiBold"
+                       Foreground="{DynamicResource InkBright}" TextWrapping="Wrap" />
+            <TextBlock Classes="caption" TextWrapping="Wrap"
+                       Text="Jack bisa membaca proyek Anda, menulis berkas, membuat pipeline, dan memindai kamera yang terhubung." />
+          </StackPanel>
+
+          <ItemsControl x:Name="PromptList">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="tool" Click="OnPromptChosen" Tag="{Binding}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Margin="0,0,0,6" Padding="12,10"
+                        Background="{DynamicResource SurfaceMid}">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{Binding Icon}" FontSize="14" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Title}" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource InkBright}" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <Button Classes="tool" Click="OnShufflePrompts" HorizontalAlignment="Left"
+                  FontSize="11">Contoh lain ↻</Button>
+        </StackPanel>
+
+        <ContentControl x:Name="MessageList" />
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Kotak input -->
+    <Border Grid.Row="2" Padding="14,12" BorderBrush="{DynamicResource HairLine}"
+            BorderThickness="0,1,0,0">
+      <StackPanel Spacing="8">
+
+        <ItemsControl x:Name="AttachmentList">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="{DynamicResource SurfaceNear}" CornerRadius="4"
+                      Padding="8,4" Margin="0,0,6,6">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="{Binding Icon}" FontSize="11" />
+                  <TextBlock Text="{Binding FileName}" FontSize="11"
+                             Foreground="{DynamicResource InkBright}" />
+                  <TextBlock Text="{Binding DisplaySize}" FontSize="10"
+                             Foreground="{DynamicResource InkFaint}" VerticalAlignment="Center" />
+                  <Button Classes="tool" Padding="2,0" FontSize="10" Content="✕"
+                          Click="OnRemoveAttachment" Tag="{Binding}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBox x:Name="InputBox" AcceptsReturn="True" MinHeight="72" MaxHeight="180"
+                 TextWrapping="Wrap" KeyDown="OnInputKeyDown"
+                 PlaceholderText="Minta Jack membangun sesuatu…  (Enter kirim, Shift+Enter baris baru)" />
+
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+          <Button Grid.Column="0" Classes="tool" Click="OnAttachImage"
+                  ToolTip.Tip="Lampirkan gambar">🖼</Button>
+          <Button Grid.Column="1" Classes="tool" Click="OnAttachDocument"
+                  ToolTip.Tip="Lampirkan dokumen">📎</Button>
+          <TextBlock Grid.Column="2" x:Name="StatusText" Classes="caption"
+                     VerticalAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis" />
+          <Button Grid.Column="3" x:Name="SendButton" Classes="primary" Click="OnSend">Kirim</Button>
+        </Grid>
+
+      </StackPanel>
+    </Border>
+
+  </Grid>
+</UserControl>

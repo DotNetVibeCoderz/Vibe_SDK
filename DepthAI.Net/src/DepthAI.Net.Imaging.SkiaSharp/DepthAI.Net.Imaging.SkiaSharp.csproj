@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DepthAI.Imaging</RootNamespace>
+    <AssemblyName>DepthAI.Net.Imaging.SkiaSharp</AssemblyName>
+    <PackageId>DepthAI.Net.Imaging.SkiaSharp</PackageId>
+    <Description>Adapter SkiaSharp untuk DepthAI.Net: konversi frame ke SKBitmap dan SKImage, jalur tercepat untuk menampilkan di Avalonia dan MAUI.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="4.151.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+  </ItemGroup>
+
+</Project>

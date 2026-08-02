@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DepthAiDesktopApp.MainWindow"
+        Width="1100" Height="720"
+        Background="#0E1417"
+        Title="Penampil Kedalaman">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+
+    <StackPanel Grid.Row="0" Spacing="2" Margin="0,0,0,12">
+      <TextBlock Text="Penampil Kedalaman" Foreground="#E8F1F2" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock x:Name="Subtitle" Text="Menghubungkan…" Foreground="#8CA3AD" FontSize="12" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,*">
+      <Border Background="#141C21" CornerRadius="8" ClipToBounds="True" Margin="0,0,6,0">
+        <Image x:Name="Preview" Stretch="Uniform" />
+      </Border>
+      <Border Grid.Column="1" Background="#141C21" CornerRadius="8" ClipToBounds="True" Margin="6,0,0,0">
+        <Image x:Name="DepthView" Stretch="Uniform"
+               PointerMoved="OnDepthPointerMoved" />
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Margin="0,12,0,0" Padding="12,8"
+            Background="#141C21" CornerRadius="6">
+      <TextBlock x:Name="Status" Text="Siap" Foreground="#8CA3AD" FontSize="12" />
+    </Border>
+
+  </Grid>
+</Window>

@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DepthAI.Wizard.App.Views.DeployDialog"
+        Width="520" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="{DynamicResource SurfaceDeep}"
+        Title="Deploy">
+  <StackPanel Margin="24" Spacing="16">
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Deploy" FontSize="17" FontWeight="SemiBold"
+                 Foreground="{DynamicResource InkBright}" />
+      <TextBlock Classes="caption"
+                 Text="Mem-publish proyek dalam konfigurasi Release ke folder yang bisa disalin ke mesin lain." />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Classes="caption" Text="Folder keluaran" />
+      <TextBox x:Name="OutputBox" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Classes="caption" Text="Target runtime" />
+      <ComboBox x:Name="RidBox" HorizontalAlignment="Stretch" />
+    </StackPanel>
+
+    <CheckBox x:Name="SelfContainedBox" FontSize="12">
+      <StackPanel Spacing="2">
+        <TextBlock Text="Sertakan runtime .NET" Foreground="{DynamicResource InkBright}" FontSize="12" />
+        <TextBlock Classes="caption"
+                   Text="Hasilnya jauh lebih besar, tapi mesin tujuan tidak perlu memasang .NET." />
+      </StackPanel>
+    </CheckBox>
+
+    <TextBlock Classes="caption" TextWrapping="Wrap"
+               Text="Catatan: aplikasi hasil deploy tetap membutuhkan pustaka native depthai-c pada mesin tujuan untuk berbicara dengan hardware. Tanpa itu, aplikasi berjalan dalam mode simulasi." />
+
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Classes="ghost" Click="OnCancel">Batal</Button>
+      <Button Classes="primary" Click="OnDeploy">Deploy</Button>
+    </StackPanel>
+
+  </StackPanel>
+</Window>

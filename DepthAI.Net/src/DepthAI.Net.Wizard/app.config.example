@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Konfigurasi Jack The Code Bender.
+
+  Kunci API sebaiknya diisi lewat variabel lingkungan, bukan berkas ini:
+    OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, TAVILY_API_KEY
+  Variabel lingkungan selalu menang atas nilai di sini. Berkas ini ikut terbawa saat
+  proyek dibagikan atau di-commit; variabel lingkungan tidak.
+-->
+<configuration>
+  <appSettings>
+
+    <!-- OpenAI | Anthropic | Gemini | Ollama -->
+    <add key="Ai:Provider" value="OpenAI" />
+    <add key="Ai:Model" value="gpt-4o" />
+
+    <!-- Endpoint kustom. Untuk Ollama, bawaannya http://localhost:11434/v1 -->
+    <!-- <add key="Ai:Endpoint" value="http://localhost:11434/v1" /> -->
+
+    <!-- Isi hanya bila tidak memakai variabel lingkungan. -->
+    <!-- <add key="Ai:ApiKey" value="" /> --> 
+    <!-- <add key="Tools:TavilyApiKey" value="" /> --> 
+
+    <add key="Ai:Temperature" value="0.3" />
+    <add key="Ai:MaxTokens" value="4096" />
+    <add key="Ai:HistoryWindow" value="20" />
+    <add key="Ai:EnableFunctionCalling" value="true" />
+
+    <add key="Ai:SystemPrompt" value="Kamu adalah Jack The Code Bender, asisten koding di dalam Computer Vision App Wizard milik DepthAI.Net — SDK .NET untuk kamera OAK dari Luxonis. Tugasmu membantu developer membangun aplikasi computer vision dengan C# dan .NET 10. Tulis kode C# modern, pakai API DepthAI.Net yang sebenarnya, dan panggil fungsi describe_sdk_api kalau butuh memastikan nama tipe. Jawab dalam bahasa yang dipakai pengguna." />
+
+  </appSettings>
+</configuration>

@@ -1,0 +1,64 @@
+@page "/"
+@rendermode InteractiveServer
+@inject VisionService Vision
+@implements IDisposable
+
+<PageTitle>DepthAI.Sample.BlazorLive</PageTitle>
+
+<header>
+    <h1>DepthAI.Sample.BlazorLive</h1>
+    <p class="device">
+        @Vision.DeviceName
+        @if (Vision.IsSimulated)
+        {
+            <span class="badge">simulasi</span>
+        }
+    </p>
+</header>
+
+<main>
+    <div class="viewer">
+        @if (_frame is null)
+        {
+            <div class="placeholder">Menunggu frame pertama…</div>
+        }
+        else
+        {
+            <img src="@_frame" alt="Tampilan kamera langsung" />
+        }
+    </div>
+
+    <aside>
+        <h2>Objek terdeteksi</h2>
+        @if (Vision.LatestDetections.Count == 0)
+        {
+            <p class="empty">Belum ada objek dalam pandangan.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var detection in Vision.LatestDetections)
+                {
+                    <li>
+                        <span class="label">@detection.Label</span>
+                        <span class="score">@detection.Confidence.ToString("P0")</span>
+                    </li>
+                }
+            </ul>
+        }
+    </aside>
+</main>
+
+@code {
+    private string? _frame;
+
+    protected override void OnInitialized() => Vision.FrameReady += OnFrameReady;
+
+    private async void OnFrameReady()
+    {
+        _frame = await Vision.GetFrameDataUriAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => Vision.FrameReady -= OnFrameReady;
+}

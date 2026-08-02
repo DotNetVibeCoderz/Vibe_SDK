@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DepthAI.Sample.VisionApi</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\DepthAI.Net.Imaging.ImageSharp\DepthAI.Net.Imaging.ImageSharp.csproj" />
+  </ItemGroup>
+
+</Project>

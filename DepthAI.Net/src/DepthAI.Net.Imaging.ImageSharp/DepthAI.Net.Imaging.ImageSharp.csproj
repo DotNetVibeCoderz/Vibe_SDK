@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DepthAI.Imaging</RootNamespace>
+    <AssemblyName>DepthAI.Net.Imaging.ImageSharp</AssemblyName>
+    <PackageId>DepthAI.Net.Imaging.ImageSharp</PackageId>
+    <Description>Adapter ImageSharp untuk DepthAI.Net: konversi frame ke Image&lt;Rgb24&gt;, encoding PNG/JPEG, dan visualisasi peta kedalaman.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,149 @@
+<!--
+  Gaya kontrol Depth Field.
+
+  Nada instrumen ukur: label panel huruf kapital dengan tracking lebar, angka
+  tabular, radius kecil, dan aksen dipakai hemat. Kebolehan visualnya dihabiskan
+  di satu tempat saja — depth ribbon — sisanya dijaga tenang.
+ -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Label panel: penanda alat ukur, bukan judul. -->
+  <Style Selector="TextBlock.panel-label">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource InkFaint}" />
+    <Setter Property="LetterSpacing" Value="1.4" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+  </Style>
+
+  <!-- Angka status memakai figur tabular supaya tidak bergeser saat berubah. -->
+  <Style Selector="TextBlock.metric">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+  </Style>
+
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource SurfaceDeep}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairLine}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+
+  <!-- Tombol dasar: tenang, tanpa isian, sampai di-hover. -->
+  <Style Selector="Button.tool">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="Button.tool:disabled /template/ ContentPresenter">
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource InkFaint}" />
+  </Style>
+
+  <!-- Aksi utama memakai ujung "dekat" peta warna: hangat berarti langsung. -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource AccentNear}" />
+    <!-- Tinta di atas aksen dibalik antar tema: amber terang butuh teks gelap, amber gelap butuh teks terang. -->
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentNear}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="Button.primary /template/ ContentPresenter">
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource OnAccentNear}" />
+  </Style>
+
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentNear}" />
+    <Setter Property="Opacity" Value="0.85" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource OnAccentNear}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairLine}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentFar}" />
+  </Style>
+
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairLine}" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="MinHeight" Value="30" />
+  </Style>
+
+  <!-- Fokus keyboard harus selalu terlihat, termasuk pada tombol tanpa isian. -->
+  <Style Selector=":is(Button):focus-visible /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="MenuItem">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="TabItem">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+  </Style>
+
+  <Style Selector="TabItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+</Styles>

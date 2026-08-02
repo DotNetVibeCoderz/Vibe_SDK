@@ -1,0 +1,148 @@
+{
+  "name": "vscode-depthai-dotnet",
+  "displayName": "DepthAI.Net",
+  "description": "Snippet pipeline builder, validasi pipeline config JSON, dan integrasi perangkat OAK untuk DepthAI.Net.",
+  "version": "0.1.0",
+  "publisher": "gravicode-studios",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Snippets",
+    "Programming Languages",
+    "Debuggers"
+  ],
+  "keywords": [
+    "depthai",
+    "oak",
+    "luxonis",
+    "computer vision",
+    "dotnet"
+  ],
+  "activationEvents": [
+    "onLanguage:csharp",
+    "workspaceContains:**/*.pipeline.json"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "snippets": [
+      {
+        "language": "csharp",
+        "path": "./snippets/depthai.json"
+      }
+    ],
+    "languages": [
+      {
+        "id": "depthai-pipeline",
+        "aliases": [ "DepthAI Pipeline" ],
+        "extensions": [ ".pipeline.json" ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "depthai-pipeline",
+        "scopeName": "source.json.depthai",
+        "path": "./syntaxes/depthai-pipeline.tmLanguage.json"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "*.pipeline.json",
+        "url": "./schemas/pipeline.schema.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "depthai.listDevices",
+        "title": "DepthAI: Daftar perangkat OAK",
+        "category": "DepthAI"
+      },
+      {
+        "command": "depthai.validatePipeline",
+        "title": "DepthAI: Validasi pipeline ini",
+        "category": "DepthAI"
+      },
+      {
+        "command": "depthai.deployPipeline",
+        "title": "DepthAI: Jalankan pipeline ini di perangkat",
+        "category": "DepthAI"
+      },
+      {
+        "command": "depthai.newPipeline",
+        "title": "DepthAI: Buat pipeline dari preset",
+        "category": "DepthAI"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "depthai.validatePipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.json$/",
+          "group": "depthai"
+        },
+        {
+          "command": "depthai.deployPipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.json$/",
+          "group": "depthai"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DepthAI.Net",
+      "properties": {
+        "depthai.cliPath": {
+          "type": "string",
+          "default": "depthai-dotnet-cli",
+          "description": "Perintah CLI DepthAI. Ubah bila tool dipasang di lokasi lain atau dijalankan lewat 'dotnet run'."
+        },
+        "depthai.simulate": {
+          "type": "boolean",
+          "default": false,
+          "description": "Selalu pakai perangkat simulasi, walaupun ada hardware terpasang."
+        }
+      }
+    },
+    "debuggers": [
+      {
+        "type": "coreclr",
+        "label": ".NET Core (DepthAI)",
+        "configurationSnippets": [
+          {
+            "label": "DepthAI: Debug aplikasi vision",
+            "description": "Menjalankan aplikasi DepthAI.Net dengan logging perangkat aktif.",
+            "body": {
+              "name": "Debug aplikasi DepthAI",
+              "type": "coreclr",
+              "request": "launch",
+              "preLaunchTask": "build",
+              "program": "^\"\\${workspaceFolder}/bin/Debug/net10.0/\\${workspaceFolderBasename}.dll\"",
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "console": "integratedTerminal",
+              "env": {
+                "DEPTHAI_LEVEL": "info"
+              }
+            }
+          },
+          {
+            "label": "DepthAI: Debug dalam mode simulasi",
+            "description": "Menjalankan aplikasi dengan backend simulasi, tanpa perlu kamera OAK.",
+            "body": {
+              "name": "Debug DepthAI (simulasi)",
+              "type": "coreclr",
+              "request": "launch",
+              "preLaunchTask": "build",
+              "program": "^\"\\${workspaceFolder}/bin/Debug/net10.0/\\${workspaceFolderBasename}.dll\"",
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "console": "integratedTerminal",
+              "env": {
+                "DEPTHAI_BACKEND": "simulation"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

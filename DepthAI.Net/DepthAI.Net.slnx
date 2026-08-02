@@ -1,0 +1,31 @@
+<Solution>
+  <Folder Name="/samples/" />
+  <Folder Name="/samples/avalonia/">
+    <Project Path="samples/avalonia/DepthAI.Sample.DepthViewer/DepthAI.Sample.DepthViewer.csproj" />
+    <Project Path="samples/avalonia/DepthAI.Sample.DetectionDashboard/DepthAI.Sample.DetectionDashboard.csproj" />
+    <Project Path="samples/avalonia/DepthAI.Sample.FaceBlur/DepthAI.Sample.FaceBlur.csproj" />
+  </Folder>
+  <Folder Name="/samples/console/">
+    <Project Path="samples/console/DepthAI.Sample.CaptureRgbd/DepthAI.Sample.CaptureRgbd.csproj" />
+    <Project Path="samples/console/DepthAI.Sample.PeopleCounter/DepthAI.Sample.PeopleCounter.csproj" />
+    <Project Path="samples/console/DepthAI.Sample.PipelineRunner/DepthAI.Sample.PipelineRunner.csproj" />
+  </Folder>
+  <Folder Name="/samples/web/">
+    <Project Path="samples/web/DepthAI.Sample.BlazorLive/DepthAI.Sample.BlazorLive.csproj" />
+    <Project Path="samples/web/DepthAI.Sample.VisionApi/DepthAI.Sample.VisionApi.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/DepthAI.Net.Cli/DepthAI.Net.Cli.csproj" />
+    <Project Path="src/DepthAI.Net.Core/DepthAI.Net.Core.csproj" />
+    <Project Path="src/DepthAI.Net.Imaging.ImageSharp/DepthAI.Net.Imaging.ImageSharp.csproj" />
+    <Project Path="src/DepthAI.Net.Imaging.SkiaSharp/DepthAI.Net.Imaging.SkiaSharp.csproj" />
+    <Project Path="src/DepthAI.Net.Imaging.SystemDrawing/DepthAI.Net.Imaging.SystemDrawing.csproj" />
+    <Project Path="src/DepthAI.Net.Templates/DepthAI.Net.Templates.csproj" />
+    <Project Path="src/DepthAI.Net.Wizard.Core/DepthAI.Net.Wizard.Core.csproj" />
+    <Project Path="src/DepthAI.Net.Wizard/DepthAI.Net.Wizard.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DepthAI.Net.Core.Tests/DepthAI.Net.Core.Tests.csproj" />
+    <Project Path="tests/DepthAI.Net.Wizard.Core.Tests/DepthAI.Net.Wizard.Core.Tests.csproj" />
+  </Folder>
+</Solution>

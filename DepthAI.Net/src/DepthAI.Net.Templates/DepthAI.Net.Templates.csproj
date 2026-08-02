@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>DepthAI.Net.Templates</PackageId>
+    <Title>Template proyek DepthAI.Net</Title>
+    <Description>Template `dotnet new` untuk aplikasi computer vision berbasis OAK: depthai-console, depthai-web, depthai-desktop.</Description>
+    <PackageTags>dotnet-new;templates;depthai;oak;computer-vision</PackageTags>
+
+    <PackageType>Template</PackageType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <PackageOutputPath>../../artifacts/nuget</PackageOutputPath>
+
+    <!--
+      Wajib: NuGet mengecualikan berkas dan folder berawalan titik secara bawaan,
+      yang berarti .template.config ikut terbuang dan paketnya tidak akan dikenali
+      sebagai template sama sekali.
+    -->
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+
+    <!-- Paket template hanya berisi berkas; tidak ada kode yang dikompilasi. -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**" />
+    <Compile Remove="**\*" />
+  </ItemGroup>
+
+</Project>

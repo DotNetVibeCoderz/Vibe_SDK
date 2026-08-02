@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DepthAI.Wizard</RootNamespace>
+    <AssemblyName>DepthAI.Net.Wizard.Core</AssemblyName>
+    <PackageId>DepthAI.Net.Wizard.Core</PackageId>
+    <Description>Mesin di balik Jack The Code Bender: sistem proyek, template computer vision, runner build/run, dan lapisan asisten Semantic Kernel.</Description>
+    <!-- Semantic Kernel menandai sebagian API sebagai eksperimental; kita memang memakainya. -->
+    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0070</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.78.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.78.0-alpha" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.78.0-alpha" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <!-- Verifikasi kode asisten memakai kompiler C# sungguhan, bukan heuristik. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DepthAI.Net.Wizard.Core.Tests" />
+  </ItemGroup>
+
+</Project>

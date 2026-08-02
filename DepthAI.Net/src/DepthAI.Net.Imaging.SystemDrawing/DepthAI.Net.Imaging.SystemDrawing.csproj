@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DepthAI.Imaging</RootNamespace>
+    <AssemblyName>DepthAI.Net.Imaging.SystemDrawing</AssemblyName>
+    <PackageId>DepthAI.Net.Imaging.SystemDrawing</PackageId>
+    <Description>Adapter System.Drawing untuk DepthAI.Net (khusus Windows): konversi frame ke Bitmap untuk WinForms dan WPF.</Description>
+    <!-- System.Drawing.Common hanya didukung di Windows sejak .NET 7. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+    <UseWindowsForms>false</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DepthAI.Wizard.App.Views.AboutDialog"
+        Width="520" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="{DynamicResource SurfaceAbyss}"
+        Title="Tentang">
+  <StackPanel Margin="0">
+
+    <!-- Depth ribbon dipakai penuh sebagai kepala dialog. -->
+    <Border Height="4" Background="{StaticResource DepthRibbon}" />
+
+    <StackPanel Margin="28,24" Spacing="18">
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="JACK THE CODE BENDER" FontSize="12" FontWeight="SemiBold"
+                   LetterSpacing="2.4" Foreground="{DynamicResource AccentNear}" />
+        <TextBlock Text="Computer Vision App Wizard" FontSize="22" FontWeight="SemiBold"
+                   Foreground="{DynamicResource InkBright}" />
+        <TextBlock Classes="caption"
+                   Text="Bangun aplikasi computer vision untuk kamera OAK dengan .NET — dibantu asisten yang paham SDK-nya." />
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Classes="caption" Text="Versi wizard" />
+            <TextBlock Grid.Column="1" x:Name="WizardVersion" Classes="metric" />
+          </Grid>
+          <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Classes="caption" Text="Versi SDK" />
+            <TextBlock Grid.Column="1" x:Name="SdkVersion" Classes="metric" />
+          </Grid>
+          <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Classes="caption" Text="Runtime native" />
+            <TextBlock Grid.Column="1" x:Name="NativeStatus" Classes="metric" TextWrapping="Wrap" />
+          </Grid>
+          <Grid ColumnDefinitions="140,*">
+            <TextBlock Grid.Column="0" Classes="caption" Text="Runtime .NET" />
+            <TextBlock Grid.Column="1" x:Name="DotnetVersion" Classes="metric" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <StackPanel Spacing="6">
+        <TextBlock Text="Dibuat oleh Gravicode Studios" FontSize="13" FontWeight="SemiBold"
+                   Foreground="{DynamicResource InkBright}" />
+        <TextBlock Classes="caption" Text="Dipimpin oleh Kang Fadhil" />
+        <TextBlock Classes="caption"
+                   Text="DepthAI.Net membungkus depthai-core dari Luxonis agar developer .NET bisa produktif membangun solusi computer vision berbasis OAK tanpa berpindah ke Python." />
+      </StackPanel>
+
+      <Button Classes="primary" HorizontalAlignment="Right" Click="OnClose">Tutup</Button>
+
+    </StackPanel>
+  </StackPanel>
+</Window>

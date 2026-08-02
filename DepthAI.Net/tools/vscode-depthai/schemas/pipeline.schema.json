@@ -1,0 +1,180 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DepthAI.Net pipeline",
+  "description": "Definisi pipeline node graph untuk kamera OAK. Skema ini memberi validasi dan pelengkapan otomatis di editor.",
+  "type": "object",
+  "required": [ "nodes" ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Versi skema pipeline.",
+      "default": "1.0"
+    },
+    "nodes": {
+      "type": "array",
+      "description": "Node yang menyusun graf.",
+      "items": { "$ref": "#/definitions/node" }
+    },
+    "links": {
+      "type": "array",
+      "description": "Sambungan berarah dari port keluaran ke port masukan.",
+      "items": { "$ref": "#/definitions/link" }
+    },
+    "streams": {
+      "type": "array",
+      "description": "Port keluaran yang dipaparkan ke host sebagai stream bernama.",
+      "items": { "$ref": "#/definitions/stream" }
+    }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "required": [ "name", "type" ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nama unik node; dipakai pada path link seperti 'rgb.preview'.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Tipe node.",
+          "enum": [
+            "ColorCamera",
+            "MonoCamera",
+            "StereoDepth",
+            "NeuralNetwork",
+            "DetectionNetwork",
+            "SpatialDetectionNetwork",
+            "ImageManip",
+            "VideoEncoder",
+            "Imu"
+          ]
+        },
+        "properties": {
+          "type": "object",
+          "description": "Konfigurasi khusus tipe node.",
+          "properties": {
+            "socket": {
+              "type": "string",
+              "enum": [ "Auto", "CamA", "CamB", "CamC", "CamD", "Rgb", "Left", "Right" ]
+            },
+            "resolution": {
+              "type": "string",
+              "description": "Resolusi sensor. Kamera warna: The1080P, The4K, The12Mp. Kamera mono: The400P, The720P, The800P."
+            },
+            "fps": { "type": "integer", "minimum": 1, "maximum": 120 },
+            "previewWidth": { "type": "integer", "minimum": 1 },
+            "previewHeight": { "type": "integer", "minimum": 1 },
+            "interleaved": { "type": "boolean" },
+            "colorOrder": { "type": "string", "enum": [ "Bgr", "Rgb" ] },
+            "keepPreviewAspectRatio": { "type": "boolean" },
+            "preset": {
+              "type": "string",
+              "enum": [ "Default", "HighDensity", "HighAccuracy", "FastAccuracy" ]
+            },
+            "leftRightCheck": { "type": "boolean" },
+            "subpixel": {
+              "type": "boolean",
+              "description": "Tidak boleh aktif bersamaan dengan extendedDisparity."
+            },
+            "extendedDisparity": { "type": "boolean" },
+            "confidenceThreshold": { "type": "number" },
+            "medianFilter": {
+              "type": "string",
+              "enum": [ "Off", "Kernel3x3", "Kernel5x5", "Kernel7x7" ]
+            },
+            "alignTo": {
+              "type": "string",
+              "description": "Menyelaraskan kedalaman ke socket ini. Wajib Rgb untuk deteksi spasial.",
+              "enum": [ "Auto", "CamA", "CamB", "CamC", "Rgb", "Left", "Right" ]
+            },
+            "outputWidth": { "type": "integer", "minimum": 0 },
+            "outputHeight": { "type": "integer", "minimum": 0 },
+            "model": {
+              "type": "string",
+              "description": "Nama model. Payload tidak disimpan di JSON; dipasang saat pipeline dimuat."
+            },
+            "inferenceThreads": { "type": "integer", "minimum": 0 },
+            "shavesPerThread": { "type": "integer", "minimum": 0 },
+            "blockingInput": { "type": "boolean" },
+            "boundingBoxScaleFactor": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+            "depthLowerThresholdMm": { "type": "integer", "minimum": 0 },
+            "depthUpperThresholdMm": { "type": "integer", "minimum": 0 },
+            "resizeWidth": { "type": "integer", "minimum": 0 },
+            "resizeHeight": { "type": "integer", "minimum": 0 },
+            "keepAspectRatio": { "type": "boolean" },
+            "rotateDegrees": { "type": "integer", "multipleOf": 90 },
+            "outputFormat": {
+              "type": "string",
+              "enum": [ "Gray8", "Bgr888", "Rgb888", "Bgra8888", "Rgba8888", "Nv12", "Jpeg" ]
+            },
+            "crop": {
+              "type": "array",
+              "description": "Crop ternormalisasi [xMin, yMin, xMax, yMax].",
+              "items": { "type": "number", "minimum": 0, "maximum": 1 },
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "profile": {
+              "type": "string",
+              "enum": [ "MjpegLossy", "MjpegLossless", "H264Main", "H265Main" ]
+            },
+            "quality": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "bitrateKbps": { "type": "integer", "minimum": 0 },
+            "keyframeFrequency": { "type": "integer", "minimum": 0 },
+            "sensors": { "type": "string" },
+            "rateHz": { "type": "integer", "minimum": 1 },
+            "batchReportThreshold": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": [ "from", "to" ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Port keluaran sumber, format 'namaNode.namaPort'.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z][A-Za-z0-9]*$"
+        },
+        "to": {
+          "type": "string",
+          "description": "Port masukan tujuan, format 'namaNode.namaPort'.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z][A-Za-z0-9]*$"
+        }
+      }
+    },
+    "stream": {
+      "type": "object",
+      "required": [ "name", "source" ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nama stream yang dipakai host pada GetStream<T>(...)."
+        },
+        "source": {
+          "type": "string",
+          "description": "Port keluaran sumber, format 'namaNode.namaPort'.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z][A-Za-z0-9]*$"
+        },
+        "maxSize": {
+          "type": "integer",
+          "description": "Kedalaman antrean host. Besar menyerap lonjakan, tapi menambah latensi.",
+          "minimum": 1,
+          "default": 4
+        },
+        "blocking": {
+          "type": "boolean",
+          "description": "True menahan perangkat saat host tertinggal; false membuang frame terlama.",
+          "default": false
+        }
+      }
+    }
+  }
+}

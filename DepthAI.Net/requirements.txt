@@ -1,0 +1,109 @@
+SDK .NET yang membungkus DepthAI API V3 dari OAK (berbasis [depthai-core C++](https://github.com/luxonis/depthai-core/)), lengkap dengan tools dan aplikasi pendukung agar developer bisa membangun solusi computer vision canggih dengan ekosistem yang nyaman di .NET.
+
+---
+
+ 🚀 SDK .NET untuk DepthAI API V3
+
+# 1. Core API Binding
+- Wrapper .NET untuk DepthAI Core C++ (interop via P/Invoke atau C++/CLI).
+- Mendukung pipeline DepthAI (node graph) untuk kamera, neural network, dan sensor.
+- API idiomatik .NET dengan async/await.
+- Strongly-typed model untuk konfigurasi device, stream, dan inference.
+
+# 2. Device Management
+- Enumerasi perangkat OAK (USB, PoE).
+- Device info (serial, firmware, capabilities).
+- Hotplug detection dengan event handler .NET.
+
+# 3. Vision Pipeline
+- Node builder untuk camera, stereo depth, neural network, image manip.
+- Fluent API untuk chaining pipeline.
+- Output stream ke `IObservable<T>` untuk reactive programming.
+
+# 4. AI Inference
+- Mendukung ONNX, blob, dan model precompiled Luxonis.
+- API untuk load model dari file atau stream.
+- Result parsing ke typed object (bounding box, classification, segmentation).
+
+# 5. Data Streaming
+- Video stream ke `System.Drawing.Bitmap`, `ImageSharp`, atau `SkiaSharp`.
+- Depth map ke array/matrix .NET.
+- Integration dengan ML.NET, TorchSharp, atau SciSharp libraries untuk post-processing.
+
+---
+
+ 🛠️ Tools Pendukung
+
+# 1. CLI Tools
+- `depthai-dotnet-cli` untuk:
+  - Device list
+  - Pipeline deploy
+  - Model upload
+  - Stream capture ke file
+
+# 2. Project Templates
+- `dotnet new depthai-console`
+- `dotnet new depthai-web` (Blazor Server/WebAssembly)
+- `dotnet new depthai-desktop` (WPF/Avalonia)
+
+# 3. VSCode Extensions
+- Snippets untuk pipeline builder.
+- Syntax highlighting untuk pipeline config JSON.
+- Debugging integration dengan DepthAI device.
+
+---
+
+ 📚 Sample Apps Gallery
+
+# 1. Avalonia UI Samples
+- Real-time camera viewer dengan depth overlay.
+- Object detection dashboard.
+- Face recognition demo.
+
+# 2. Web Samples
+- Blazor Server app untuk live inference.
+- REST API untuk expose hasil vision ke aplikasi lain.
+
+# 3. Console Samples
+- Simple pipeline runner.
+- CLI untuk capture depth + RGB ke file.
+
+---
+
+ 📄 Dokumentasi & Readme
+
+- README.md: cara install, setup device, run sample.
+- API Reference (md files): dokumentasi class, method, pipeline builder.
+- Tutorials: step-by-step untuk object detection, stereo depth, dan model custom.
+- Gallery: showcase aplikasi dengan screenshot + code snippet.
+
+---
+
+Computer Vision App Wizard
+
+pembuat aplikasi computer vision dengan bantuan LLM memanfaatkan SDK Depth AI .NET
+  - bentuknya seperti code editor
+  - Menu: New Project, Close Project, beberapa menu terkait code editor: cut/copy/paste, go to line, search, replace, line number toggle. Build, Run, Deploy, tersedia Logs Panel dan Status Bar. 
+  - Project yang dibuat bisa desktop, console, web
+  - Ketika New project ada 2 pilihan: Blank dan From Template (buatkan banyak template aplikasi computer vision dengan berbagai use case)
+  - About
+  - Bikin UI UX yang keren, modern, easy to use, dengan theme dark/light dengan bantuan skill frontend-design
+  - Tersedia Chat Bot Code Asisstant yang membantu membuatkan aplikasi dengan bantuan natural language  
+  - Namanya 'Jack The Code Bender'
+  - Bentuknya adalah Chat Panel di sebelah kanan code editor dengan tampilan yang keren, multi session (create/delete), reset session, bisa attach gambar (diupload lalu url-nya di jadikan image content) dan dokumen (di upload dan disertakan linknya ke text message).
+  - Chat Panel bisa di show/hide
+  - System Prompt (persona), temperature, model dan setting lainnya di simpan di app.config
+  - Menggunakan Semantic Kernel Library dengan dukungan model: Open AI, Anthropic, Gemini, Ollama (bisa pilih)
+  - Tambahkan beberapa common functions (kernel functions) yang diperlukan termasuk query ke tavily (search internet), scrap page url, baca file dari url, cek tanggal, Waktu, math calculation, dan beberapa function yang diperlukan lainnya
+  - Tambahkan functions untuk mengenerate code aplikasi dengan memanfaatkan Depth AI SDK .NET dan .NET Library berdasarkan instruksi user baik frontend atau backend code dengan c#
+  - Bisa render chat thread dengan mark down dengan baik (baik table, media (image, video, audio), code, dan lainnya dengan baik)
+  - Berikan contoh-contoh template prompt untuk generate aplikasi yang menarik (bikinkan yang banyak)
+
+---
+
+Notes:
+- target .NET 10
+- tambahkan informasi pada docs dan aplikasi, dibuat oleh Gravicode Studios dipimpin Kang Fadhil
+- readme dan dokumentasi dalam Bahasa Indonesia dan English
+
+👉 Dengan ekosistem ini, developer .NET bisa langsung produktif membangun solusi computer vision berbasis OAK tanpa harus berpindah ke Python.  

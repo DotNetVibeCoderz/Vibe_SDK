@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "DepthAI Pipeline",
+  "scopeName": "source.json.depthai",
+  "patterns": [
+    { "include": "#depthai-keys" },
+    { "include": "#node-types" },
+    { "include": "#port-paths" },
+    { "include": "source.json" }
+  ],
+  "repository": {
+    "depthai-keys": {
+      "comment": "Kunci tingkat atas pipeline diberi warna berbeda dari properti biasa, supaya struktur graf langsung terlihat.",
+      "match": "\"(nodes|links|streams|version|properties)\"\\s*(?=:)",
+      "captures": {
+        "1": { "name": "keyword.control.depthai" }
+      }
+    },
+    "node-types": {
+      "comment": "Nama tipe node yang dikenali SDK.",
+      "match": "\"(ColorCamera|MonoCamera|StereoDepth|NeuralNetwork|DetectionNetwork|SpatialDetectionNetwork|ImageManip|VideoEncoder|Imu)\"",
+      "name": "entity.name.type.depthai"
+    },
+    "port-paths": {
+      "comment": "Path port seperti 'rgb.preview' — node dan port diberi warna terpisah.",
+      "match": "\"([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z][A-Za-z0-9]*)\"",
+      "captures": {
+        "1": { "name": "variable.other.depthai" },
+        "2": { "name": "support.function.depthai" }
+      }
+    }
+  }
+}

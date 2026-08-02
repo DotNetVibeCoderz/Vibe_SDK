@@ -1,0 +1,95 @@
+<!--
+  Depth Field — sistem visual Jack The Code Bender.
+
+  Warna aksennya diambil dari peta warna Turbo yang sama dengan DepthColorizer di SDK:
+  ujung "dekat" (amber) untuk aksi utama, ujung "jauh" (teal, biru) untuk keadaan
+  ambien dan informasi. Jadi UI diwarnai oleh fungsi yang sama dengan yang mewarnai
+  keluaran kedalaman kamera.
+ -->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Dark">
+      <!-- Permukaan: makin "dalam" makin gelap, meniru jarak menjauh. -->
+      <SolidColorBrush x:Key="SurfaceAbyss" Color="#0E1417" />
+      <SolidColorBrush x:Key="SurfaceDeep" Color="#141C21" />
+      <SolidColorBrush x:Key="SurfaceMid" Color="#1B252B" />
+      <SolidColorBrush x:Key="SurfaceNear" Color="#24313A" />
+      <SolidColorBrush x:Key="SurfaceRaised" Color="#2C3B45" />
+
+      <!--
+        Tiga tingkat teks, semuanya diperiksa terhadap permukaan tempatnya dipakai.
+        InkFaint sempat lebih gelap dan gagal terbaca sebagai label panel, jadi
+        dinaikkan sampai kontrasnya sekitar 5:1 di atas SurfaceDeep.
+      -->
+      <SolidColorBrush x:Key="InkBright" Color="#E8F1F2" />
+      <SolidColorBrush x:Key="InkMuted" Color="#9DB2BC" />
+      <SolidColorBrush x:Key="InkFaint" Color="#7A909C" />
+
+      <SolidColorBrush x:Key="AccentNear" Color="#F2A03D" />
+      <SolidColorBrush x:Key="AccentNearSoft" Color="#3A2E1E" />
+
+      <!-- Teks di atas AccentNear; amber terang menuntut tinta gelap. -->
+      <SolidColorBrush x:Key="OnAccentNear" Color="#10191E" />
+
+      <SolidColorBrush x:Key="AccentMid" Color="#46C2A8" />
+      <SolidColorBrush x:Key="AccentFar" Color="#6FB4E8" />
+      <SolidColorBrush x:Key="SignalError" Color="#F07A8E" />
+      <SolidColorBrush x:Key="SignalWarning" Color="#E3B341" />
+
+      <SolidColorBrush x:Key="HairLine" Color="#2A3941" />
+      <SolidColorBrush x:Key="EditorBackground" Color="#111A1F" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="SurfaceAbyss" Color="#F4F7F8" />
+      <SolidColorBrush x:Key="SurfaceDeep" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="SurfaceMid" Color="#EDF2F4" />
+      <SolidColorBrush x:Key="SurfaceNear" Color="#E1E9ED" />
+      <SolidColorBrush x:Key="SurfaceRaised" Color="#D3DEE4" />
+
+      <SolidColorBrush x:Key="InkBright" Color="#10191E" />
+      <SolidColorBrush x:Key="InkMuted" Color="#51636E" />
+      <SolidColorBrush x:Key="InkFaint" Color="#6B7C87" />
+
+      <!-- Aksen digelapkan agar kontrasnya tetap lolos pada latar terang. -->
+      <SolidColorBrush x:Key="AccentNear" Color="#A85E06" />
+      <SolidColorBrush x:Key="AccentNearSoft" Color="#FBEEDC" />
+
+      <!-- Amber gelap butuh tinta terang, kebalikan dari tema gelap. -->
+      <SolidColorBrush x:Key="OnAccentNear" Color="#FFFFFF" />
+
+      <SolidColorBrush x:Key="AccentMid" Color="#0E6B59" />
+      <SolidColorBrush x:Key="AccentFar" Color="#1F5E96" />
+      <SolidColorBrush x:Key="SignalError" Color="#B02742" />
+      <SolidColorBrush x:Key="SignalWarning" Color="#875F06" />
+
+      <SolidColorBrush x:Key="HairLine" Color="#C9D6DD" />
+      <SolidColorBrush x:Key="EditorBackground" Color="#FFFFFF" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!--
+    Depth ribbon — elemen penanda aplikasi ini. Gradien Turbo dari dekat ke jauh,
+    dipakai sebagai garis tipis di status bar dan sebagai indikator progres build.
+ -->
+  <LinearGradientBrush x:Key="DepthRibbon" StartPoint="0%,0%" EndPoint="100%,0%">
+    <GradientStop Color="#30123B" Offset="0.0" />
+    <GradientStop Color="#4145AB" Offset="0.15" />
+    <GradientStop Color="#4675ED" Offset="0.3" />
+    <GradientStop Color="#39A2FC" Offset="0.42" />
+    <GradientStop Color="#1BCFD4" Offset="0.55" />
+    <GradientStop Color="#62FC6B" Offset="0.65" />
+    <GradientStop Color="#D2E935" Offset="0.78" />
+    <GradientStop Color="#FE9B2D" Offset="0.9" />
+    <GradientStop Color="#DB3A07" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <FontFamily x:Key="MonoFont">Cascadia Code,Cascadia Mono,Consolas,JetBrains Mono,Menlo,DejaVu Sans Mono,monospace</FontFamily>
+
+  <x:Double x:Key="PanelLabelSize">11</x:Double>
+
+</ResourceDictionary>

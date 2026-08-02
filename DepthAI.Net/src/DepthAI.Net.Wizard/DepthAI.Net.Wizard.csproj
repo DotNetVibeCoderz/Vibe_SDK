@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>DepthAI.Wizard.App</RootNamespace>
+    <AssemblyName>JackTheCodeBender</AssemblyName>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <NoWarn>$(NoWarn);SKEXP0001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+    <ProjectReference Include="..\DepthAI.Net.Wizard.Core\DepthAI.Net.Wizard.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    app.config memuat kunci API pengguna, jadi tidak ikut di-commit. Yang tersimpan di
+    repo adalah app.config.example; salinan kerja dibuat otomatis pada build pertama
+    supaya clone baru langsung bisa dijalankan.
+  -->
+  <Target Name="SeedUserConfig" BeforeTargets="BeforeBuild" Condition="!Exists('app.config')">
+    <Copy SourceFiles="app.config.example" DestinationFiles="app.config" />
+  </Target>
+
+  <ItemGroup>
+    <None Include="app.config" Condition="Exists('app.config')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="app.config.example">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

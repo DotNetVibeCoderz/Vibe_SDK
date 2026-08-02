@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Gravicode Studios",
+  "classifications": [ "Console", "Computer Vision", "DepthAI", "OAK" ],
+  "identity": "DepthAI.Net.Console",
+  "name": "DepthAI Console App",
+  "description": "Aplikasi konsol computer vision untuk kamera OAK. Console computer vision app for OAK cameras.",
+  "shortName": "depthai-console",
+  "sourceName": "DepthAiConsoleApp",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "Framework": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [ { "choice": "net10.0", "description": ".NET 10" } ],
+      "defaultValue": "net10.0",
+      "replaces": "net10.0"
+    },
+    "pipeline": {
+      "type": "parameter",
+      "datatype": "choice",
+      "description": "Preset pipeline yang dipakai saat start.",
+      "choices": [
+        { "choice": "rgb-preview", "description": "Preview kamera warna saja" },
+        { "choice": "stereo-depth", "description": "Stereo depth plus preview warna" },
+        { "choice": "object-detection", "description": "Deteksi objek pada preview warna" }
+      ],
+      "defaultValue": "rgb-preview",
+      "replaces": "PIPELINE_PRESET"
+    },
+    "fps": {
+      "type": "parameter",
+      "datatype": "integer",
+      "description": "Frame per detik kamera.",
+      "defaultValue": "30",
+      "replaces": "CAMERA_FPS"
+    }
+  }
+}

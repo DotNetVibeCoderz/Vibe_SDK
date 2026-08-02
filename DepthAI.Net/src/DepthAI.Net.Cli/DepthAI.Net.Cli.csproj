@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DepthAI.Cli</RootNamespace>
+    <AssemblyName>depthai</AssemblyName>
+    <PackageId>DepthAI.Net.Cli</PackageId>
+    <Description>CLI DepthAI.Net: daftar perangkat, deploy pipeline, unggah model, dan tangkap stream ke berkas.</Description>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>depthai-dotnet-cli</ToolCommandName>
+    <PackageOutputPath>../../artifacts/nuget</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+    <ProjectReference Include="..\DepthAI.Net.Imaging.ImageSharp\DepthAI.Net.Imaging.ImageSharp.csproj" />
+  </ItemGroup>
+
+</Project>

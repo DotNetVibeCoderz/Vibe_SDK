@@ -1,0 +1,282 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:edit="using:AvaloniaEdit"
+        xmlns:views="using:DepthAI.Wizard.App.Views"
+        x:Class="DepthAI.Wizard.App.Views.MainWindow"
+        Width="1280" Height="820"
+        WindowStartupLocation="CenterScreen"
+        MinWidth="860" MinHeight="560"
+        Background="{DynamicResource SurfaceAbyss}"
+        Title="Jack The Code Bender">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Menu bar -->
+    <Border Grid.Row="0" Background="{DynamicResource SurfaceDeep}"
+            BorderBrush="{DynamicResource HairLine}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto" Height="38">
+
+        <Menu Grid.Column="0" VerticalAlignment="Center" Margin="6,0">
+          <MenuItem Header="_Berkas">
+            <MenuItem Header="Proyek _Baru…" Click="OnNewProject" InputGesture="Ctrl+Shift+N" />
+            <MenuItem Header="_Buka Proyek…" Click="OnOpenProject" InputGesture="Ctrl+O" />
+            <MenuItem Header="_Simpan" Click="OnSave" InputGesture="Ctrl+S" />
+            <MenuItem Header="Simpan _Semua" Click="OnSaveAll" InputGesture="Ctrl+Shift+S" />
+            <Separator />
+            <MenuItem Header="_Tutup Proyek" Click="OnCloseProject" />
+            <Separator />
+            <MenuItem Header="_Keluar" Click="OnExit" />
+          </MenuItem>
+
+          <MenuItem Header="_Edit">
+            <MenuItem Header="_Batal" Click="OnUndo" InputGesture="Ctrl+Z" />
+            <MenuItem Header="_Ulangi" Click="OnRedo" InputGesture="Ctrl+Y" />
+            <Separator />
+            <MenuItem Header="Po_tong" Click="OnCut" InputGesture="Ctrl+X" />
+            <MenuItem Header="_Salin" Click="OnCopy" InputGesture="Ctrl+C" />
+            <MenuItem Header="_Tempel" Click="OnPaste" InputGesture="Ctrl+V" />
+            <Separator />
+            <MenuItem Header="_Cari…" Click="OnFind" InputGesture="Ctrl+F" />
+            <MenuItem Header="_Ganti…" Click="OnReplace" InputGesture="Ctrl+H" />
+            <MenuItem Header="_Ke Baris…" Click="OnGoToLine" InputGesture="Ctrl+G" />
+          </MenuItem>
+
+          <MenuItem Header="_Tampilan">
+            <MenuItem Header="_Nomor Baris" Click="OnToggleLineNumbers" InputGesture="Ctrl+L" />
+            <MenuItem Header="_Panel Chat" Click="OnToggleChat" InputGesture="Ctrl+J" />
+            <MenuItem Header="Panel _Logs" Click="OnToggleLogs" InputGesture="Ctrl+K" />
+            <Separator />
+            <MenuItem Header="Tema Gelap / Terang" Click="OnToggleTheme" />
+          </MenuItem>
+
+          <MenuItem Header="_Build">
+            <MenuItem Header="_Build" Click="OnBuild" InputGesture="F6" />
+            <MenuItem Header="_Run" Click="OnRun" InputGesture="F5" />
+            <MenuItem Header="_Stop" Click="OnStop" InputGesture="Shift+F5" />
+            <Separator />
+            <MenuItem Header="_Deploy…" Click="OnDeploy" />
+          </MenuItem>
+
+          <MenuItem Header="B_antuan">
+            <MenuItem Header="_Pengaturan Asisten…" Click="OnSettings" />
+            <Separator />
+            <MenuItem Header="_Tentang" Click="OnAbout" />
+          </MenuItem>
+        </Menu>
+
+        <!-- Judul di tengah, dengan garis depth ribbon tipis sebagai penanda merek. -->
+        <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="JACK THE CODE BENDER" FontSize="11" FontWeight="SemiBold"
+                     LetterSpacing="2.2" Foreground="{DynamicResource InkMuted}"
+                     HorizontalAlignment="Center" />
+          <Border Height="2" Width="150" CornerRadius="1" Background="{StaticResource DepthRibbon}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" Margin="6,0">
+          <Button Classes="tool" Click="OnBuild" ToolTip.Tip="Build (F6)">Build</Button>
+          <Button Classes="tool" Click="OnRun" ToolTip.Tip="Run (F5)">Run</Button>
+          <Button Classes="tool" Click="OnStop" ToolTip.Tip="Stop (Shift+F5)" x:Name="StopButton"
+                  IsEnabled="False">Stop</Button>
+          <Border Width="1" Margin="6,8" Background="{DynamicResource HairLine}" />
+          <Button Classes="tool" Click="OnToggleTheme" ToolTip.Tip="Ganti tema">◐</Button>
+          <Button Classes="tool" Click="OnToggleChat" ToolTip.Tip="Panel chat (Ctrl+J)">💬</Button>
+        </StackPanel>
+
+      </Grid>
+    </Border>
+
+    <!-- Badan -->
+    <Grid Grid.Row="1" ColumnDefinitions="240,4,*,4,Auto">
+
+      <!-- Penjelajah berkas -->
+      <Border Grid.Column="0" Background="{DynamicResource SurfaceDeep}"
+              BorderBrush="{DynamicResource HairLine}" BorderThickness="0,0,1,0">
+        <DockPanel Margin="14,12">
+          <TextBlock DockPanel.Dock="Top" Classes="panel-label" Text="PENJELAJAH" />
+
+          <StackPanel DockPanel.Dock="Top" x:Name="NoProjectPanel" Spacing="10" Margin="0,10,0,0">
+            <TextBlock Text="Belum ada proyek terbuka." Classes="caption" TextWrapping="Wrap" />
+            <Button Classes="primary" Click="OnNewProject" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center">Proyek Baru</Button>
+            <Button Classes="ghost" Click="OnOpenProject" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center">Buka Folder</Button>
+          </StackPanel>
+
+          <TextBlock DockPanel.Dock="Top" x:Name="ProjectNameText" Classes="caption"
+                     FontWeight="SemiBold" Foreground="{DynamicResource InkBright}"
+                     Margin="0,0,0,8" IsVisible="False" TextTrimming="CharacterEllipsis" />
+
+          <TreeView x:Name="FileTree" Background="Transparent" BorderThickness="0"
+                    SelectionChanged="OnFileSelected">
+            <TreeView.ItemTemplate>
+              <TreeDataTemplate ItemsSource="{Binding Children}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="{Binding Icon}" FontSize="12" />
+                  <TextBlock Text="{Binding Name}" FontSize="12"
+                             Foreground="{DynamicResource InkBright}" />
+                </StackPanel>
+              </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+          </TreeView>
+        </DockPanel>
+      </Border>
+
+      <GridSplitter Grid.Column="1" Background="Transparent" ResizeDirection="Columns" />
+
+      <!-- Editor + logs -->
+      <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*,4,Auto">
+
+        <!-- Bilah cari/ganti, tersembunyi sampai dipanggil. -->
+        <Border Grid.Row="0" x:Name="FindBar" IsVisible="False" Padding="12,8"
+                Background="{DynamicResource SurfaceMid}"
+                BorderBrush="{DynamicResource HairLine}" BorderThickness="0,0,0,1">
+          <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Column="0" Text="Cari" Classes="caption" VerticalAlignment="Center"
+                       Margin="0,0,8,0" />
+            <TextBox Grid.Column="1" x:Name="FindBox" PlaceholderText="teks yang dicari"
+                     KeyDown="OnFindBoxKeyDown" />
+            <TextBlock Grid.Column="2" x:Name="ReplaceLabel" Text="Ganti" Classes="caption"
+                       VerticalAlignment="Center" Margin="12,0,8,0" />
+            <TextBox Grid.Column="3" x:Name="ReplaceBox" PlaceholderText="teks pengganti" />
+            <Button Grid.Column="4" Classes="tool" Click="OnFindNext" Margin="8,0,0,0">Berikutnya</Button>
+            <Button Grid.Column="5" x:Name="ReplaceOneButton" Classes="tool"
+                    Click="OnReplaceOne">Ganti</Button>
+            <Button Grid.Column="6" x:Name="ReplaceAllButton" Classes="tool"
+                    Click="OnReplaceAll">Ganti Semua</Button>
+            <Button Grid.Column="7" Classes="tool" Click="OnCloseFind">✕</Button>
+          </Grid>
+        </Border>
+
+        <!-- Tab berkas terbuka. -->
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceDeep}"
+                BorderBrush="{DynamicResource HairLine}" BorderThickness="0,0,0,1">
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl x:Name="TabStrip">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Background="{Binding TabBackground}" Margin="0,0,1,0"
+                          PointerPressed="OnTabPressed" Tag="{Binding}">
+                    <StackPanel Orientation="Horizontal" Margin="14,9" Spacing="8">
+                      <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                                 Foreground="{Binding TabForeground}" />
+                      <Button Classes="tool" Padding="3,0" FontSize="11" Click="OnCloseTab"
+                              Tag="{Binding}" Content="✕" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+
+        <!-- Editor kode. -->
+        <Panel Grid.Row="2" Background="{DynamicResource EditorBackground}">
+          <edit:TextEditor x:Name="Editor"
+                           ShowLineNumbers="True"
+                           FontFamily="{DynamicResource MonoFont}"
+                           FontSize="13"
+                           Background="Transparent"
+                           Foreground="{DynamicResource InkBright}"
+                           HorizontalScrollBarVisibility="Auto"
+                           VerticalScrollBarVisibility="Auto" />
+
+          <!-- Keadaan kosong: mengundang bertindak, bukan sekadar memberi tahu. -->
+          <StackPanel x:Name="EmptyEditorState" VerticalAlignment="Center"
+                      HorizontalAlignment="Center" Spacing="14" MaxWidth="420">
+            <Border Height="3" Width="220" CornerRadius="2"
+                    Background="{StaticResource DepthRibbon}" HorizontalAlignment="Center" />
+            <TextBlock Text="Bangun aplikasi computer vision" FontSize="19" FontWeight="SemiBold"
+                       Foreground="{DynamicResource InkBright}" HorizontalAlignment="Center" />
+            <TextBlock TextWrapping="Wrap" TextAlignment="Center" Classes="caption"
+                       Text="Buat proyek dari template, atau minta Jack menuliskannya untuk Anda di panel chat." />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+              <Button Classes="primary" Click="OnNewProject">Proyek Baru</Button>
+              <Button Classes="ghost" Click="OnOpenProject">Buka Folder</Button>
+            </StackPanel>
+          </StackPanel>
+        </Panel>
+
+        <GridSplitter Grid.Row="3" Background="Transparent" ResizeDirection="Rows" />
+
+        <!-- Panel logs. -->
+        <Border Grid.Row="4" x:Name="LogsPanel" Height="200"
+                Background="{DynamicResource SurfaceDeep}"
+                BorderBrush="{DynamicResource HairLine}" BorderThickness="0,1,0,0">
+          <DockPanel Margin="14,10">
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+              <TextBlock Grid.Column="0" Classes="panel-label" Text="LOGS" Margin="0" />
+              <TextBlock Grid.Column="1" x:Name="LogSummary" Classes="metric"
+                         Margin="14,0,0,0" VerticalAlignment="Center" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Click="OnClearLogs" FontSize="11">Bersihkan</Button>
+                <Button Classes="tool" Click="OnToggleLogs" FontSize="11">▾</Button>
+              </StackPanel>
+            </Grid>
+
+            <ScrollViewer x:Name="LogScroller">
+              <ItemsControl x:Name="LogList">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,1">
+                      <TextBlock Grid.Column="0" Text="{Binding Time}" Classes="metric"
+                                 Foreground="{DynamicResource InkFaint}" Margin="0,0,10,0" />
+                      <Border Grid.Column="1" Width="3" CornerRadius="2" Margin="0,1,10,1"
+                              Background="{Binding Accent}" />
+                      <TextBlock Grid.Column="2" Text="{Binding Text}" FontSize="11"
+                                 FontFamily="{DynamicResource MonoFont}"
+                                 Foreground="{Binding Color}" TextWrapping="Wrap" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      <GridSplitter Grid.Column="3" Background="Transparent" ResizeDirection="Columns"
+                    x:Name="ChatSplitter" />
+
+      <!-- Panel chat -->
+      <views:ChatPanel Grid.Column="4" x:Name="Chat" Width="400" />
+
+    </Grid>
+
+    <!-- Status bar -->
+    <Border Grid.Row="2" Background="{DynamicResource SurfaceDeep}"
+            BorderBrush="{DynamicResource HairLine}" BorderThickness="0,1,0,0">
+      <StackPanel>
+
+        <!--
+          Depth ribbon: elemen penanda aplikasi. Diam saat siap, dan lebarnya
+          menjadi indikator progres saat build atau run berjalan.
+ -->
+        <Panel Height="3">
+          <Border Background="{DynamicResource SurfaceMid}" />
+          <Border x:Name="DepthRibbonBar" Background="{StaticResource DepthRibbon}"
+                  HorizontalAlignment="Left" Width="0" />
+        </Panel>
+
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Height="26" Margin="14,0">
+          <TextBlock Grid.Column="0" x:Name="StatusText" Classes="metric" VerticalAlignment="Center"
+                     Text="Siap" />
+          <TextBlock Grid.Column="1" x:Name="ProjectStatus" Classes="metric" VerticalAlignment="Center"
+                     Margin="16,0,0,0" />
+          <TextBlock Grid.Column="3" x:Name="DeviceStatus" Classes="metric" VerticalAlignment="Center"
+                     Margin="0,0,16,0" />
+          <TextBlock Grid.Column="4" x:Name="CaretStatus" Classes="metric" VerticalAlignment="Center"
+                     Margin="0,0,16,0" Text="Brs 1, Kol 1" />
+          <TextBlock Grid.Column="5" Classes="metric" VerticalAlignment="Center"
+                     Foreground="{DynamicResource InkFaint}" Text="Gravicode Studios" />
+        </Grid>
+
+      </StackPanel>
+    </Border>
+
+  </Grid>
+</Window>

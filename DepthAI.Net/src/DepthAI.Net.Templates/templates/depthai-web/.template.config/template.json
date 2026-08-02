@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Gravicode Studios",
+  "classifications": [
+    "Web",
+    "Computer Vision",
+    "DepthAI",
+    "OAK"
+  ],
+  "identity": "DepthAI.Net.DepthAiWebApp",
+  "name": "DepthAI Web App (Blazor Server)",
+  "description": "Aplikasi Blazor Server dengan inferensi live. Blazor Server app with live inference.",
+  "shortName": "depthai-web",
+  "sourceName": "DepthAiWebApp",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}
