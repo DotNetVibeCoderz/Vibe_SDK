@@ -41,6 +41,10 @@ code --extensionDevelopmentPath=.
 
 # First thing to run whenever a robot "won't connect". Needs no robot.
 dotnet run --project apps/Unitree.Net.Cli -- diagnose
+
+# NuGet packages land in artifacts/packages. Publishing is a tag, not a command — see
+# docs/publishing.md. Never `dotnet nuget push` by hand; the workflow validates the version first.
+dotnet pack Unitree.Net.slnx -c Release
 ```
 
 The native shim is built separately with CMake and is **not** part of `dotnet build`; see
@@ -126,6 +130,13 @@ false or absent, the code's default wins.
 API up does not work — it skips the lookup precisely when it is confident, which is when it is wrong.
 A check in the tool result does work: Jack rewrote the same file six times until the lint went quiet,
 then it compiled. Keep the table in step with the SDK; that is the whole cost of it being useful.
+
+**`src/Unitree.Net` is a metapackage — it has no code, and that is deliberate.** `IncludeBuildOutput`
+is false and NU5128 is suppressed because a package with dependencies and no `lib/` folder is exactly
+what an umbrella package is. Adding a library to `src/` does not add it to the umbrella; the reference
+list in `src/Unitree.Net/Unitree.Net.csproj` is maintained by hand, and `Unitree.Net.Ml`,
+`Unitree.Net.Simulation` and `Unitree.Net.Wizard.Core` are left out of it on purpose (see
+`docs/publishing.md`).
 
 **BlazorWebView needs an OS version in the target framework.** `net10.0-windows` builds fine and then
 dies at runtime on "Could not load Microsoft.Windows.SDK.NET" — it needs

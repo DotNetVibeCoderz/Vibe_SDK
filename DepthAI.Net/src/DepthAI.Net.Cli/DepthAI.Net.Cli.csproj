@@ -9,7 +9,6 @@
 
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>depthai-dotnet-cli</ToolCommandName>
-    <PackageOutputPath>../../artifacts/nuget</PackageOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

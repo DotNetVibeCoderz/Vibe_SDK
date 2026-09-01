@@ -6,6 +6,9 @@ lokomosi high-level, integrasi ROS 2, ML, dan LLM.
 **A .NET 10 SDK for Unitree robots** — a modern wrapper over Unitree SDK 2, with low-level control,
 high-level locomotion, ROS 2 integration, ML, and LLM support.
 
+[![CI](https://github.com/DotNetVibeCoderz/Vibe_SDK/actions/workflows/ci.yml/badge.svg)](https://github.com/DotNetVibeCoderz/Vibe_SDK/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Unitree.Net.svg)](https://www.nuget.org/packages/Unitree.Net)
+
 [Bahasa Indonesia](#bahasa-indonesia) · [English](#english)
 
 ---
@@ -21,6 +24,27 @@ antarmuka bahasa alami.
 Format kabel (wire format) diimplementasikan ulang di C# dan **diverifikasi byte-per-byte** terhadap
 tata letak struct C++ Unitree, sehingga CRC yang dihitung SDK ini persis sama dengan yang dihitung
 firmware. Ini penting: firmware membuang perintah dengan CRC salah **tanpa pesan error apa pun**.
+
+### Instalasi
+
+```bash
+dotnet add package Unitree.Net
+```
+
+Paket `Unitree.Net` adalah paket payung: ia menarik seluruh SDK sekaligus. Kalau hanya butuh
+sebagian, pasang paket per-modul saja (lihat tabel di bagian [Packages](#packages)).
+
+`Unitree.Net.Ml` sengaja **tidak** ikut dalam paket payung — ML.NET dan TorchSharp membawa ratusan
+megabyte runtime native, dan hanya aplikasi analisis gait atau lokomosi hasil pembelajaran yang
+memerlukannya:
+
+```bash
+dotnet add package Unitree.Net.Ml
+```
+
+Untuk berbicara dengan firmware robot sungguhan masih dibutuhkan native shim Cyclone DDS, yang
+dibangun terpisah dengan CMake — lihat `native/README.md`. Transport murni-managed bawaan SDK hanya
+bisa bicara dengan simulator.
 
 ### Mulai cepat
 
@@ -150,6 +174,27 @@ The wire format is reimplemented in C# and **verified byte-for-byte** against Un
 layout, so the CRC this SDK computes is exactly the one the firmware computes. That matters: the
 firmware discards a command with a bad CRC **without reporting anything at all**.
 
+### Installation
+
+```bash
+dotnet add package Unitree.Net
+```
+
+`Unitree.Net` is an umbrella package that pulls in the whole SDK. Install the individual packages
+instead if you only need part of it — they are listed under [Packages](#packages) below.
+
+`Unitree.Net.Ml` is deliberately **not** part of the umbrella: ML.NET and TorchSharp bring hundreds of
+megabytes of native runtime with them, and only applications doing gait analysis or learned locomotion
+need it.
+
+```bash
+dotnet add package Unitree.Net.Ml
+```
+
+Talking to real robot firmware also needs the Cyclone DDS native shim, which is built separately with
+CMake — see `native/README.md`. The pure-managed transport that ships in the box reaches the simulator
+only.
+
 ### Quick start
 
 No robot? Start the simulator first — it has a 3D viewport, and the telemetry it publishes is real:
@@ -210,6 +255,7 @@ stream.Stop();
 
 | Package | Contents |
 |---|---|
+| **Unitree.Net** | Umbrella package — references everything below except `Unitree.Net.Ml` |
 | **Unitree.Net.Core** | Robot models, joint maps, pose maths, safety limits, real-time loop |
 | **Unitree.Net.Messages** | Zero-allocation CDR codec, `unitree_go` / `unitree_api` types, Unitree CRC-32 |
 | **Unitree.Net.Dds** | Transport abstraction; pure-managed multicast and loopback transports |
@@ -222,6 +268,7 @@ stream.Stop();
 | **Unitree.Net.Firmware** | Verified packages, staging, health gating, automatic rollback |
 | **Unitree.Net.Ml** | ML.NET gait analysis, anomaly detection, TorchSharp policy inference |
 | **Unitree.Net.Ai** | Semantic Kernel with OpenAI / Anthropic / Gemini / Ollama providers |
+| **Unitree.Net.Extensions.DependencyInjection** | `AddUnitreeRobot`, configuration binding, health checks, hosted services |
 | **Unitree.Net.Simulation** | Rig-driven kinematics for all eight platforms, shared by the simulator and the tests |
 | **Unitree.Net.Wizard.Core** | Project templates, scaffolding, build orchestration, SSH deployment |
 

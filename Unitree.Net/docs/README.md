@@ -26,6 +26,7 @@
 | [AI workflows](ai-workflow.md) | Semantic Kernel, the four providers, motion gating |
 | [ROS 2 bridge](ros2-bridge.md) | Publishing telemetry, accepting `cmd_vel`, frame conventions |
 | [Native shim](../native/README.md) | Building `unitree_net_native` for real hardware |
+| [Publishing and CI](publishing.md) | The NuGet packages, the release tag, and what each CI job protects |
 
 ## Project status
 

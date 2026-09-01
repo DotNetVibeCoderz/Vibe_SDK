@@ -1,0 +1,113 @@
+# Rilis DepthAI.Net ke nuget.org.
+#
+# Pemicu:
+#   - tag  v0.1.0  atau  depthai-net-v0.1.0  (awalan dibuang, sisanya jadi versi paket)
+#   - jalankan manual lewat tab Actions dengan mengisi input `version`
+#
+# Butuh secret repository: NUGET_API_KEY (API key dari nuget.org).
+name: Publish NuGet
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'depthai-net-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versi paket, mis. 0.1.0 atau 0.2.0-beta.1'
+        required: true
+        type: string
+      dry_run:
+        description: 'Pack saja, jangan push ke nuget.org'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    name: Pack & push
+    # Windows: DepthAI.Net.Imaging.SystemDrawing menargetkan net10.0-windows.
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Source Link butuh riwayat commit untuk menautkan sumber.
+
+      - name: Temukan folder SDK
+        id: sdk
+        shell: bash
+        run: |
+          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' | head -n 1)
+          if [ -z "$slnx" ]; then echo "DepthAI.Net.slnx tidak ditemukan"; exit 1; fi
+          echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
+          echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
+
+      - name: Tentukan versi
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#depthai-net-}"
+            version="${version#v}"
+          fi
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Versi tidak valid: '$version'"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Merilis versi $version"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
+
+      - name: Restore
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet restore ${{ steps.sdk.outputs.slnx }}
+
+      - name: Build
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet build ${{ steps.sdk.outputs.slnx }} -c Release --no-restore -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Test
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet test ${{ steps.sdk.outputs.slnx }} -c Release --no-build -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Pack
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet pack ${{ steps.sdk.outputs.slnx }} -c Release --no-build -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Unggah paket sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-${{ steps.ver.outputs.version }}
+          path: |
+            ${{ steps.sdk.outputs.dir }}/artifacts/nuget/*.nupkg
+            ${{ steps.sdk.outputs.dir }}/artifacts/nuget/*.snupkg
+          if-no-files-found: error
+
+      # --skip-duplicate: rilis ulang setelah kegagalan sebagian tidak berhenti
+      # hanya karena satu paket sudah terlanjur masuk ke nuget.org.
+      - name: Push ke nuget.org
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "Secret NUGET_API_KEY belum diset di repository ini."; exit 1
+          fi
+          dotnet nuget push "artifacts/nuget/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "$NUGET_API_KEY" \
+            --skip-duplicate

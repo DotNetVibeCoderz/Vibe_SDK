@@ -1,0 +1,12 @@
+<Project>
+
+  <!--
+    README paket harus ditambahkan di .targets, bukan .props: PackageId dan
+    IsPackable baru terisi setelah body csproj dibaca, sedangkan .props diimpor
+    sebelum itu, sehingga kondisinya selalu bernilai salah kalau ditaruh di sana.
+  -->
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

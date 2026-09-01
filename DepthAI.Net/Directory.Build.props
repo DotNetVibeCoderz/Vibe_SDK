@@ -21,9 +21,30 @@
     <Copyright>Copyright (c) Gravicode Studios. Dipimpin oleh Kang Fadhil.</Copyright>
     <VersionPrefix>0.1.0</VersionPrefix>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/gravicode/DepthAI.Net</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/gravicode/DepthAI.Net</RepositoryUrl>
     <PackageTags>depthai;oak;luxonis;computer-vision;stereo-depth;dotnet</PackageTags>
+
+    <!--
+      SDK ini tinggal di subfolder DepthAI.Net dalam monorepo Vibe_SDK, jadi
+      PackageProjectUrl menunjuk langsung ke subfolder itu; RepositoryUrl harus
+      URL kloning repo (Source Link dan nuget.org memakainya untuk menautkan
+      commit), sehingga menunjuk ke akar repo.
+    -->
+    <PackageProjectUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/DepthAI.Net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryBranch>main</RepositoryBranch>
+  </PropertyGroup>
+
+  <!-- Semua paket keluar ke satu folder supaya CI cukup melihat satu tempat. -->
+  <PropertyGroup>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts/nuget</PackageOutputPath>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!-- Build deterministik hanya di CI; di lokal path absolut lebih berguna saat debug. -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
 </Project>

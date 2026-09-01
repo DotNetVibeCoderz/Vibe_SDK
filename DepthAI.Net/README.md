@@ -27,8 +27,8 @@ Dibuat oleh **Gravicode Studios**, dipimpin **Kang Fadhil**.
 ## Mulai cepat / Quick start
 
 ```bash
-git clone https://github.com/gravicode/DepthAI.Net
-cd DepthAI.Net
+git clone https://github.com/DotNetVibeCoderz/Vibe_SDK
+cd Vibe_SDK/DepthAI.Net
 dotnet build
 
 # Menjalankan sample deteksi objek — berjalan tanpa kamera sekalipun

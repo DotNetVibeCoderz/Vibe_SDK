@@ -13,6 +13,8 @@
     <Project Path="samples/Unitree.Net.Samples.VirtualRobot/Unitree.Net.Samples.VirtualRobot.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <!-- The umbrella NuGet package; carries no code, only references. -->
+    <Project Path="src/Unitree.Net/Unitree.Net.csproj" />
     <Project Path="src/Unitree.Net.Ai/Unitree.Net.Ai.csproj" />
     <Project Path="src/Unitree.Net.Control/Unitree.Net.Control.csproj" />
     <Project Path="src/Unitree.Net.Core/Unitree.Net.Core.csproj" />

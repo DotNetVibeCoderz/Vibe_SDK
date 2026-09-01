@@ -1,0 +1,116 @@
+# CI DepthAI.Net — build, uji, dan pack setiap perubahan.
+#
+# Workflow ini sengaja tidak mengasumsikan letak SDK di dalam repo: langkah
+# "Temukan folder SDK" mencari DepthAI.Net.slnx, sehingga file ini tetap jalan
+# baik ketika DepthAI.Net adalah akar repo maupun subfolder monorepo Vibe_SDK.
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'DepthAI.Net/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'samples/**'
+      - 'Directory.Build.*'
+      - 'global.json'
+      - '*.slnx'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  build:
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Temukan folder SDK
+        id: sdk
+        shell: bash
+        run: |
+          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' | head -n 1)
+          if [ -z "$slnx" ]; then echo "DepthAI.Net.slnx tidak ditemukan"; exit 1; fi
+          echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
+          echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
+
+      - name: Cache paket NuGet
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: nuget-${{ matrix.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: nuget-${{ matrix.os }}-
+
+      - name: Restore
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet restore ${{ steps.sdk.outputs.slnx }}
+
+      - name: Build
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet build ${{ steps.sdk.outputs.slnx }} -c Release --no-restore
+
+      - name: Test
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet test ${{ steps.sdk.outputs.slnx }} -c Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./artifacts/test-results
+
+      - name: Unggah hasil uji
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: ${{ steps.sdk.outputs.dir }}/artifacts/test-results/**/*.trx
+          if-no-files-found: ignore
+
+  pack:
+    name: Pack
+    needs: build
+    # Pack di Windows: DepthAI.Net.Imaging.SystemDrawing menargetkan net10.0-windows.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Temukan folder SDK
+        id: sdk
+        shell: bash
+        run: |
+          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' | head -n 1)
+          echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
+          echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
+
+      # Build CI memakai nomor build sebagai suffix prerelease supaya paket dari
+      # main tidak pernah bentrok dengan rilis stabil di nuget.org.
+      - name: Pack
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet pack ${{ steps.sdk.outputs.slnx }} -c Release --version-suffix "ci.${{ github.run_number }}"
+
+      - name: Unggah paket
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: |
+            ${{ steps.sdk.outputs.dir }}/artifacts/nuget/*.nupkg
+            ${{ steps.sdk.outputs.dir }}/artifacts/nuget/*.snupkg
+          if-no-files-found: error

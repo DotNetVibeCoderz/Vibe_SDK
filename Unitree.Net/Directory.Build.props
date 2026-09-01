@@ -25,13 +25,29 @@
 
   <PropertyGroup>
     <Product>Unitree.Net</Product>
-    <Company>Unitree.Net Contributors</Company>
-    <Authors>Unitree.Net Contributors</Authors>
+    <Company>Gravicode Studios</Company>
+    <Authors>Gravicode Studios</Authors>
+    <Copyright>Copyright (c) Gravicode Studios and Unitree.Net contributors</Copyright>
     <VersionPrefix>0.1.0</VersionPrefix>
-    <RepositoryUrl>https://github.com/unitree-net/Unitree.Net</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/Unitree.Net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/Unitree.Net</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>unitree;robotics;dds;ros2;go2;g1;b2;h1</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- The SDK bundles Source Link, which overwrites RepositoryUrl from the git remote when this is
+         true. The URLs above point at this SDK's folder inside the Vibe_SDK monorepo, which the
+         remote does not describe, so the explicit values win. -->
+    <PublishRepositoryUrl>false</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts/packages</PackageOutputPath>
+  </PropertyGroup>
+
+  <!-- Deterministic file paths in the PDBs, so the same commit packs to the same bytes anywhere. -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">

@@ -9,7 +9,7 @@ exercised end to end against the simulator. **Nothing has been run against real 
 
 | Metric | Value |
 |---|---|
-| Projects | 24 (15 libraries, 4 apps, 3 samples, 1 tool, 1 test project) plus a VS Code extension |
+| Projects | 25 (16 libraries, 4 apps, 3 samples, 1 tool, 1 test project) plus a VS Code extension |
 | Build | 0 errors, 0 warnings (Debug and Release) |
 | Tests | 320 passing, 0 failing, 0 skipped |
 | Target | .NET 10 · TypeScript 5.7 for the extension |
@@ -320,7 +320,8 @@ Nothing below can be closed without a robot:
 | No concrete `IFirmwareChannel` | OTA orchestration exists; the transport to the robot does not |
 | No camera or audio streams | Topics are named; no decoding |
 | ROS 2 bridge does not republish point clouds | Decoding exists in `Unitree.Net.Sensors` |
-| No NuGet packaging or CI | Projects are marked packable; nothing publishes them |
+| CI has never run on GitHub | Both workflows are written and their shell steps were rehearsed locally, but no job has executed on a runner |
+| Nothing published to nuget.org yet | The 16 packages build locally; the first `unitree-net-v*` tag will be the first real publish |
 | Deployment never run against a robot | Publish, SFTP copy and systemd install are written but unexercised, in both the wizard and the extension |
 | The extension has no automated tests | It is verified by running it; the logic it wraps is tested in C# |
 | Simulator is kinematic, not dynamic | Motion is generated, not integrated. It will not tell you whether a controller is stable |
@@ -340,8 +341,8 @@ Nothing below can be closed without a robot:
 3. Measure loop jitter on the actual robot host.
 4. Implement `unitree_hg` for humanoid low-level control, so the simulator can publish humanoid
    low-level state and the wizard can generate G1 low-level code.
-5. Set up CI, and run `tools/Unitree.Net.TemplateCheck` in it — the template catalogue drifts silently
-   otherwise.
+5. Push the workflows and confirm the first CI run is green, then cut `unitree-net-v0.1.0` to
+   publish the packages — see [docs/publishing.md](docs/publishing.md).
 6. Exercise the deploy path against a real Jetson module, from both the wizard and the extension.
 7. Publish the VS Code extension.
 

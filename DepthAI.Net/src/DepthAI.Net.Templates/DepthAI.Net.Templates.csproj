@@ -10,9 +10,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <IncludeContentInPack>true</IncludeContentInPack>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- Paket template tidak punya assembly, jadi tidak ada simbol untuk dipaketkan. -->
+    <IncludeSymbols>false</IncludeSymbols>
     <ContentTargetFolders>content</ContentTargetFolders>
     <NoWarn>$(NoWarn);NU5128</NoWarn>
-    <PackageOutputPath>../../artifacts/nuget</PackageOutputPath>
 
     <!--
       Wajib: NuGet mengecualikan berkas dan folder berawalan titik secara bawaan,

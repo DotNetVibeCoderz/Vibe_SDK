@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The umbrella package. It carries no code of its own: `dotnet add package Unitree.Net` pulls in
+       every library a robot application normally needs, and each one stays separately installable for
+       consumers who want a subset.
+
+       Unitree.Net.Ml is deliberately not here. It drags in ML.NET and TorchSharp — hundreds of
+       megabytes of native runtime — and only applications doing gait analysis or learned locomotion
+       need it. Those install Unitree.Net.Ml alongside this. -->
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>The Unitree.Net SDK for .NET — control, telemetry, DDS transport, navigation, manipulation, diagnostics, firmware management, ROS 2 bridging and AI workflows for Unitree quadrupeds (Go2, B2) and humanoids (G1, H1, R1). This is the umbrella package; it references the whole SDK except Unitree.Net.Ml, which is installed separately.</Description>
+
+    <!-- A metapackage ships dependencies, not an assembly. NU5128 is the warning that a package with
+         dependencies has no lib/ folder, which is exactly the intent here. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <!-- No assembly means no PDB, and nuget.org rejects a symbol package that contains none with a
+         400. Left on, that failure is enough to fail the whole release job after the real package
+         has already gone up. -->
+    <IncludeSymbols>false</IncludeSymbols>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unitree.Net.Core\Unitree.Net.Core.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Messages\Unitree.Net.Messages.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Dds\Unitree.Net.Dds.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Interop\Unitree.Net.Interop.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Control\Unitree.Net.Control.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Sensors\Unitree.Net.Sensors.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Manipulation\Unitree.Net.Manipulation.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Diagnostics\Unitree.Net.Diagnostics.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Firmware\Unitree.Net.Firmware.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Ros2\Unitree.Net.Ros2.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Ai\Unitree.Net.Ai.csproj" />
+    <ProjectReference Include="..\Unitree.Net.Extensions.DependencyInjection\Unitree.Net.Extensions.DependencyInjection.csproj" />
+  </ItemGroup>
+
+</Project>

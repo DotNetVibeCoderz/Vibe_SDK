@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <IsPackable>false</IsPackable>
     <OutputType>WinExe</OutputType>
     <RootNamespace>DepthAI.Wizard.App</RootNamespace>
     <AssemblyName>JackTheCodeBender</AssemblyName>
