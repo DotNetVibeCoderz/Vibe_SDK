@@ -1,16 +1,18 @@
 # Rilis DepthAI.Net ke nuget.org.
 #
 # Pemicu:
-#   - tag  v0.1.0  atau  depthai-net-v0.1.0  (awalan dibuang, sisanya jadi versi paket)
+#   - tag  depthai-net-v0.1.0  (awalan dibuang, sisanya jadi versi paket)
 #   - jalankan manual lewat tab Actions dengan mengisi input `version`
 #
+# Tag sengaja diberi awalan nama SDK, bukan `v*` polos: Vibe_SDK memuat beberapa
+# SDK, dan tag rilis Unitree.Net tidak boleh ikut mempublish paket DepthAI.
+#
 # Butuh secret repository: NUGET_API_KEY (API key dari nuget.org).
-name: Publish NuGet
+name: DepthAI.Net Publish NuGet
 
 on:
   push:
     tags:
-      - 'v*'
       - 'depthai-net-v*'
   workflow_dispatch:
     inputs:
@@ -45,7 +47,7 @@ jobs:
         id: sdk
         shell: bash
         run: |
-          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' | head -n 1)
+          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/.vs/*' | sort | head -n 1)
           if [ -z "$slnx" ]; then echo "DepthAI.Net.slnx tidak ditemukan"; exit 1; fi
           echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
           echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
@@ -57,8 +59,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             version="${{ inputs.version }}"
           else
-            version="${GITHUB_REF_NAME#depthai-net-}"
-            version="${version#v}"
+            version="${GITHUB_REF_NAME#depthai-net-v}"
           fi
           if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
             echo "Versi tidak valid: '$version'"; exit 1

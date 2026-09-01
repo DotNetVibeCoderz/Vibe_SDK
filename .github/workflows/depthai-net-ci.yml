@@ -1,24 +1,22 @@
 # CI DepthAI.Net — build, uji, dan pack setiap perubahan.
 #
-# Workflow ini sengaja tidak mengasumsikan letak SDK di dalam repo: langkah
-# "Temukan folder SDK" mencari DepthAI.Net.slnx, sehingga file ini tetap jalan
-# baik ketika DepthAI.Net adalah akar repo maupun subfolder monorepo Vibe_SDK.
-name: CI
+# Vibe_SDK adalah monorepo (DepthAI.Net, Unitree.Net, ...), jadi workflow ini
+# dibatasi ke subfolder DepthAI.Net saja: perubahan di SDK lain tidak memicunya.
+# Langkah "Temukan folder SDK" mencari DepthAI.Net.slnx sehingga jalur build
+# tetap benar walau foldernya kelak dipindah atau diganti nama.
+name: DepthAI.Net CI
 
 on:
   push:
     branches: [ main ]
     paths:
       - 'DepthAI.Net/**'
-      - 'src/**'
-      - 'tests/**'
-      - 'samples/**'
-      - 'Directory.Build.*'
-      - 'global.json'
-      - '*.slnx'
-      - '.github/workflows/**'
+      - '.github/workflows/depthai-net-ci.yml'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'DepthAI.Net/**'
+      - '.github/workflows/depthai-net-ci.yml'
   workflow_dispatch:
 
 env:
@@ -43,7 +41,7 @@ jobs:
         id: sdk
         shell: bash
         run: |
-          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' | head -n 1)
+          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/.vs/*' | sort | head -n 1)
           if [ -z "$slnx" ]; then echo "DepthAI.Net.slnx tidak ditemukan"; exit 1; fi
           echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
           echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
@@ -92,7 +90,7 @@ jobs:
         id: sdk
         shell: bash
         run: |
-          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' | head -n 1)
+          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/.vs/*' | sort | head -n 1)
           echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
           echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
 
