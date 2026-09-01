@@ -8,7 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="4.0.0" />
+    <!--
+      Ditahan di 3.1.x, bukan 4.x. Sejak 4.0.0 paket ImageSharp menjalankan
+      ValidateLicenseTask sebelum CoreCompile dan menggagalkan build kalau tidak
+      menemukan SixLaborsLicenseKey, SixLaborsLicenseFile, atau berkas sixlabors.lic.
+      Tanpa lisensi Six Labors, setiap mesin bersih dan setiap runner CI gagal build.
+      Naikkan ke 4.x hanya bersamaan dengan menyediakan lisensinya.
+    -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 
   <ItemGroup>
