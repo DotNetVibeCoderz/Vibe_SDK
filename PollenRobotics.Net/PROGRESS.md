@@ -27,7 +27,7 @@ Run and observed working, in the simulation or on this machine.
 | Area | Evidence |
 |---|---|
 | Solution builds | `dotnet build PollenRobotics.Net.slnx` — 0 warnings, 0 errors |
-| Tests | 37 pass (`dotnet run --project tests/PollenRobotics.Net.Tests`) |
+| Tests | 40 pass (`dotnet run --project tests/PollenRobotics.Net.Tests`) |
 | Templates | 20/20 scaffold and compile (`tools/PollenRobotics.Net.TemplateCheck`) |
 | Reachy Mini simulation | Head pose, antennas, body yaw, gotos, easing curves, idle breath, motor modes, the 65-degree yaw constraint |
 | MicroDuck simulation | Init, velocity intents, gait, the seven action slots, falls and recovery, the velocity watchdog |
@@ -114,6 +114,7 @@ Kept because each one names a trap that is easy to fall into again.
 | The duck walked out of frame | Viewport looked frozen | The camera did not follow a robot that travels |
 | `pollen sim` died when piped | "The handle is invalid" | `Console.SetCursorPosition` throws when stdout is redirected |
 | Twenty templates scaffolded, four did not compile | Only visible on Build | Template code is written by hand against the SDK and nothing recompiles it. `tools/TemplateCheck` now does |
+| `dotnet build` in a generated folder failed with MSB1011 | Only outside the wizard | The wizard wrote its metadata as `<name>.pollenproj`. MSBuild globs `*.*proj` to resolve a bare `dotnet build`, so it found two candidates. The wizard never hit it because it always passes the .csproj path; it hit the first command the generated README tells a user to run. Renamed to `.pollen.json` |
 
 ---
 

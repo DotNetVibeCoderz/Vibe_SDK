@@ -39,9 +39,13 @@ public readonly record struct ProjectFile(string RelativePath, string Content);
 /// A project the wizard has open.
 /// </summary>
 /// <remarks>
-/// The wizard writes a small <c>.pollenproj</c> beside the <c>.csproj</c> to remember which robot
+/// The wizard writes a small <c>.pollen.json</c> beside the <c>.csproj</c> to remember which robot
 /// the project targets and which template it came from. That is not derivable from the .NET project
 /// file, and without it Run has no idea whether to start the simulator with a duck or a Reachy.
+///
+/// The extension must not end in <c>proj</c>. MSBuild treats every <c>*.*proj</c> in a folder as a
+/// project file, so a sibling <c>.pollenproj</c> made bare <c>dotnet build</c> and <c>dotnet run</c>
+/// fail with MSB1011 - which is the first command every generated README tells the user to run.
 /// </remarks>
 public sealed record WizardProject
 {
@@ -72,7 +76,7 @@ public sealed record WizardProject
 
     /// <summary>The wizard metadata path.</summary>
     [JsonIgnore]
-    public string MetadataPath => Path.Combine(Directory, $"{Name}.pollenproj");
+    public string MetadataPath => Path.Combine(Directory, $"{Name}.pollen.json");
 
     /// <summary>The file name shown in a title bar.</summary>
     [JsonIgnore]
@@ -93,10 +97,10 @@ public sealed record WizardProject
     }
 
     /// <summary>
-    /// Opens a project from a directory or from a <c>.pollenproj</c> path.
+    /// Opens a project from a directory or from a <c>.pollen.json</c> path.
     /// </summary>
     /// <remarks>
-    /// A directory containing a <c>.csproj</c> but no <c>.pollenproj</c> still opens - the wizard
+    /// A directory containing a <c>.csproj</c> but no <c>.pollen.json</c> still opens - the wizard
     /// can edit any .NET project, it just falls back to defaults for the robot and kind. Refusing
     /// would make the editor useless for anything it did not itself create.
     /// </remarks>
@@ -104,7 +108,10 @@ public sealed record WizardProject
     {
         string directory = System.IO.Directory.Exists(path) ? path : Path.GetDirectoryName(path) ?? path;
 
-        string? metadata = System.IO.Directory.EnumerateFiles(directory, "*.pollenproj").FirstOrDefault();
+        // *.pollenproj is the pre-0.1.1 name, still read so projects created by an earlier build
+        // keep opening. They are rewritten under the new name on the next save.
+        string? metadata = System.IO.Directory.EnumerateFiles(directory, "*.pollen.json").FirstOrDefault()
+            ?? System.IO.Directory.EnumerateFiles(directory, "*.pollenproj").FirstOrDefault();
 
         if (metadata is not null)
         {

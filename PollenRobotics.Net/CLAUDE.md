@@ -9,7 +9,7 @@ MicroDuck, Reachy 2), plus an Avalonia gallery, a 3D simulator and an LLM-assist
 `requirements.md` (Indonesian) is the original spec; `PLAN.md` is the roadmap and `PROGRESS.md`
 tracks what is verified.
 
-The solution builds clean and 37 tests pass. **Nothing has been run against physical hardware** —
+The solution builds clean and 40 tests pass. **Nothing has been run against physical hardware** —
 read the "Written but not verified" section of `PROGRESS.md` before claiming anything works on a
 robot.
 
@@ -110,6 +110,11 @@ the solver threw into a `catch`, and every branch reported zero while the status
 
 **Templates are hand-written against the SDK and nothing recompiles them.** Run `TemplateCheck`
 after any public API change. Four of twenty failed the first time it ran.
+
+**A wizard-generated folder must contain exactly one `*.*proj` file.** MSBuild resolves a bare
+`dotnet build` or `dotnet run` by globbing that pattern, so the metadata file is `.pollen.json` and
+must never be named `.pollenproj` again. The wizard itself cannot catch this — it always passes the
+`.csproj` path explicitly — but it is the first command every generated README tells the user to run.
 
 **`Console.SetCursorPosition` throws when stdout is redirected.** Guard in-place terminal updates
 with `Console.IsOutputRedirected`.

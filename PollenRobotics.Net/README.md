@@ -175,7 +175,7 @@ Clamping is still available — you just have to ask for it.
 
 ## Status
 
-The SDK builds clean and 37 tests pass. **Nothing has been run against physical hardware.** Read
+The SDK builds clean and 40 tests pass. **Nothing has been run against physical hardware.** Read
 [PROGRESS.md](PROGRESS.md) before relying on any of it on a robot — it separates what is verified
 from what is written against published documentation.
 
@@ -358,7 +358,7 @@ Penjepitan tetap tersedia — Anda hanya perlu memintanya secara eksplisit.
 
 ## Status
 
-SDK ini build bersih dan 37 test lulus. **Belum pernah dijalankan pada perangkat keras sungguhan.**
+SDK ini build bersih dan 40 test lulus. **Belum pernah dijalankan pada perangkat keras sungguhan.**
 Baca [PROGRESS.md](PROGRESS.md) sebelum mengandalkannya di robot — di sana dipisahkan mana yang sudah
 terverifikasi dan mana yang ditulis berdasarkan dokumentasi publik.
 
