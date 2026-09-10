@@ -10,7 +10,7 @@ C:\experiment\VibeCoding\Vibe_SDK\PollenRobotics.Net
 
 `Vibe_SDK` is one repository holding several SDKs, each in its own subfolder next to `DepthAI.Net`
 and `Unitree.Net`. Pack from here, never from a scratch directory: packages built outside the
-repository carry no commit and no tag to go back to when a bug report arrives against 0.1.0.
+repository carry no commit and no tag to go back to when a bug report arrives against a version.
 
 If the tree is ever copied in again, exclude the build outputs:
 
@@ -70,9 +70,14 @@ naming convention and anyone can publish under it.
 
 ## Version
 
-`VersionPrefix` in `Directory.Build.props`, currently `0.1.0`. All eleven packages ship in lockstep —
+`VersionPrefix` in `Directory.Build.props`, currently `0.1.1`. All eleven packages ship in lockstep —
 they reference each other by exact version, so a partial push leaves a version of one package that
 cannot restore.
+
+Bump it in that one place only. `SdkInfo.Version` reads it back off the assembly at runtime, so
+the CLI banner, the wizard's About dialog, the `PackageReference` lines in generated projects and in
+Jack's answers, and the simulated duck's firmware string all follow automatically. They used to be
+five separate literals, and 0.1.1 is the release that proved they drift.
 
 0.x is the honest number. Nothing here has run against physical hardware, and the parts most likely
 to change are the wire formats listed in [PROGRESS.md](../PROGRESS.md). Reaching 1.0 means one thing:
@@ -104,7 +109,7 @@ first experience for whoever installs one.
 
 ```powershell
 dotnet nuget locals http-cache --clear
-Expand-Archive artifacts\packages\Gravicode.PollenRobotics.Net.Core.0.1.0.nupkg -DestinationPath artifacts\inspect -Force
+Expand-Archive artifacts\packages\Gravicode.PollenRobotics.Net.Core.0.1.1.nupkg -DestinationPath artifacts\inspect -Force
 ```
 
 Look at the `.nuspec` inside: the `id` should carry the prefix, the dependency `id`s should carry it
@@ -140,7 +145,7 @@ version number can never be reused. Push a prerelease first if there is any doub
 ## After the first push
 
 - Tag the commit. The repository holds several SDKs, so the tag has to say which one:
-  `git tag pollenrobotics-v0.1.0 && git push --tags`.
+  `git tag pollenrobotics-v0.1.1 && git push --tags`.
 - Verify a clean install actually works, from outside the repository:
 
   ```bash

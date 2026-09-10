@@ -8,6 +8,7 @@
 //   pollen sim <robot>                  - run the simulator headless and print telemetry
 //   pollen mini <command>               - drive a Reachy Mini
 //   pollen duck <command>               - drive a MicroDuck
+using PollenRobotics.Net.Core;
 using PollenRobotics.Net.Cli.Commands;
 using Spectre.Console;
 
@@ -53,8 +54,8 @@ catch (Exception ex)
 
 static int Version()
 {
-    AnsiConsole.MarkupLine("[bold]PollenRobotics.Net[/] 0.1.0");
-    AnsiConsole.MarkupLine("[dim]Gravicode Studios, led by Kang Fadhil[/]");
+    AnsiConsole.MarkupLine($"[bold]PollenRobotics.Net[/] {SdkInfo.Version}");
+    AnsiConsole.MarkupLine($"[dim]{SdkInfo.Credit}[/]");
     return 0;
 }
 

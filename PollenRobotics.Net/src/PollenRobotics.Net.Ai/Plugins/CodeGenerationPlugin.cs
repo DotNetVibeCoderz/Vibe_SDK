@@ -1,3 +1,4 @@
+using PollenRobotics.Net.Core;
 using System.ComponentModel;
 using System.Text;
 using Microsoft.SemanticKernel;
@@ -51,18 +52,25 @@ public sealed class CodeGenerationPlugin
             _ => "Microsoft.NET.Sdk",
         };
 
-        var packages = new List<string> { RobotPackage(robotKind), "PollenRobotics.Net.Simulation" };
+        // SDK packages take the publisher prefix and this build's version; everything else carries
+        // its own. They used to share one list and every entry was written out at the SDK version,
+        // so a desktop project asked for Avalonia 0.1.0 and would not restore.
+        var packages = new List<(string Id, string Version)>
+        {
+            ($"{PackageIdPrefix}{RobotPackage(robotKind)}", SdkInfo.Version),
+            ($"{PackageIdPrefix}PollenRobotics.Net.Simulation", SdkInfo.Version),
+        };
 
         if (kind.Equals("desktop", StringComparison.OrdinalIgnoreCase))
         {
-            packages.Add("Avalonia");
-            packages.Add("Avalonia.Desktop");
-            packages.Add("Avalonia.Themes.Fluent");
+            packages.Add(("Avalonia", AvaloniaVersion));
+            packages.Add(("Avalonia.Desktop", AvaloniaVersion));
+            packages.Add(("Avalonia.Themes.Fluent", AvaloniaVersion));
         }
 
         if (kind.Equals("embedded", StringComparison.OrdinalIgnoreCase))
         {
-            packages.Add("Microsoft.Extensions.Hosting");
+            packages.Add(("Microsoft.Extensions.Hosting", ExtensionsVersion));
         }
 
         var builder = new StringBuilder();
@@ -90,9 +98,9 @@ public sealed class CodeGenerationPlugin
         builder.AppendLine();
         builder.AppendLine("  <ItemGroup>");
 
-        foreach (string package in packages)
+        foreach ((string id, string version) in packages)
         {
-            builder.AppendLine($"""    <PackageReference Include="{package}" Version="0.1.0" />""");
+            builder.AppendLine($"""    <PackageReference Include="{id}" Version="{version}" />""");
         }
 
         builder.AppendLine("  </ItemGroup>");
@@ -389,6 +397,18 @@ public sealed class CodeGenerationPlugin
             }
             """;
     }
+
+    /// <summary>The publisher prefix on NuGet IDs. Namespaces stay unprefixed.</summary>
+    private const string PackageIdPrefix = "Gravicode.";
+
+    /// <summary>Versions of the third-party packages generated projects may reference.</summary>
+    /// <remarks>
+    /// Kept in step with Directory.Packages.props by hand. They are the versions this SDK is built
+    /// and tested against, so a generated project that pins them behaves like the gallery does.
+    /// </remarks>
+    private const string AvaloniaVersion = "12.1.2";
+
+    private const string ExtensionsVersion = "10.0.6";
 
     private static string RobotPackage(RobotKind kind) => kind switch
     {

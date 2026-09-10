@@ -1,3 +1,4 @@
+using PollenRobotics.Net.Core;
 using PollenRobotics.Net.Core.Robots;
 using PollenRobotics.Net.MicroDuck;
 using PollenRobotics.Net.Simulation.Robots;
@@ -100,7 +101,7 @@ public sealed class SimulatedMicroDuckTransport : IMicroDuckTransport
             warnings.Add("Servos are not powered. Call InitAsync.");
         }
 
-        return new MicroDuckHealth(_robot.BatteryVolts > 6.5, "simulated-0.1.0", 50, [], warnings);
+        return new MicroDuckHealth(_robot.BatteryVolts > 6.5, $"simulated-{SdkInfo.Version}", 50, [], warnings);
     }
 
     /// <inheritdoc />

@@ -35,7 +35,7 @@
     <Company>Gravicode Studios</Company>
     <Authors>Gravicode Studios</Authors>
     <Copyright>Copyright (c) Gravicode Studios and PollenRobotics.Net contributors</Copyright>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.1.1</VersionPrefix>
     <!-- The SDK lives in a subfolder of the Vibe_SDK repository, alongside its siblings.
          PackageProjectUrl points at the subfolder because that is where a reader should land;
          RepositoryUrl must stay the repository root, because Source Link resolves source paths

@@ -4,7 +4,7 @@ What exists, what is verified, and what is not. The distinction in the last two 
 point of this file: a great deal here builds, runs and looks right without ever having touched a
 robot.
 
-Last updated: 10 September 2026. Published to nuget.org at 0.1.0 on the same day.
+Last updated: 10 September 2026. Published to nuget.org at 0.1.0, then 0.1.1, on the same day.
 
 ---
 
@@ -42,7 +42,7 @@ Run and observed working, in the simulation or on this machine.
 | Sample | `samples/DeskCompanion` runs end to end against the simulation - idles, notices a face, engages, parks on exit |
 | Packaging | `dotnet pack` produces 11 NuGet packages into `artifacts/packages`, IDs prefixed `Gravicode.` |
 | Package install | A fresh `dotnet new console` restored `Gravicode.PollenRobotics.Net.ReachyMini` and `.Simulation` and ran a head goto against the simulation |
-| Published | 11 packages at 0.1.0 on nuget.org, from commit `b2ec200`, tag `pollenrobotics-v0.1.0` |
+| Published | 11 packages at 0.1.1 on nuget.org, tag `pollenrobotics-v0.1.1`. 0.1.0 came from `b2ec200` |
 
 ---
 
@@ -114,6 +114,8 @@ Kept because each one names a trap that is easy to fall into again.
 | The duck walked out of frame | Viewport looked frozen | The camera did not follow a robot that travels |
 | `pollen sim` died when piped | "The handle is invalid" | `Console.SetCursorPosition` throws when stdout is redirected |
 | Twenty templates scaffolded, four did not compile | Only visible on Build | Template code is written by hand against the SDK and nothing recompiles it. `tools/TemplateCheck` now does |
+| Jack generated a .csproj that would not restore | Only when the generated project was built | Every `PackageReference` was written at the SDK version, so a desktop project asked for Avalonia 0.1.0; the SDK entries also lacked the `Gravicode.` prefix, so they did not exist either |
+| Five copies of the version string | Silent, until a release | The CLI banner, About dialog, template scaffold, Jack's codegen and the simulated firmware each held their own literal. `SdkInfo.Version` now reads it off the assembly |
 | `dotnet build` in a generated folder failed with MSB1011 | Only outside the wizard | The wizard wrote its metadata as `<name>.pollenproj`. MSBuild globs `*.*proj` to resolve a bare `dotnet build`, so it found two candidates. The wizard never hit it because it always passes the .csproj path; it hit the first command the generated README tells a user to run. Renamed to `.pollen.json` |
 
 ---

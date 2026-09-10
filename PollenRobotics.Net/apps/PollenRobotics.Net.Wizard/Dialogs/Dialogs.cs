@@ -1,3 +1,4 @@
+using PollenRobotics.Net.Core;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -467,7 +468,7 @@ internal sealed class AboutDialog : WizardDialog
             Children =
             {
                 new TextBlock { Text = "PollenRobotics Robot Wizard", Classes = { "display" } },
-                new TextBlock { Text = "Version 0.1.0", Classes = { "mono", "faint" }, Margin = new Thickness(0, 2, 0, 14) },
+                new TextBlock { Text = $"Version {SdkInfo.Version}", Classes = { "mono", "faint" }, Margin = new Thickness(0, 2, 0, 14) },
 
                 Body("A code editor for robot applications built on PollenRobotics.Net, the unofficial .NET SDK for "
                    + "Reachy Mini, MicroDuck and Reachy 2."),

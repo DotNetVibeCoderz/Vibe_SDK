@@ -44,7 +44,7 @@ public class WizardProjectTests : IDisposable
         };
 
         Directory.CreateDirectory(_directory);
-        await project.SaveAsync();
+        await project.SaveAsync(TestContext.Current.CancellationToken);
         File.WriteAllText(project.ProjectFilePath, "<Project />");
 
         // MSBuild's own rule: anything matching *.*proj in the folder is a candidate project.
@@ -74,10 +74,10 @@ public class WizardProjectTests : IDisposable
         };
 
         Directory.CreateDirectory(_directory);
-        await project.SaveAsync();
+        await project.SaveAsync(TestContext.Current.CancellationToken);
         File.Move(project.MetadataPath, Path.Combine(_directory, "OldPet.pollenproj"));
 
-        WizardProject? reopened = await WizardProject.OpenAsync(_directory);
+        WizardProject? reopened = await WizardProject.OpenAsync(_directory, TestContext.Current.CancellationToken);
 
         reopened.ShouldNotBeNull();
         reopened.Robot.ShouldBe(RobotKind.MicroDuck);

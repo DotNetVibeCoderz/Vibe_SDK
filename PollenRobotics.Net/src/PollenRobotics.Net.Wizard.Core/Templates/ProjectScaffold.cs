@@ -1,3 +1,4 @@
+using PollenRobotics.Net.Core;
 using PollenRobotics.Net.Core.Robots;
 using PollenRobotics.Net.Wizard.Core.Projects;
 
@@ -13,7 +14,11 @@ namespace PollenRobotics.Net.Wizard.Core.Templates;
 internal static class ProjectScaffold
 {
     /// <summary>The SDK version generated projects reference.</summary>
-    public const string SdkVersion = "0.1.0";
+    /// <remarks>
+    /// Read from the assembly rather than written down, so a release cannot bump the packages and
+    /// leave every generated project pinned to the version before it.
+    /// </remarks>
+    public static string SdkVersion => SdkInfo.Version;
 
     /// <summary>
     /// The publisher prefix on the NuGet package IDs. Namespaces are unprefixed, so generated code
