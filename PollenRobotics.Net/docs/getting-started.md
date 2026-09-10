@@ -7,20 +7,21 @@
 
 ## Install
 
-Nothing is published yet. Build the packages locally and point a project at the output folder:
-
 ```bash
-dotnet pack PollenRobotics.Net.slnx -c Release       # -> artifacts/packages
-dotnet nuget add source <repo>/artifacts/packages --name pollen-local
 dotnet add package Gravicode.PollenRobotics.Net.ReachyMini
 dotnet add package Gravicode.PollenRobotics.Net.Simulation
 ```
 
-Package IDs carry a `Gravicode.` prefix; namespaces do not, so the code below is unchanged either
-way. [docs/publishing.md](publishing.md) has the full procedure and the push steps.
+Package IDs carry a `Gravicode.` prefix; namespaces do not, so the code below reads the same either
+way:
 
-Until then, a `ProjectReference` into `src/` works just as well, and is what the gallery, the
-samples and `tools/TemplateCheck` use.
+```csharp
+using PollenRobotics.Net.ReachyMini;
+```
+
+Working inside this repository, a `ProjectReference` into `src/` is better than the published
+package — that is what the gallery, the samples and `tools/TemplateCheck` use.
+[docs/publishing.md](publishing.md) covers releasing a new version.
 
 ## Build and test
 

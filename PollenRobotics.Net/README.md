@@ -181,13 +181,14 @@ from what is written against published documentation.
 
 ### Packages
 
-Nothing is on nuget.org yet. `dotnet pack` builds eleven packages into `artifacts/packages`, under
-the publisher's prefix:
+Eleven packages, published on nuget.org at 0.1.0:
 
 ```bash
 dotnet add package Gravicode.PollenRobotics.Net.ReachyMini
 dotnet add package Gravicode.PollenRobotics.Net.Simulation
 ```
+
+The version is 0.x deliberately. It reaches 1.0 when a real robot has answered.
 
 **The prefix is on the package ID only.** Namespaces are unprefixed, so the code stays
 `using PollenRobotics.Net.ReachyMini;` everywhere. See [docs/publishing.md](docs/publishing.md).
@@ -363,13 +364,14 @@ terverifikasi dan mana yang ditulis berdasarkan dokumentasi publik.
 
 ### Paket
 
-Belum ada yang diterbitkan ke nuget.org. `dotnet pack` menghasilkan sebelas paket di
-`artifacts/packages` dengan prefix penerbit:
+Sebelas paket, sudah terbit di nuget.org pada versi 0.1.0:
 
 ```bash
 dotnet add package Gravicode.PollenRobotics.Net.ReachyMini
 dotnet add package Gravicode.PollenRobotics.Net.Simulation
 ```
+
+Versinya sengaja 0.x. Angka 1.0 baru pantas setelah ada robot sungguhan yang menjawab.
 
 **Prefix hanya melekat pada ID paket.** Namespace tetap tanpa prefix, jadi kode Anda tetap menulis
 `using PollenRobotics.Net.ReachyMini;`. Prosedur lengkapnya ada di

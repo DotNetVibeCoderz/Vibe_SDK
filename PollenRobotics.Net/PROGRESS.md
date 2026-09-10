@@ -4,7 +4,7 @@ What exists, what is verified, and what is not. The distinction in the last two 
 point of this file: a great deal here builds, runs and looks right without ever having touched a
 robot.
 
-Last updated: 10 September 2026.
+Last updated: 10 September 2026. Published to nuget.org at 0.1.0 on the same day.
 
 ---
 
@@ -41,7 +41,8 @@ Run and observed working, in the simulation or on this machine.
 | Jack | Answered live against an OpenAI-compatible endpoint, called the SDK reference functions, and produced code using real members of this SDK |
 | Sample | `samples/DeskCompanion` runs end to end against the simulation - idles, notices a face, engages, parks on exit |
 | Packaging | `dotnet pack` produces 11 NuGet packages into `artifacts/packages`, IDs prefixed `Gravicode.` |
-| Package install | A fresh `dotnet new console` restored `Gravicode.PollenRobotics.Net.ReachyMini` and `.Simulation` from the packed output and ran a head goto against the simulation |
+| Package install | A fresh `dotnet new console` restored `Gravicode.PollenRobotics.Net.ReachyMini` and `.Simulation` and ran a head goto against the simulation |
+| Published | 11 packages at 0.1.0 on nuget.org, from commit `b2ec200`, tag `pollenrobotics-v0.1.0` |
 
 ---
 
@@ -128,10 +129,8 @@ Kept because each one names a trap that is easy to fall into again.
   an interface of ours. Reachy 2 templates therefore have no `--sim` switch.
 - **Head tracking** is plumbed end to end but the simulated face has to be set by the caller; there
   is no vision pipeline behind it.
-- **NuGet publish.** `dotnet pack` produces packages into `artifacts/packages`; nothing has been
-  pushed. Publishing starts by moving this tree into `C:\experiment\VibeCoding\Vibe_SDK` and
-  committing it — packages built from a scratch directory carry no commit to go back to. Package IDs
-  already carry the `Gravicode.` prefix; namespaces do not. See
+- **Prefix reservation.** `Gravicode.*` is not reserved on nuget.org. Until it is, the prefix is a
+  naming convention rather than a claim, and nothing stops someone else publishing under it. See
   [docs/publishing.md](docs/publishing.md).
 - **TorchSharp** is referenced and available but no component uses it yet; the ONNX runner covers
   the inference case.
