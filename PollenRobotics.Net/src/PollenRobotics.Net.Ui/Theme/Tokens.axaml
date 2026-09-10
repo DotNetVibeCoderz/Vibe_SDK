@@ -1,0 +1,107 @@
+<!--
+  Design tokens for PollenRobotics.Net tooling.
+
+  Direction: "instrument, not dashboard". These are tools for driving real hardware, so the surface
+  stays quiet and the only loud thing is the one that matters - a joint approaching its limit.
+
+  The palette is warm graphite rather than the near-black-plus-acid-green that robotics software
+  defaults to. Amber is the accent because it is the colour of the duck's beak and of every status
+  LED ever fitted to lab equipment; red is reserved exclusively for limit violations and errors, so
+  that red on screen always means "stop", never "heading".
+
+  Violet marks simulation. An operator glancing at a screen must be able to tell in one look whether
+  they are commanding a real robot or a model of one, and colour carries that faster than a label.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="GroundColor">#14161A</Color>
+      <Color x:Key="PanelColor">#1C1F25</Color>
+      <Color x:Key="PanelRaisedColor">#232830</Color>
+      <Color x:Key="LineColor">#2E343E</Color>
+      <Color x:Key="LineStrongColor">#3C444F</Color>
+      <Color x:Key="TextColor">#E6E9EF</Color>
+      <Color x:Key="TextMutedColor">#7C8698</Color>
+      <Color x:Key="TextFaintColor">#525C6B</Color>
+      <Color x:Key="AccentColor">#F5A524</Color>
+      <Color x:Key="AccentSoftColor">#3A2E17</Color>
+      <Color x:Key="SignalColor">#E5484D</Color>
+      <Color x:Key="SignalSoftColor">#3A1F21</Color>
+      <Color x:Key="HealthyColor">#3DD68C</Color>
+      <Color x:Key="SimulationColor">#8B7FD4</Color>
+      <Color x:Key="SimulationSoftColor">#292545</Color>
+      <Color x:Key="ShadowColor">#00000066</Color>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="GroundColor">#F6F5F2</Color>
+      <Color x:Key="PanelColor">#FFFFFF</Color>
+      <Color x:Key="PanelRaisedColor">#FBFAF8</Color>
+      <Color x:Key="LineColor">#E3E1DB</Color>
+      <Color x:Key="LineStrongColor">#CFCCC3</Color>
+      <Color x:Key="TextColor">#14161A</Color>
+      <Color x:Key="TextMutedColor">#5F6875</Color>
+      <Color x:Key="TextFaintColor">#98A0AD</Color>
+      <!-- Darkened so that amber-on-white clears the contrast floor for small text. -->
+      <Color x:Key="AccentColor">#C97F09</Color>
+      <Color x:Key="AccentSoftColor">#FDF1DC</Color>
+      <Color x:Key="SignalColor">#CE2C31</Color>
+      <Color x:Key="SignalSoftColor">#FDE9E9</Color>
+      <Color x:Key="HealthyColor">#177E51</Color>
+      <Color x:Key="SimulationColor">#5B4DBE</Color>
+      <Color x:Key="SimulationSoftColor">#EEEBFA</Color>
+      <Color x:Key="ShadowColor">#0000001A</Color>
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Brushes resolve against whichever theme dictionary is active. -->
+  <SolidColorBrush x:Key="GroundBrush" Color="{DynamicResource GroundColor}" />
+  <SolidColorBrush x:Key="PanelBrush" Color="{DynamicResource PanelColor}" />
+  <SolidColorBrush x:Key="PanelRaisedBrush" Color="{DynamicResource PanelRaisedColor}" />
+  <SolidColorBrush x:Key="LineBrush" Color="{DynamicResource LineColor}" />
+  <SolidColorBrush x:Key="LineStrongBrush" Color="{DynamicResource LineStrongColor}" />
+  <SolidColorBrush x:Key="TextBrush" Color="{DynamicResource TextColor}" />
+  <SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource TextMutedColor}" />
+  <SolidColorBrush x:Key="TextFaintBrush" Color="{DynamicResource TextFaintColor}" />
+  <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource AccentColor}" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="{DynamicResource AccentSoftColor}" />
+  <SolidColorBrush x:Key="SignalBrush" Color="{DynamicResource SignalColor}" />
+  <SolidColorBrush x:Key="SignalSoftBrush" Color="{DynamicResource SignalSoftColor}" />
+  <SolidColorBrush x:Key="HealthyBrush" Color="{DynamicResource HealthyColor}" />
+  <SolidColorBrush x:Key="SimulationBrush" Color="{DynamicResource SimulationColor}" />
+  <SolidColorBrush x:Key="SimulationSoftBrush" Color="{DynamicResource SimulationSoftColor}" />
+
+  <!--
+    Two faces, one rule: words are set in Inter, every number is set in the mono face.
+
+    That is not a stylistic flourish. Telemetry updates at up to 50 Hz, and a proportional digit
+    changes width as it changes value, so a joint angle in Inter jitters sideways while you read it.
+    Tabular monospaced digits hold still. The rule is easy to apply and it makes the readouts
+    unmistakably instrument-like, which is the personality this tooling wants.
+
+    No font is embedded: the mono stack falls through to whatever the platform has, which on Windows
+    is Cascadia and on Linux the generic monospace. A missing font is not worth a binary in the repo.
+  -->
+  <FontFamily x:Key="UiFont">avares://Avalonia.Fonts.Inter/Assets#Inter, $Default</FontFamily>
+  <FontFamily x:Key="MonoFont">JetBrains Mono, Cascadia Mono, Cascadia Code, Consolas, DejaVu Sans Mono, Menlo, monospace</FontFamily>
+
+  <!-- A type scale with real steps rather than a smooth ramp: display, title, body, label, micro. -->
+  <x:Double x:Key="FontSizeDisplay">28</x:Double>
+  <x:Double x:Key="FontSizeTitle">18</x:Double>
+  <x:Double x:Key="FontSizeSubtitle">14</x:Double>
+  <x:Double x:Key="FontSizeBody">13</x:Double>
+  <x:Double x:Key="FontSizeLabel">11</x:Double>
+  <x:Double x:Key="FontSizeMicro">10</x:Double>
+
+  <CornerRadius x:Key="RadiusPanel">8</CornerRadius>
+  <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+  <Thickness x:Key="PanelPadding">16</Thickness>
+  <Thickness x:Key="PanelPaddingTight">10</Thickness>
+
+</ResourceDictionary>

@@ -1,0 +1,35 @@
+@* The document shell for the viewport page. *@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot viewport</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/viewport.css" />
+
+    @*
+        three.js is vendored under wwwroot/lib rather than pulled from a CDN: this viewport runs
+        inside a desktop tool that has to work with no network. The import map is what lets the
+        addons resolve their bare "three" specifier against the local copy.
+
+        Both three.module.js and three.core.js are needed. Since r167 the former re-exports the
+        latter, and vendoring only the module gives "Failed to fetch dynamically imported module",
+        which reads like a missing file rather than a missing sibling.
+    *@
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "/lib/three/three.module.js",
+            "three/addons/": "/lib/three/addons/"
+        }
+    }
+    </script>
+
+    <HeadOutlet />
+</head>
+<body>
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics transports for .NET (unofficial)</Title>
+    <Description>Wire-level plumbing shared by the Pollen Robotics clients: line-delimited JSON-RPC, a reconnecting WebSocket channel and a small HTTP helper.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

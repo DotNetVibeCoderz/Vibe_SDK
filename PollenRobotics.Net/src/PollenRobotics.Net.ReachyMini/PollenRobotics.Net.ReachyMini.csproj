@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Reachy Mini SDK for .NET (unofficial)</Title>
+    <Description>.NET client for Reachy Mini: head pose control over the daemon REST and WebSocket API, antennas, body yaw, motor modes, head tracking and recorded moves. Camera and audio are not implemented.</Description>
+    <PackageTags>$(PackageTags);reachy-mini</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.Kinematics/PollenRobotics.Net.Kinematics.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.Transport/PollenRobotics.Net.Transport.csproj" />
+  </ItemGroup>
+
+</Project>

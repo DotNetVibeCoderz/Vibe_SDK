@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>MicroDuck SDK for .NET (unofficial)</Title>
+    <Description>.NET client for the Pollen Robotics MicroDuck biped: JSON-RPC over the robotd socket, velocity drive, action slots, skills, telemetry and the time-of-flight sensor.</Description>
+    <PackageTags>$(PackageTags);microduck;biped</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.Transport/PollenRobotics.Net.Transport.csproj" />
+  </ItemGroup>
+
+</Project>

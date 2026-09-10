@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics kinematics for .NET (unofficial)</Title>
+    <Description>Forward and inverse kinematics for Pollen Robotics hardware: the Reachy Mini Stewart-platform neck and the Reachy 2 seven-axis arms.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+  </ItemGroup>
+
+</Project>

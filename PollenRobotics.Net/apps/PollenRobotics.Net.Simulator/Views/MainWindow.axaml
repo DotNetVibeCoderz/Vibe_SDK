@@ -1,0 +1,189 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:PollenRobotics.Net.Ui.Controls;assembly=PollenRobotics.Net.Ui"
+        xmlns:views="clr-namespace:PollenRobotics.Net.Simulator.Views"
+        mc:Ignorable="d"
+        x:Class="PollenRobotics.Net.Simulator.Views.MainWindow"
+        x:DataType="views:MainWindow"
+        Title="PollenRobotics.Net Simulator"
+        Width="1380" Height="880"
+        MinWidth="1080" MinHeight="660"
+        WindowStartupLocation="CenterScreen">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- ============================ top rail ============================ -->
+    <Border Grid.Row="0" Classes="rail">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
+
+        <TextBlock Grid.Column="0" Classes="title" VerticalAlignment="Center" Text="Simulator" />
+
+        <Border Grid.Column="1" Classes="ruleVertical" Height="20" Margin="14,0" />
+
+        <ComboBox Grid.Column="2"
+                  Name="RobotPicker"
+                  Width="170"
+                  VerticalAlignment="Center"
+                  SelectionChanged="OnRobotChanged" />
+
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+          <Button Name="StartButton"
+                  Classes="primary"
+                  Padding="16,6"
+                  Click="OnStartClicked"
+                  Content="Start" />
+
+          <Button Name="StopButton"
+                  Classes="danger"
+                  Padding="14,6"
+                  Click="OnStopClicked"
+                  IsEnabled="False"
+                  Content="Stop" />
+
+          <Button Classes="ghost" Padding="12,6" Click="OnResetClicked" Content="Reset" />
+        </StackPanel>
+
+        <Border Grid.Column="5" Name="RunPill" Classes="pill" Margin="0,0,10,0">
+          <TextBlock Name="RunPillText" Text="IDLE" />
+        </Border>
+
+        <TextBlock Grid.Column="6"
+                   Name="RateLabel"
+                   Classes="readout muted"
+                   VerticalAlignment="Center"
+                   Margin="0,0,8,0"
+                   Text="--" />
+
+        <Button Grid.Column="7"
+                Name="ThemeButton"
+                Classes="icon"
+                FontSize="15"
+                Click="OnThemeClicked"
+                Content="◐" />
+      </Grid>
+    </Border>
+
+    <!-- ============================ body ============================ -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,1,340">
+
+      <!-- 3D viewport -->
+      <Grid Grid.Column="0">
+        <views:EmbeddedBrowser Name="Viewport" />
+
+        <!--
+          Shown when the window cannot host a browser itself. The viewport is a page on loopback,
+          so a real browser renders it identically - this is a different route to the same thing,
+          not a degraded one.
+        -->
+        <Border Name="ViewportFallback"
+                Background="{DynamicResource GroundBrush}"
+                IsVisible="False">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="14" MaxWidth="440">
+            <TextBlock Classes="eyebrow" HorizontalAlignment="Center" Text="3D VIEWPORT" />
+
+            <TextBlock Classes="title"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       Text="Opens in your browser" />
+
+            <TextBlock Name="FallbackReason"
+                       Classes="muted"
+                       TextAlignment="Center"
+                       Text="This window cannot host a browser, so the viewport runs in your default one instead. It is the same page, driven by the same simulation." />
+
+            <Button Classes="primary"
+                    HorizontalAlignment="Center"
+                    Padding="18,8"
+                    Click="OnOpenViewportClicked"
+                    Content="Open the viewport" />
+
+            <SelectableTextBlock Name="ViewportAddress"
+                                 Classes="mono faint"
+                                 HorizontalAlignment="Center"
+                                 Text="" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Border Grid.Column="1" Classes="ruleVertical" />
+
+      <!-- status and log -->
+      <Grid Grid.Column="2" RowDefinitions="Auto,*,1,260">
+
+        <StackPanel Grid.Row="0" Margin="16,16,16,0" Spacing="12">
+          <TextBlock Classes="eyebrow" Text="STATUS" />
+
+          <Border Classes="raised" Padding="14,12">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
+              <TextBlock Grid.Row="0" Grid.Column="0" Classes="mono faint" Text="robot" Margin="0,0,14,5" />
+              <TextBlock Grid.Row="0" Grid.Column="1" Name="StatusRobot" Classes="mono" Text="--" Margin="0,0,0,5" />
+
+              <TextBlock Grid.Row="1" Grid.Column="0" Classes="mono faint" Text="joints" Margin="0,0,14,5" />
+              <TextBlock Grid.Row="1" Grid.Column="1" Name="StatusJoints" Classes="mono" Text="--" Margin="0,0,0,5" />
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Classes="mono faint" Text="clock" Margin="0,0,14,5" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Name="StatusClock" Classes="mono" Text="--" Margin="0,0,0,5" />
+
+              <TextBlock Grid.Row="3" Grid.Column="0" Classes="mono faint" Text="motion" Margin="0,0,14,5" />
+              <TextBlock Grid.Row="3" Grid.Column="1" Name="StatusMotion" Classes="mono" Text="--" Margin="0,0,0,5" />
+
+              <TextBlock Grid.Row="4" Grid.Column="0" Classes="mono faint" Text="overruns" Margin="0,0,14,0" />
+              <TextBlock Grid.Row="4" Grid.Column="1" Name="StatusOverruns" Classes="mono" Text="0" />
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!--
+          The joint arcs, in the same instrument the gallery uses. This is the panel that answers
+          "why is the robot not going where I told it" - a joint pinned at an end stop is visible
+          here and nowhere else.
+        -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,*" Margin="16,16,16,12">
+          <TextBlock Grid.Row="0" Classes="eyebrow" Text="JOINTS" Margin="0,0,0,10" />
+
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ItemsControl Name="JointArcs">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="views:JointView">
+                  <ui:JointArc Width="76" Height="82"
+                               Margin="3"
+                               Label="{Binding Label}"
+                               Minimum="{Binding Minimum}"
+                               Maximum="{Binding Maximum}"
+                               Value="{Binding Value}"
+                               Thickness="4"
+                               TrackBrush="{DynamicResource LineStrongBrush}"
+                               FillBrush="{DynamicResource SimulationBrush}"
+                               WarnBrush="{DynamicResource AccentBrush}"
+                               LimitBrush="{DynamicResource SignalBrush}"
+                               TextBrush="{DynamicResource TextBrush}"
+                               ReadoutFontFamily="{DynamicResource MonoFont}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+
+        <Border Grid.Row="2" Classes="rule" />
+
+        <ui:LogPanel Grid.Row="3" Name="Log" />
+      </Grid>
+    </Grid>
+
+    <!-- ============================ status bar ============================ -->
+    <Border Grid.Row="2" Classes="statusBar">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Column="0" Name="StatusBarText" Classes="mono faint" VerticalAlignment="Center" Text="Ready" />
+        <TextBlock Grid.Column="2" Classes="mono faint" VerticalAlignment="Center" Text="Gravicode Studios · Kang Fadhil" />
+      </Grid>
+    </Border>
+
+  </Grid>
+</Window>

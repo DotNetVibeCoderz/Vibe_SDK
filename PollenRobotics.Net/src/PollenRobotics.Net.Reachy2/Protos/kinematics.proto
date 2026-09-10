@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+package reachy.kinematics;
+
+message Matrix4x4 {
+    repeated double data = 1;
+}
+
+message Matrix3x3 {
+    repeated double data = 1;
+}
+
+message Quaternion {
+    double w = 1;
+    double x = 2;
+    double y = 3;
+    double z = 4;
+}
+
+message Rotation3d {
+    oneof rotation {
+        Quaternion q = 1;
+        ExtEulerAngles rpy = 2;
+        Matrix3x3 matrix = 3;
+    }
+}
+
+message Point {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message ExtEulerAngles {
+    google.protobuf.FloatValue roll = 1;
+    google.protobuf.FloatValue pitch = 2;
+    google.protobuf.FloatValue yaw = 3;
+}
+
+message PointDistanceTolerances {
+    double x_tol = 1;
+    double y_tol = 2;
+    double z_tol = 3;
+}
+
+message ExtEulerAnglesTolerances {
+    double roll_tol = 1;
+    double pitch_tol = 2;
+    double yaw_tol = 3;
+}

@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+import "component.proto";
+import "error.proto";
+import "kinematics.proto";
+
+package component.orbita3d;
+
+enum Orbita3dField {
+    NONE = 0;
+
+    NAME = 1;
+    ID = 2;
+
+    PRESENT_POSITION = 3;
+    PRESENT_SPEED = 4;
+    PRESENT_LOAD = 5;
+    TEMPERATURE = 6;
+    JOINT_LIMITS = 7;
+
+    COMPLIANT = 8;
+    GOAL_POSITION = 9;
+    SPEED_LIMIT = 10;
+    TORQUE_LIMIT = 11;
+    PID = 12;
+
+    ALL = 15;
+}
+
+message Orbita3dState {
+    google.protobuf.Timestamp timestamp = 1;
+
+    component.ComponentId id = 2;
+
+    reachy.kinematics.Rotation3d present_position = 3;
+    Vector3d present_speed = 4;
+    Vector3d present_load = 5;
+    Float3d temperature = 6;
+    Limits3d joint_limits = 7;
+
+    google.protobuf.BoolValue compliant = 8;
+    reachy.kinematics.Rotation3d goal_position = 9;
+    Float3d speed_limit = 10;
+    Float3d torque_limit = 11;
+
+    PID3d pid = 12;
+}
+
+message Orbita3dStateRequest {
+    repeated Orbita3dField fields = 1;
+    component.ComponentId id = 2;
+}
+
+message Orbita3dStreamStateRequest {
+    Orbita3dStateRequest req = 1;
+    float freq = 2;
+}
+
+message PID3d {
+    PIDGains motor_1 = 1;
+    PIDGains motor_2 = 2;
+    PIDGains motor_3 = 3;
+}
+
+message Limits3d {
+    JointLimits roll = 1;
+    JointLimits pitch = 2;
+    JointLimits yaw = 3;
+}
+
+message Float3d {
+    google.protobuf.FloatValue motor_1 = 1;
+    google.protobuf.FloatValue motor_2 = 2;
+    google.protobuf.FloatValue motor_3 = 3;
+}
+
+message Vector3d {
+    google.protobuf.FloatValue x = 1;
+    google.protobuf.FloatValue y = 2;
+    google.protobuf.FloatValue z = 3;
+}
+
+message Orbita3dCommand {
+    component.ComponentId id = 1;
+
+    google.protobuf.BoolValue compliant = 2;
+    reachy.kinematics.Rotation3d goal_position = 3;
+    Float3d speed_limit = 4;
+    Float3d torque_limit = 5;
+
+    PID3d pid = 6;
+}
+
+message Orbita3dsCommand {
+    repeated Orbita3dCommand cmd = 1;
+}
+
+message Orbita3dGoal {
+    component.ComponentId id = 1;
+    reachy.kinematics.Rotation3d rotation = 2;
+    google.protobuf.FloatValue duration = 3;
+}
+
+message Orbita3d {
+    ComponentId id = 1;
+    string serial_number = 2;
+}
+
+message ListOfOrbita3d {
+    repeated Orbita3d info = 1;
+}
+
+message Orbita3dStatus {
+    repeated error.Error errors = 1;
+}
+
+service Orbita3dService {
+    rpc GetAllOrbita3d (google.protobuf.Empty) returns (ListOfOrbita3d);
+
+    rpc GetState (Orbita3dStateRequest) returns (Orbita3dState);
+    rpc StreamState (Orbita3dStreamStateRequest) returns (stream Orbita3dState);
+
+    rpc GoToOrientation (Orbita3dGoal) returns (google.protobuf.Empty);
+
+    rpc SendCommand (Orbita3dsCommand) returns (google.protobuf.Empty);
+    rpc StreamCommand (stream Orbita3dsCommand) returns (google.protobuf.Empty);
+
+    rpc Audit (component.ComponentId) returns (Orbita3dStatus);
+    rpc HeartBeat (component.ComponentId) returns (google.protobuf.Empty);
+
+    rpc Restart (component.ComponentId) returns (google.protobuf.Empty);
+}

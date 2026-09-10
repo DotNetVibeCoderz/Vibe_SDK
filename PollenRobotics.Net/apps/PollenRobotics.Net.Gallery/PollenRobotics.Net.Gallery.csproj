@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>PollenRobotics.Net.Gallery</RootNamespace>
+    <AssemblyName>PollenRobotics.Net.Gallery</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/PollenRobotics.Net.Ui/PollenRobotics.Net.Ui.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Simulation/PollenRobotics.Net.Simulation.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Wizard.Core/PollenRobotics.Net.Wizard.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+</Project>

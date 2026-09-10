@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics Avalonia design system (unofficial)</Title>
+    <Description>The shared Avalonia design system for PollenRobotics.Net tooling: theme tokens, the joint-arc instrument, log and status panels.</Description>
+    <PackageTags>$(PackageTags);avalonia;ui;design-system</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Theme/**/*.axaml" />
+  </ItemGroup>
+
+</Project>

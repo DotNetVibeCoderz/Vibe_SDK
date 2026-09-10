@@ -1,0 +1,30 @@
+<Solution>
+  <Folder Name="/apps/">
+    <Project Path="apps/PollenRobotics.Net.Cli/PollenRobotics.Net.Cli.csproj" />
+    <Project Path="apps/PollenRobotics.Net.Gallery/PollenRobotics.Net.Gallery.csproj" />
+    <Project Path="apps/PollenRobotics.Net.Simulator/PollenRobotics.Net.Simulator.csproj" />
+    <Project Path="apps/PollenRobotics.Net.Wizard/PollenRobotics.Net.Wizard.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/PollenRobotics.Net.Samples.DeskCompanion/PollenRobotics.Net.Samples.DeskCompanion.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/PollenRobotics.Net.Ai/PollenRobotics.Net.Ai.csproj" />
+    <Project Path="src/PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+    <Project Path="src/PollenRobotics.Net.Kinematics/PollenRobotics.Net.Kinematics.csproj" />
+    <Project Path="src/PollenRobotics.Net.MicroDuck/PollenRobotics.Net.MicroDuck.csproj" />
+    <Project Path="src/PollenRobotics.Net.Ml/PollenRobotics.Net.Ml.csproj" />
+    <Project Path="src/PollenRobotics.Net.Reachy2/PollenRobotics.Net.Reachy2.csproj" />
+    <Project Path="src/PollenRobotics.Net.ReachyMini/PollenRobotics.Net.ReachyMini.csproj" />
+    <Project Path="src/PollenRobotics.Net.Simulation/PollenRobotics.Net.Simulation.csproj" />
+    <Project Path="src/PollenRobotics.Net.Transport/PollenRobotics.Net.Transport.csproj" />
+    <Project Path="src/PollenRobotics.Net.Ui/PollenRobotics.Net.Ui.csproj" />
+    <Project Path="src/PollenRobotics.Net.Wizard.Core/PollenRobotics.Net.Wizard.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PollenRobotics.Net.Tests/PollenRobotics.Net.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/PollenRobotics.Net.TemplateCheck/PollenRobotics.Net.TemplateCheck.csproj" />
+  </Folder>
+</Solution>

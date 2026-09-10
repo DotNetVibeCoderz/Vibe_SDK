@@ -1,0 +1,27 @@
+<Project>
+
+  <!-- Only libraries under src/ ship to NuGet. Apps, samples, tools and tests opt out via
+       IsPackable in Directory.Build.props; this re-enables it for src/ and attaches the README
+       that the package metadata references. -->
+  <PropertyGroup Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <!-- Must be here rather than in Directory.Build.props: MSBuildProjectName is only meaningful once
+       the project itself has been read. -->
+  <PropertyGroup Condition="'$(IsPackable)' == 'true' AND '$(PackageId)' == ''">
+    <PackageId>$(PackageIdPrefix)$(MSBuildProjectName)</PackageId>
+  </PropertyGroup>
+
+  <!-- Every package says the same two things, so they are appended once rather than repeated in
+       eleven csproj files. Both matter on a package page: this SDK is not Pollen's, and nothing in
+       it has been run against a physical robot. -->
+  <PropertyGroup Condition="'$(IsPackable)' == 'true' AND '$(Description)' != ''">
+    <Description>$(Description) Unofficial and not affiliated with Pollen Robotics; version 0.x has not been validated against physical hardware.</Description>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

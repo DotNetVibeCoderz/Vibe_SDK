@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+import "component.proto";
+import "error.proto";
+
+package component.dynamixel_motor;
+
+enum DynamixelMotorField {
+    NONE = 0;
+
+    NAME = 1;
+    ID = 2;
+
+    PRESENT_POSITION = 3;
+    PRESENT_SPEED = 4;
+    PRESENT_LOAD = 5;
+    TEMPERATURE = 6;
+    JOINT_LIMITS = 7;
+
+    COMPLIANT = 8;
+    GOAL_POSITION = 9;
+    SPEED_LIMIT = 10;
+    TORQUE_LIMIT = 11;
+    PID = 12;
+
+    ALL = 15;
+}
+
+message DynamixelMotorState {
+    google.protobuf.Timestamp timestamp = 1;
+
+    component.ComponentId id = 2;
+
+    google.protobuf.FloatValue present_position = 3;
+    google.protobuf.FloatValue present_speed = 4;
+    google.protobuf.FloatValue present_load = 5;
+    google.protobuf.FloatValue temperature = 6;
+    JointLimits joint_limits = 7;
+
+    google.protobuf.BoolValue compliant = 8;
+    google.protobuf.FloatValue goal_position = 9;
+    google.protobuf.FloatValue speed_limit = 10;
+    google.protobuf.FloatValue torque_limit = 11;
+
+    PIDGains pid = 12;
+}
+
+message DynamixelMotorStateRequest {
+    repeated DynamixelMotorField fields = 1;
+    component.ComponentId id = 2;
+}
+
+message DynamixelMotorStreamStateRequest {
+    DynamixelMotorStateRequest req = 1;
+    float freq = 2;
+}
+
+message DynamixelMotorGoal {
+    component.ComponentId id = 1;
+    google.protobuf.FloatValue goal_position = 2;
+    google.protobuf.FloatValue duration = 3;
+}
+
+
+message DynamixelMotorCommand {
+    component.ComponentId id = 1;
+
+    google.protobuf.BoolValue compliant = 2;
+    google.protobuf.FloatValue goal_position = 3;
+    google.protobuf.FloatValue speed_limit = 4;
+    google.protobuf.FloatValue torque_limit = 5;
+}
+
+message DynamixelMotorsCommand {
+    repeated DynamixelMotorCommand cmd = 1;
+}
+
+message DynamixelMotor {
+    ComponentId id = 1;
+    string serial_number = 2;
+}
+
+message ListOfDynamixelMotor {
+    repeated DynamixelMotor info = 1;
+}
+
+message DynamixelMotorStatus {
+    repeated error.Error errors = 1;
+}
+
+service DynamixelMotorService {
+    rpc GetAllDynamixelMotor (google.protobuf.Empty) returns (ListOfDynamixelMotor);
+
+    rpc GetState (DynamixelMotorStateRequest) returns (DynamixelMotorState);
+    rpc StreamState (DynamixelMotorStreamStateRequest) returns (stream DynamixelMotorState);
+
+    rpc SendCommand (DynamixelMotorsCommand) returns (google.protobuf.Empty);
+    rpc StreamCommand (stream DynamixelMotorsCommand) returns (google.protobuf.Empty);
+
+    rpc SetPosition (DynamixelMotorGoal) returns (google.protobuf.Empty);
+
+    rpc Audit (component.ComponentId) returns (DynamixelMotorStatus);
+    rpc HeartBeat (component.ComponentId) returns (google.protobuf.Empty);
+
+    rpc Restart (component.ComponentId) returns (google.protobuf.Empty);
+}

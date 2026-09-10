@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>pollen</AssemblyName>
+    <RootNamespace>PollenRobotics.Net.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/PollenRobotics.Net.ReachyMini/PollenRobotics.Net.ReachyMini.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.MicroDuck/PollenRobotics.Net.MicroDuck.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Reachy2/PollenRobotics.Net.Reachy2.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Simulation/PollenRobotics.Net.Simulation.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Wizard.Core/PollenRobotics.Net.Wizard.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" />
+  </ItemGroup>
+
+</Project>

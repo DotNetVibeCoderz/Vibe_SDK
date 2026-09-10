@@ -1,0 +1,14 @@
+@*
+    The render mode goes on the page component, not here.
+
+    Putting @rendermode on RouteView makes the framework marshal RouteData across the render-mode
+    boundary, and RouteData carries a System.Type - which the parameter serialiser refuses, with
+    "Serialization and deserialization of 'System.Type' instances is not supported". The page returns
+    HTTP 500 and the viewport never loads. Viewport.razor declares InteractiveServer itself.
+*@
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

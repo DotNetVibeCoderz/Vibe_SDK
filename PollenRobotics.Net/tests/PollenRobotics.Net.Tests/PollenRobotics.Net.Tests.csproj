@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Kinematics/PollenRobotics.Net.Kinematics.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Transport/PollenRobotics.Net.Transport.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.ReachyMini/PollenRobotics.Net.ReachyMini.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.MicroDuck/PollenRobotics.Net.MicroDuck.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Simulation/PollenRobotics.Net.Simulation.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Wizard.Core/PollenRobotics.Net.Wizard.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

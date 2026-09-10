@@ -1,0 +1,139 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="clr-namespace:PollenRobotics.Net.Wizard.Views"
+             mc:Ignorable="d"
+             x:Class="PollenRobotics.Net.Wizard.Views.ChatPanel">
+
+  <!--
+    Jack The Code Bender. Sessions across the top, the thread in the middle, the composer at the
+    bottom. The starter prompts are shown only on an empty thread: an empty chat box is the hardest
+    part of a tool like this, and the examples teach what a useful request contains.
+  -->
+  <Grid RowDefinitions="Auto,1,Auto,*,Auto">
+
+    <!-- header -->
+    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="14,12,10,10">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9">
+        <Border Width="24" Height="24"
+                CornerRadius="6"
+                Background="{DynamicResource AccentSoftBrush}"
+                BorderBrush="{DynamicResource AccentBrush}"
+                BorderThickness="1">
+          <TextBlock Text="J"
+                     FontWeight="Bold"
+                     FontSize="13"
+                     Foreground="{DynamicResource AccentBrush}"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+        </Border>
+
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="Jack The Code Bender" FontWeight="SemiBold" FontSize="13" />
+          <TextBlock Name="ModelLabel" Classes="mono faint" Text="not configured" />
+        </StackPanel>
+      </StackPanel>
+
+      <Button Grid.Column="2" Classes="icon" FontSize="13" Click="OnSettingsClicked"
+              ToolTip.Tip="Model and persona settings" Content="⚙" />
+
+      <Button Grid.Column="3" Classes="icon" FontSize="13" Click="OnHideClicked"
+              ToolTip.Tip="Hide the chat panel" Content="✕" />
+    </Grid>
+
+    <Border Grid.Row="1" Classes="rule" />
+
+    <!-- sessions -->
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="10,10,10,8">
+      <ComboBox Grid.Column="0"
+                Name="SessionPicker"
+                HorizontalAlignment="Stretch"
+                SelectionChanged="OnSessionChanged" />
+
+      <Button Grid.Column="1" Classes="ghost" Padding="9,5" Margin="6,0,0,0"
+              Click="OnNewSessionClicked" ToolTip.Tip="New session" Content="+" />
+
+      <Button Grid.Column="2" Classes="ghost" Padding="9,5" Margin="4,0,0,0"
+              Click="OnDeleteSessionClicked" ToolTip.Tip="Delete this session" Content="🗑" />
+    </Grid>
+
+    <!-- thread -->
+    <ScrollViewer Grid.Row="3" Name="ThreadScroller" Padding="12,4,12,12">
+      <StackPanel Name="Thread" Spacing="12">
+
+        <!-- starter prompts, shown only while the thread is empty -->
+        <StackPanel Name="StarterPrompts" Spacing="8" Margin="2,8,2,0">
+          <TextBlock Classes="eyebrow" Text="TRY ASKING" />
+          <ItemsControl Name="PromptCards">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="views:PromptCard">
+                <Button Classes="ghost"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Padding="11,9"
+                        Margin="0,2"
+                        Command="{Binding Use}">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="12" />
+                    <TextBlock Text="{Binding Preview}" Classes="faint" FontSize="11" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- composer -->
+    <Border Grid.Row="4" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="10,10">
+      <StackPanel Spacing="8">
+
+        <ItemsControl Name="Attachments">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="views:AttachmentChip">
+              <Border Classes="pill" Margin="0,0,5,5" Padding="8,3">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="{Binding Icon}" />
+                  <TextBlock Text="{Binding Label}" />
+                  <Button Classes="icon" Padding="2,0" FontSize="10"
+                          Command="{Binding Remove}" Content="✕" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBox Name="Composer"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 MinHeight="72"
+                 MaxHeight="200"
+                 PlaceholderText="Ask Jack to write a robot behaviour. Enter to send, Shift+Enter for a new line."
+                 KeyDown="OnComposerKeyDown" />
+
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+          <Button Grid.Column="0" Classes="ghost" Padding="9,5"
+                  Click="OnAttachImageClicked" ToolTip.Tip="Attach an image" Content="🖼" />
+
+          <Button Grid.Column="1" Classes="ghost" Padding="9,5" Margin="4,0,0,0"
+                  Click="OnAttachDocumentClicked" ToolTip.Tip="Attach a document" Content="📎" />
+
+          <Button Grid.Column="3" Classes="ghost" Padding="11,5" Margin="0,0,6,0"
+                  Click="OnResetSessionClicked" ToolTip.Tip="Clear this conversation" Content="Reset" />
+
+          <Button Grid.Column="4" Name="SendButton" Classes="primary" Padding="18,6"
+                  Click="OnSendClicked" Content="Send" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+  </Grid>
+</UserControl>

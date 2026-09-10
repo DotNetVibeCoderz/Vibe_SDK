@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics ML helpers for .NET (unofficial)</Title>
+    <Description>Machine-learning helpers for Pollen robots: ONNX policy inference and ML.NET gesture and intent classification. TorchSharp is referenced and available but nothing here builds on it yet.</Description>
+    <PackageTags>$(PackageTags);ml;onnx;mlnet;torchsharp</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+    <PackageReference Include="TorchSharp" />
+  </ItemGroup>
+
+</Project>

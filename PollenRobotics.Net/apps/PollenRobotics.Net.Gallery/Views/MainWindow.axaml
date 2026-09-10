@@ -1,0 +1,260 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:PollenRobotics.Net.Ui.Controls;assembly=PollenRobotics.Net.Ui"
+        xmlns:views="clr-namespace:PollenRobotics.Net.Gallery.Views"
+        mc:Ignorable="d"
+        x:Class="PollenRobotics.Net.Gallery.Views.MainWindow"
+        x:DataType="views:MainWindow"
+        Title="PollenRobotics.Net Gallery"
+        Width="1320" Height="860"
+        MinWidth="1040" MinHeight="640"
+        WindowStartupLocation="CenterScreen">
+
+  <!--
+    Chassis: a thin identity rail on top, a demo list on the left, the live instrument panel in the
+    middle, the sample code on the right, and the log along the bottom. The layout is deliberately
+    the familiar tool shape - inventing new navigation for something people read for an hour is
+    hostile. The distinctiveness lives in the instruments, not in moving the menu.
+  -->
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- ============================ top rail ============================ -->
+    <Border Grid.Row="0" Classes="rail">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+
+        <TextBlock Grid.Column="0"
+                   Classes="title"
+                   VerticalAlignment="Center"
+                   Text="Gallery" />
+
+        <TextBlock Grid.Column="1"
+                   Classes="eyebrow"
+                   Margin="10,0,0,0"
+                   VerticalAlignment="Center"
+                   Text="POLLENROBOTICS.NET" />
+
+        <Border Grid.Column="3" Classes="pill simulated" Margin="0,0,10,0">
+          <TextBlock Text="SIMULATION" />
+        </Border>
+
+        <TextBlock Grid.Column="4"
+                   Name="RateLabel"
+                   Classes="readout muted"
+                   VerticalAlignment="Center"
+                   Margin="0,0,8,0"
+                   Text="--" />
+
+        <Button Grid.Column="5"
+                Name="ThemeButton"
+                Classes="icon"
+                FontSize="15"
+                Click="OnThemeClicked"
+                ToolTip.Tip="Switch theme"
+                Content="◐" />
+      </Grid>
+    </Border>
+
+    <!-- ============================ body ============================ -->
+    <Grid Grid.Row="1" ColumnDefinitions="264,1,*,1,400">
+
+      <!-- demo list -->
+      <Grid Grid.Column="0" RowDefinitions="Auto,*">
+
+        <StackPanel Grid.Row="0" Margin="14,14,14,8" Spacing="8">
+          <TextBlock Classes="eyebrow" Text="ROBOT" />
+          <ComboBox Name="RobotPicker"
+                    HorizontalAlignment="Stretch"
+                    SelectionChanged="OnRobotChanged" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Padding="8,0,8,12">
+          <ItemsControl Name="DemoGroups">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="views:DemoGroupView">
+                <StackPanel Margin="0,10,0,0">
+                  <TextBlock Classes="eyebrow" Margin="6,0,0,6" Text="{Binding Name}" />
+                  <ItemsControl ItemsSource="{Binding Demos}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="views:DemoItemView">
+                        <Button Classes="ghost"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="10,8"
+                                Margin="0,1"
+                                Command="{Binding Select}">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}" FontWeight="Medium" />
+                            <TextBlock Classes="faint"
+                                       FontSize="11"
+                                       Margin="0,2,0,0"
+                                       Text="{Binding Summary}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+
+      <Border Grid.Column="1" Classes="ruleVertical" />
+
+      <!-- instrument panel -->
+      <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*">
+
+        <StackPanel Grid.Row="0" Margin="20,18,20,0" Spacing="6">
+          <TextBlock Name="DemoTitle" Classes="display" Text="Pick a demo" />
+          <TextBlock Name="DemoSummary"
+                     Classes="subtitle"
+                     Text="Everything here runs against the built-in simulation, through the same client classes an application would use." />
+        </StackPanel>
+
+        <!--
+          The "watch for" note is the reason a demo earns its place. Without it a gallery is a list
+          of things wiggling.
+        -->
+        <Border Grid.Row="1"
+                Name="WatchForCard"
+                Classes="raised"
+                Margin="20,14,20,0"
+                Padding="14,11"
+                IsVisible="False">
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0"
+                       Classes="eyebrow"
+                       Foreground="{DynamicResource AccentBrush}"
+                       Text="WATCH FOR"
+                       VerticalAlignment="Top"
+                       Margin="0,2,12,0" />
+            <TextBlock Grid.Column="1" Name="WatchForText" Classes="muted" />
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" RowDefinitions="*,Auto" Margin="20,16,20,16">
+
+          <Border Grid.Row="0" Classes="panel" Padding="18">
+            <Grid RowDefinitions="Auto,Auto,*">
+              <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Classes="eyebrow" Text="JOINTS" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2"
+                           Name="StatusText"
+                           Classes="readout muted"
+                           VerticalAlignment="Center"
+                           Text="idle" />
+              </Grid>
+
+              <Border Grid.Row="1" Classes="rule" Margin="0,10,0,14" />
+
+              <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                <ItemsControl Name="JointArcs">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="views:JointView">
+                      <ui:JointArc Width="88" Height="94"
+                                   Margin="4"
+                                   Label="{Binding Label}"
+                                   Minimum="{Binding Minimum}"
+                                   Maximum="{Binding Maximum}"
+                                   Value="{Binding Value}"
+                                   Thickness="5"
+                                   TrackBrush="{DynamicResource LineStrongBrush}"
+                                   FillBrush="{DynamicResource SimulationBrush}"
+                                   WarnBrush="{DynamicResource AccentBrush}"
+                                   LimitBrush="{DynamicResource SignalBrush}"
+                                   TextBrush="{DynamicResource TextBrush}"
+                                   ReadoutFontFamily="{DynamicResource MonoFont}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Grid>
+          </Border>
+
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,14,0,0">
+            <Button Name="RunButton"
+                    Classes="primary"
+                    Padding="18,8"
+                    Click="OnRunClicked"
+                    IsEnabled="False"
+                    Content="Run demo" />
+
+            <Button Name="StopButton"
+                    Classes="danger"
+                    Padding="16,8"
+                    Click="OnStopClicked"
+                    IsEnabled="False"
+                    Content="Stop" />
+
+            <Button Classes="ghost"
+                    Padding="14,8"
+                    Click="OnResetClicked"
+                    Content="Reset robot" />
+
+            <Button Name="CopyButton"
+                    Classes="ghost"
+                    Padding="14,8"
+                    Click="OnCopyClicked"
+                    IsEnabled="False"
+                    Content="Copy code" />
+          </StackPanel>
+        </Grid>
+      </Grid>
+
+      <Border Grid.Column="3" Classes="ruleVertical" />
+
+      <!-- sample code -->
+      <Grid Grid.Column="4" RowDefinitions="Auto,1,*,1,220">
+        <Grid Grid.Row="0" Margin="16,14,16,10" ColumnDefinitions="Auto,*">
+          <TextBlock Grid.Column="0" Classes="eyebrow" Text="SAMPLE CODE" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Classes="mono faint"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Center"
+                     Text="C#" />
+        </Grid>
+
+        <Border Grid.Row="1" Classes="rule" />
+
+        <ScrollViewer Grid.Row="2" Padding="16,12">
+          <SelectableTextBlock Name="CodeText"
+                               FontFamily="{DynamicResource MonoFont}"
+                               FontSize="12"
+                               LineHeight="19"
+                               TextWrapping="NoWrap"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               Text="Select a demo to see the code that drives it." />
+        </ScrollViewer>
+
+        <Border Grid.Row="3" Classes="rule" />
+
+        <ui:LogPanel Grid.Row="4" Name="Log" />
+      </Grid>
+    </Grid>
+
+    <!-- ============================ status bar ============================ -->
+    <Border Grid.Row="2" Classes="statusBar">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock Grid.Column="0"
+                   Name="StatusBarText"
+                   Classes="mono faint"
+                   VerticalAlignment="Center"
+                   Text="Ready" />
+
+        <TextBlock Grid.Column="2"
+                   Classes="mono faint"
+                   VerticalAlignment="Center"
+                   Text="Gravicode Studios · Kang Fadhil" />
+      </Grid>
+    </Border>
+
+  </Grid>
+</Window>

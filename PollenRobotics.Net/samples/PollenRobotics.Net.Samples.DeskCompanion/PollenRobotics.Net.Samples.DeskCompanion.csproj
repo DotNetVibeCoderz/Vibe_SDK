@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>desk-companion</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/PollenRobotics.Net.ReachyMini/PollenRobotics.Net.ReachyMini.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Simulation/PollenRobotics.Net.Simulation.csproj" />
+  </ItemGroup>
+
+</Project>

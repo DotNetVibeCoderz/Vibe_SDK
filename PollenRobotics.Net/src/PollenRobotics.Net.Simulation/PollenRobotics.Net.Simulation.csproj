@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics robot simulation for .NET (unofficial)</Title>
+    <Description>A kinematic simulation of every supported Pollen robot, plus in-process transports so SDK code runs unchanged against it.</Description>
+    <PackageTags>$(PackageTags);simulation</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.Kinematics/PollenRobotics.Net.Kinematics.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.ReachyMini/PollenRobotics.Net.ReachyMini.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.MicroDuck/PollenRobotics.Net.MicroDuck.csproj" />
+  </ItemGroup>
+
+</Project>

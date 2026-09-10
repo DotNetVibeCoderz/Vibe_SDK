@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+import "component.proto";
+import "error.proto";
+
+package component.parallel_gripper;
+
+enum ParallelGripperField {
+    NONE = 0;
+
+    NAME = 1;
+    ID = 2;
+
+    PRESENT_POSITION = 3;
+    PRESENT_SPEED = 4;
+    PRESENT_LOAD = 5;
+    TEMPERATURE = 6;
+    FORCE_SENSOR = 7;
+
+    COMPLIANT = 8;
+    GOAL_POSITION = 9;
+    SPEED_LIMIT = 10;
+    TORQUE_LIMIT = 11;
+    PID = 12;
+
+    ALL = 15;
+}
+
+message ParallelGripperState {
+    google.protobuf.Timestamp timestamp = 15;
+}
+
+message ParallelGripperStateRequest {
+    repeated ParallelGripperField fields = 1;
+    component.ComponentId id = 2;
+}
+
+message ParallelGripperStreamStateRequest {
+    ParallelGripperStateRequest req = 1;
+    float freq = 2;
+}
+
+
+message ParallelGripperCommand {
+    
+}
+
+
+message ParallelGripperInfo {
+    ComponentId id = 1;
+    string serial_number = 2;
+}
+
+message ListOfParallelGripperInfo {
+    repeated ParallelGripperInfo parallel_gripper_info = 1;
+}
+
+message ParallelGripperStatus {
+    repeated error.Error errors = 1;
+}
+
+service GripperService {
+    rpc GetAllParallelGripper (google.protobuf.Empty) returns (ListOfParallelGripperInfo);
+
+    rpc GetState (ParallelGripperStateRequest) returns (ParallelGripperState);
+    rpc StreamState (ParallelGripperStreamStateRequest) returns (stream ParallelGripperState);
+
+    rpc SendCommand (ParallelGripperCommand) returns (google.protobuf.Empty);
+    rpc StreamCommand (stream ParallelGripperCommand) returns (google.protobuf.Empty);
+
+    rpc Audit (component.ComponentId) returns (ParallelGripperStatus);
+    rpc HeartBeat (component.ComponentId) returns (google.protobuf.Empty);
+
+    rpc Restart (component.ComponentId) returns (google.protobuf.Empty);
+}

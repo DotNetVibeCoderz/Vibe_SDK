@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+import "arm.proto";
+import "head.proto";
+import "hand.proto";
+import "mobile_base_utility.proto";
+import "sound.proto";
+
+package reachy;
+
+message Reachy {
+    ReachyId id = 1;
+    reachy.part.arm.Arm l_arm = 2;
+    reachy.part.arm.Arm r_arm = 3;
+    reachy.part.head.Head head = 4;
+    reachy.part.hand.Hand l_hand= 5;
+    reachy.part.hand.Hand r_hand= 6;
+
+    reachy.part.mobile.base.utility.MobileBase mobile_base= 7;
+
+    component.sound.Microphone microphone = 8;
+    component.sound.Speaker speaker = 9;
+
+    // component.video.StereoCamera stereo_camera = 10;
+    // component.video.DepthCamera depth_camera = 11;
+    
+    ReachyInfo info = 20;
+}
+
+message ReachyId {
+    uint32 id = 1;
+    string name = 2;
+}
+
+message ReachyInfo {
+    string serial_number = 1;
+    string version_hard = 2;
+    string version_soft = 3;
+}
+
+message ReachyState {
+    google.protobuf.Timestamp timestamp = 1;
+
+    ReachyId id = 2;
+
+    reachy.part.arm.ArmState l_arm_state = 3;
+    reachy.part.arm.ArmState r_arm_state = 4;
+    reachy.part.head.HeadState head_state = 5;
+    reachy.part.hand.HandState l_hand_state = 6;
+    reachy.part.hand.HandState r_hand_state = 7;
+    reachy.part.mobile.base.utility.MobileBaseState mobile_base_state = 8;
+}
+
+message ReachyStatus {
+    google.protobuf.Timestamp timestamp = 1;
+
+    ReachyId id = 2;
+
+    reachy.part.arm.ArmStatus l_arm_status = 3;
+    reachy.part.arm.ArmStatus r_arm_status = 4;
+    reachy.part.head.HeadStatus head_status = 5;
+    reachy.part.hand.HandStatus l_hand_status = 6;
+    reachy.part.hand.HandStatus r_hand_status = 7;
+    reachy.part.mobile.base.utility.MobileBaseStatus mobile_base_status = 8;
+}
+
+message ReachyStreamStateRequest {
+    ReachyId id = 1;
+    float publish_frequency = 2;
+}
+
+message ReachyStreamAuditRequest {
+    ReachyId id = 1;
+    float publish_frequency = 2;
+}
+
+service ReachyService {
+    rpc GetReachy (google.protobuf.Empty) returns (Reachy);
+
+    rpc GetReachyState (ReachyId) returns (ReachyState);
+    rpc StreamReachyState (ReachyStreamStateRequest) returns (stream ReachyState);
+
+    rpc Audit (ReachyId) returns (ReachyStatus);
+    rpc StreamAudit (ReachyStreamAuditRequest) returns (stream ReachyStatus);
+}

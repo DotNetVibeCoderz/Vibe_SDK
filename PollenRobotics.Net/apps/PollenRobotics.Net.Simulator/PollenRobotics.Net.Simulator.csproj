@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- Exe, not WinExe, and this is load-bearing.
+
+         On a Microsoft.NET.Sdk.Web project, OutputType=WinExe drops the framework's static web
+         assets from the build: wwwroot still serves, but _framework/blazor.web.js 404s, the circuit
+         never starts, and the page renders as a static prerender where no event handler and no
+         OnAfterRenderAsync ever runs. Nothing reports an error - the viewport is simply blank.
+
+         Exe keeps the assets and costs a console window, which Program.Main hides on Windows. -->
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PollenRobotics.Net.Simulator</RootNamespace>
+    <AssemblyName>PollenRobotics.Net.Simulator</AssemblyName>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Avalonia and ASP.NET Core both ship a Program entry point convention; this project owns
+         its own, starting Kestrel first and then handing the main thread to Avalonia. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- MSB3277: the WebView2 package ships WPF and WinForms wrappers alongside the Core assembly,
+         and its WPF wrapper wants an older WindowsBase than the framework provides. This project
+         only ever touches CoreWebView2, so the conflicting assembly is one that never loads. -->
+    <NoWarn>$(NoWarn);MSB3277</NoWarn>
+  </PropertyGroup>
+
+  <!-- The Web SDK serves wwwroot from the project directory during development, but this is a
+       desktop app whose content root is its own output folder, both when run from bin and when
+       published. Without this the viewport page loads with no CSS and no three.js, which presents
+       as a blank canvas rather than as a missing file. -->
+  <ItemGroup>
+    <Content Update="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/PollenRobotics.Net.Ui/PollenRobotics.Net.Ui.csproj" />
+    <ProjectReference Include="../../src/PollenRobotics.Net.Simulation/PollenRobotics.Net.Simulation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Web.WebView2" Condition="$([MSBuild]::IsOSPlatform(Windows))" />
+  </ItemGroup>
+
+</Project>

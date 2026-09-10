@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+package component;
+
+message ComponentId {
+    uint32 id = 1;
+    string name = 2;
+}
+
+message PIDGains {
+    google.protobuf.FloatValue p = 1;
+    google.protobuf.FloatValue i = 2;
+    google.protobuf.FloatValue d = 3;
+}
+
+message JointLimits {
+    google.protobuf.FloatValue min = 1;
+    google.protobuf.FloatValue max = 2;
+}

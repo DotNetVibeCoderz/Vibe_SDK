@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics AI tooling for .NET (unofficial)</Title>
+    <Description>Semantic Kernel wiring for Pollen Robotics tooling: OpenAI, Anthropic, Gemini and Ollama behind one kernel, plus the robot-aware plugins and chat session model that Jack The Code Bender runs on.</Description>
+    <PackageTags>$(PackageTags);semantic-kernel;llm;openai;anthropic;gemini;ollama</PackageTags>
+    <!-- Semantic Kernel marks most of its non-OpenAI connectors and the function-calling surface as
+         experimental. They are the supported way to do this today; suppressing the diagnostics here
+         is deliberate rather than an oversight. -->
+    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010;SKEXP0070;SKEXP0050</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.ReachyMini/PollenRobotics.Net.ReachyMini.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.MicroDuck/PollenRobotics.Net.MicroDuck.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.Reachy2/PollenRobotics.Net.Reachy2.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" />
+    <PackageReference Include="Anthropic.SDK" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+</Project>

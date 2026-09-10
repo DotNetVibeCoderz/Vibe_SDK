@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics Robot Wizard engine (unofficial)</Title>
+    <Description>The engine behind the PollenRobotics Robot Wizard: the project model, the template catalogue, and the build, run and deploy pipeline. Headless, so it can be tested without a UI.</Description>
+    <PackageTags>$(PackageTags);wizard;templates;codegen</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.Ai/PollenRobotics.Net.Ai.csproj" />
+  </ItemGroup>
+
+</Project>

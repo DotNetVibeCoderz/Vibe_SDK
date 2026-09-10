@@ -1,0 +1,62 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1701</WarningsNotAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: missing XML doc on a public member. The public SDK surface is documented;
+         this keeps app and test projects quiet without turning the warning off per-project. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- Control loops run at 100-500 Hz on hardware that is often a Raspberry Pi or an RK3566.
+       Spans and aggressive inlining are worth the unsafe switch; workstation GC keeps pauses short. -->
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- NuGet package IDs carry the publisher's reserved prefix; assembly names and namespaces do
+         not. A package called Gravicode.PollenRobotics.Net.ReachyMini still gives you
+         `using PollenRobotics.Net.ReachyMini;`, which is what the docs, templates and samples all
+         say. Directory.Build.targets applies this to every packable project. -->
+    <PackageIdPrefix>Gravicode.</PackageIdPrefix>
+    <Product>PollenRobotics.Net</Product>
+    <Company>Gravicode Studios</Company>
+    <Authors>Gravicode Studios</Authors>
+    <Copyright>Copyright (c) Gravicode Studios and PollenRobotics.Net contributors</Copyright>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <!-- The SDK lives in a subfolder of the Vibe_SDK repository, alongside its siblings.
+         PackageProjectUrl points at the subfolder because that is where a reader should land;
+         RepositoryUrl must stay the repository root, because Source Link resolves source paths
+         relative to it and a tree URL sends every "go to definition" to a 404. -->
+    <PackageProjectUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/PollenRobotics.Net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryBranch>main</RepositoryBranch>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>pollen-robotics;robotics;reachy;reachy-mini;microduck;sdk;avalonia</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PublishRepositoryUrl>false</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts/packages</PackageOutputPath>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>

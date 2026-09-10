@@ -1,0 +1,160 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:PollenRobotics.Net.Ui.Controls;assembly=PollenRobotics.Net.Ui"
+        xmlns:edit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        xmlns:views="clr-namespace:PollenRobotics.Net.Wizard.Views"
+        mc:Ignorable="d"
+        x:Class="PollenRobotics.Net.Wizard.Views.MainWindow"
+        x:DataType="views:MainWindow"
+        Title="PollenRobotics Robot Wizard"
+        Width="1520" Height="920"
+        MinWidth="1120" MinHeight="700"
+        WindowStartupLocation="CenterScreen">
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+    <!-- ============================ menu ============================ -->
+    <Menu Grid.Row="0" Background="{DynamicResource PanelBrush}" Padding="6,2">
+      <MenuItem Header="_Project">
+        <MenuItem Header="_New project…" Click="OnNewProject" InputGesture="Ctrl+Shift+N" />
+        <MenuItem Header="_Open project…" Click="OnOpenProject" InputGesture="Ctrl+O" />
+        <Separator />
+        <MenuItem Header="_Save file" Click="OnSaveFile" InputGesture="Ctrl+S" />
+        <MenuItem Header="_Close project" Click="OnCloseProject" />
+        <Separator />
+        <MenuItem Header="E_xit" Click="OnExit" />
+      </MenuItem>
+
+      <MenuItem Header="_Edit">
+        <MenuItem Header="Cu_t" Click="OnCut" InputGesture="Ctrl+X" />
+        <MenuItem Header="_Copy" Click="OnCopy" InputGesture="Ctrl+C" />
+        <MenuItem Header="_Paste" Click="OnPaste" InputGesture="Ctrl+V" />
+        <Separator />
+        <MenuItem Header="_Undo" Click="OnUndo" InputGesture="Ctrl+Z" />
+        <MenuItem Header="_Redo" Click="OnRedo" InputGesture="Ctrl+Y" />
+        <Separator />
+        <MenuItem Header="_Find…" Click="OnFind" InputGesture="Ctrl+F" />
+        <MenuItem Header="Replace…" Click="OnReplace" InputGesture="Ctrl+H" />
+        <MenuItem Header="_Go to line…" Click="OnGoToLine" InputGesture="Ctrl+G" />
+      </MenuItem>
+
+      <MenuItem Header="_View">
+        <MenuItem Header="Line _numbers" Click="OnToggleLineNumbers" InputGesture="Ctrl+L" />
+        <MenuItem Header="_Word wrap" Click="OnToggleWordWrap" />
+        <Separator />
+        <MenuItem Header="_Chat panel" Click="OnToggleChat" InputGesture="Ctrl+J" />
+        <MenuItem Header="_Log panel" Click="OnToggleLog" />
+        <Separator />
+        <MenuItem Header="Switch _theme" Click="OnToggleTheme" />
+      </MenuItem>
+
+      <MenuItem Header="_Run">
+        <MenuItem Header="_Build" Click="OnBuild" InputGesture="Ctrl+B" />
+        <MenuItem Header="_Run in simulator" Click="OnRunSimulator" InputGesture="F5" />
+        <MenuItem Header="Run on _robot" Click="OnRunRobot" InputGesture="Shift+F5" />
+        <MenuItem Header="_Stop" Click="OnStopRun" InputGesture="Shift+F5" />
+        <Separator />
+        <MenuItem Header="_Deploy to robot…" Click="OnDeploy" />
+      </MenuItem>
+
+      <MenuItem Header="_Help">
+        <MenuItem Header="Jack _settings…" Click="OnJackSettings" />
+        <Separator />
+        <MenuItem Header="_About" Click="OnAbout" />
+      </MenuItem>
+    </Menu>
+
+    <!-- ============================ toolbar ============================ -->
+    <Border Grid.Row="1" Classes="rail" Height="42">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
+        <Button Grid.Column="0" Classes="ghost" Padding="11,5" Click="OnBuild" Content="Build" />
+        <Button Grid.Column="1" Classes="primary" Padding="13,5" Margin="6,0,0,0" Click="OnRunSimulator" Content="▶ Run" />
+        <Button Grid.Column="2" Name="StopButton" Classes="danger" Padding="11,5" Margin="6,0,0,0"
+                Click="OnStopRun" IsEnabled="False" Content="Stop" />
+        <Button Grid.Column="3" Classes="ghost" Padding="11,5" Margin="6,0,0,0" Click="OnDeploy" Content="Deploy" />
+
+        <TextBlock Grid.Column="5" Name="ProjectLabel" Classes="mono faint"
+                   VerticalAlignment="Center" Margin="0,0,12,0" Text="no project open" />
+
+        <Button Grid.Column="6" Classes="ghost" Padding="11,5" Click="OnToggleChat" Content="Jack" />
+
+        <Button Grid.Column="7" Name="ThemeButton" Classes="icon" FontSize="15"
+                Margin="4,0,0,0" Click="OnToggleTheme" Content="◐" />
+      </Grid>
+    </Border>
+
+    <!-- ============================ body ============================ -->
+    <Grid Grid.Row="2" ColumnDefinitions="230,1,*,Auto,Auto">
+
+      <!-- file tree -->
+      <Grid Grid.Column="0" RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0" Classes="eyebrow" Text="FILES" Margin="14,12,0,8" />
+
+        <ListBox Grid.Row="1"
+                 Name="FileList"
+                 Margin="6,0,6,8"
+                 SelectionChanged="OnFileSelected">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="views:FileEntry">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Icon}" Classes="mono faint" />
+                <TextBlock Text="{Binding Name}" FontSize="12" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+
+      <Border Grid.Column="1" Classes="ruleVertical" />
+
+      <!-- editor and log -->
+      <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,240">
+
+        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,7">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Grid.Column="0" Name="OpenFileLabel" Classes="mono" Text="no file open" />
+            <TextBlock Grid.Column="2" Name="DirtyLabel" Classes="mono faint" Text="" />
+          </Grid>
+        </Border>
+
+        <edit:TextEditor Grid.Row="1"
+                         Name="Editor"
+                         FontFamily="{DynamicResource MonoFont}"
+                         FontSize="13"
+                         ShowLineNumbers="True"
+                         Background="{DynamicResource GroundBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         Padding="10,8" />
+
+        <Border Grid.Row="2" Classes="rule" />
+
+        <ui:LogPanel Grid.Row="3" Name="Log" />
+      </Grid>
+
+      <Border Grid.Column="3" Name="ChatSplitter" Classes="ruleVertical" IsVisible="True" />
+
+      <!-- Jack -->
+      <views:ChatPanel Grid.Column="4" Name="Chat" Width="420" />
+    </Grid>
+
+    <!-- ============================ status bar ============================ -->
+    <Border Grid.Row="3" Classes="statusBar">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+        <TextBlock Grid.Column="0" Name="StatusText" Classes="mono faint" VerticalAlignment="Center" Text="Ready" />
+
+        <TextBlock Grid.Column="1" Name="CaretLabel" Classes="mono faint"
+                   VerticalAlignment="Center" Margin="16,0,0,0" Text="Ln 1, Col 1" />
+
+        <TextBlock Grid.Column="3" Name="TargetLabel" Classes="mono faint"
+                   VerticalAlignment="Center" Margin="0,0,14,0" Text="" />
+
+        <TextBlock Grid.Column="4" Classes="mono faint" VerticalAlignment="Center"
+                   Text="Gravicode Studios · Kang Fadhil" />
+      </Grid>
+    </Border>
+
+  </Grid>
+</Window>

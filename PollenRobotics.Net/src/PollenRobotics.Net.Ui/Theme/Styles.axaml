@@ -1,0 +1,389 @@
+<!--
+  The shared surface treatment. Everything here is quiet on purpose: the only element allowed to
+  raise its voice is a joint approaching its limit.
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://PollenRobotics.Net.Ui/Theme/Tokens.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <!-- ============================ text roles ============================ -->
+
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.display">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <!-- Tightened, because a display line set at default tracking reads as a web headline. -->
+    <Setter Property="LetterSpacing" Value="-0.6" />
+  </Style>
+
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.2" />
+  </Style>
+
+  <Style Selector="TextBlock.subtitle">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSubtitle}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.faint">
+    <Setter Property="Foreground" Value="{DynamicResource TextFaintBrush}" />
+  </Style>
+
+  <!--
+    The eyebrow marks a section. Wide tracking and small caps is a convention borrowed from panel
+    silkscreening, which is where these labels would live if this were a physical instrument.
+  -->
+  <Style Selector="TextBlock.eyebrow">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1.4" />
+    <Setter Property="Foreground" Value="{DynamicResource TextFaintBrush}" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+  </Style>
+
+  <!-- Every number in this application wears this class. See the note in Tokens.axaml. -->
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+  </Style>
+
+  <Style Selector="TextBlock.readout">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSubtitle}" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+  </Style>
+
+  <!-- ============================ surfaces ============================ -->
+
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPanel}" />
+    <Setter Property="Padding" Value="{DynamicResource PanelPadding}" />
+  </Style>
+
+  <Style Selector="Border.raised">
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+  </Style>
+
+  <!-- A hairline divider. One pixel, no margin of its own - the caller owns the spacing. -->
+  <Style Selector="Border.rule">
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+    <Setter Property="Height" Value="1" />
+  </Style>
+
+  <Style Selector="Border.ruleVertical">
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+    <Setter Property="Width" Value="1" />
+  </Style>
+
+  <!-- The top rail: identity and connection state, nothing else. -->
+  <Style Selector="Border.rail">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="Height" Value="46" />
+  </Style>
+
+  <Style Selector="Border.statusBar">
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Height" Value="26" />
+  </Style>
+
+  <!-- ============================ buttons ============================ -->
+
+  <Style Selector="Button">
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+
+  <Style Selector="Button:disabled /template/ ContentPresenter">
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextFaintBrush}" />
+  </Style>
+
+  <Style Selector="Button:disabled">
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+
+  <!-- The one action on a screen that starts or commits something. -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="#14161A" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button.primary /template/ ContentPresenter">
+    <Setter Property="TextElement.Foreground" Value="#14161A" />
+  </Style>
+
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="TextElement.Foreground" Value="#14161A" />
+  </Style>
+
+  <!-- Stop, disconnect, relax: anything that takes power off a robot. -->
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{DynamicResource SignalSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SignalBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource SignalBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button.danger /template/ ContentPresenter">
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource SignalBrush}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="Padding" Value="8,5" />
+  </Style>
+
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+
+  <Style Selector="Button.icon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Padding" Value="7" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+  </Style>
+
+  <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+
+  <!-- ============================ inputs ============================ -->
+
+  <Style Selector="TextBox">
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
+  </Style>
+
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+
+  <Style Selector="CheckBox">
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+
+  <Style Selector="Slider">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+
+  <!-- ============================ pills and chips ============================ -->
+
+  <!--
+    A status pill. The class carries the meaning: .connected, .simulated, .fault, .idle. Colour
+    alone would not be enough - the text inside always says the same thing the colour does, so the
+    state survives being read by someone who cannot separate red from green.
+  -->
+  <Style Selector="Border.pill">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.pill > TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="0.6" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.connected">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.connected > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.simulated">
+    <Setter Property="Background" Value="{DynamicResource SimulationSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SimulationBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.simulated > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource SimulationBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.fault">
+    <Setter Property="Background" Value="{DynamicResource SignalSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SignalBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.fault > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource SignalBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.healthy">
+    <Setter Property="BorderBrush" Value="{DynamicResource HealthyBrush}" />
+  </Style>
+
+  <Style Selector="Border.pill.healthy > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource HealthyBrush}" />
+  </Style>
+
+  <!-- ============================ lists ============================ -->
+
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style Selector="ListBoxItem">
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+
+  <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+  </Style>
+
+  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+  </Style>
+
+  <Style Selector="ScrollViewer">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- ============================ tabs ============================ -->
+
+  <!--
+    Tabs are underlined rather than boxed. A boxed tab strip in a tool with four panels open at once
+    competes with every other border on screen; a 2 px rule under the active label does not.
+  -->
+  <Style Selector="TabItem">
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="Padding" Value="14,9" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="TabItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+
+  <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <!-- ============================ misc ============================ -->
+
+  <Style Selector="ProgressBar">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+  </Style>
+
+  <Style Selector="ToolTip">
+    <Setter Property="Background" Value="{DynamicResource PanelRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Padding" Value="9,6" />
+  </Style>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource GroundBrush}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+  </Style>
+
+</Styles>

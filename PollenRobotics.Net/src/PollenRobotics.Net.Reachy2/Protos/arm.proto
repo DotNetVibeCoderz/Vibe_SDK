@@ -1,0 +1,222 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+
+import "part.proto";
+import "kinematics.proto";
+import "error.proto";
+import "orbita2d.proto";
+import "orbita3d.proto";
+
+package reachy.part.arm;
+
+enum ArmField {
+    NONE = 0;
+
+    NAME = 1;
+    ID = 2;
+
+    PRESENT_POSITION = 3;
+    PRESENT_SPEED = 4;
+    PRESENT_LOAD = 5;
+    TEMPERATURE = 6;
+    JOINT_LIMITS = 7;
+
+    COMPLIANT = 8;
+    GOAL_POSITION = 9;
+    SPEED_LIMIT = 10;
+    TORQUE_LIMIT = 11;
+    PID = 12;
+
+    ALL = 15;
+}
+
+enum ArmJoints {
+    SHOULDER_PITCH = 0;
+    SHOULDER_ROLL = 1;
+    ELBOW_YAW = 2;
+    ELBOW_PITCH = 3;
+    WRIST_ROLL = 4;
+    WRIST_PITCH = 5;
+    WRIST_YAW = 6;
+}
+
+enum IKConstrainedMode {
+    UNDEFINED_CONSTRAINED_MODE = 0;
+    UNCONSTRAINED = 1;
+    LOW_ELBOW = 2;
+}
+
+enum IKContinuousMode {
+    UNDEFINED_CONTINUOUS_MODE = 0;
+    CONTINUOUS = 1;
+    DISCRETE = 2;
+}
+
+enum ReachabilityError {
+    NO_ERROR = 0;
+    DISTANCE_LIMIT = 1;
+    SHOULDER_LIMIT = 2;
+    ELBOW_LIMIT = 3;
+    WRIST_LIMIT = 4;
+    CONTINUITY_LIMIT = 5;
+    OTHER = 6;
+}
+
+message CustomArmJoints {
+    repeated ArmJoints joints = 1;
+}
+
+message ArmState {
+    google.protobuf.Timestamp timestamp = 1;
+
+    reachy.part.PartId id = 2;
+
+    bool activated = 3;
+
+    component.orbita2d.Orbita2dState shoulder_state = 4;
+    component.orbita2d.Orbita2dState elbow_state = 5;
+    component.orbita3d.Orbita3dState wrist_state = 6;
+
+    repeated ReachabilityAnswer reachability = 10;
+}
+
+message ReachabilityAnswer {
+    google.protobuf.Int32Value order_id = 1;
+    google.protobuf.BoolValue is_reachable = 2;
+
+    ReachabilityError description = 3;
+}
+
+message ArmDescription {
+    component.orbita2d.Orbita2d shoulder = 1;
+    component.orbita2d.Orbita2d elbow = 2;
+    component.orbita3d.Orbita3d wrist = 3;
+}
+
+message Arm {
+    PartId part_id = 1;
+    ArmDescription description = 2;
+    PartInfo info = 5;
+}
+
+message ListOfArm {
+    repeated Arm arm = 1;
+}
+
+message ArmPosition {
+    component.orbita2d.Pose2d shoulder_position = 1;
+    component.orbita2d.Pose2d elbow_position = 2;
+    kinematics.Rotation3d wrist_position = 3;
+}
+
+message ArmCartesianGoal {
+    reachy.part.PartId id = 1;
+
+    kinematics.Matrix4x4 goal_pose = 2;
+    
+    kinematics.PointDistanceTolerances position_tolerance = 3;
+    kinematics.ExtEulerAnglesTolerances orientation_tolerance = 4;
+
+    ArmPosition q0 = 5;
+    IKConstrainedMode constrained_mode = 6;
+    google.protobuf.FloatValue preferred_theta = 7;
+    google.protobuf.FloatValue d_theta_max  = 8;
+    IKContinuousMode continuous_mode = 9;
+
+    google.protobuf.FloatValue duration = 10;
+
+    google.protobuf.Int32Value order_id = 15;
+}
+
+message ArmJointGoal {
+    reachy.part.PartId id = 1;
+    ArmPosition joints_goal = 2;
+    google.protobuf.FloatValue duration = 3;
+}
+
+message ArmEndEffector {
+    kinematics.Matrix4x4 pose = 1;
+}
+
+message ArmFKRequest {
+    reachy.part.PartId id = 1;
+    ArmPosition position = 2;
+}
+
+message ArmFKSolution {
+    bool success = 1;
+    ArmEndEffector end_effector = 2;
+}
+
+message ArmIKRequest {
+    reachy.part.PartId id = 1;
+    ArmEndEffector target = 2;
+    ArmPosition q0 = 3;
+}
+
+message ArmIKSolution {
+    bool success = 1;
+    ArmPosition arm_position = 2;
+
+    error.Error error = 3;
+}
+
+message ArmStatus {
+    component.orbita2d.Orbita2dStatus shoulder_status = 1;
+    component.orbita2d.Orbita2dStatus elbow_status = 2;
+    component.orbita3d.Orbita3dStatus wrist_status = 3;
+}
+
+message SpeedLimitRequest {
+    reachy.part.PartId id = 1;
+    uint32 limit = 2;
+}
+
+message TorqueLimitRequest {
+    reachy.part.PartId id = 1;
+    uint32 limit = 2;
+}
+
+message ArmLimits {
+    component.orbita2d.Limits2d shoulder_limits = 1;
+    component.orbita2d.Limits2d elbow_limits = 2;
+    component.orbita3d.Limits3d wrist_limits = 3;
+}
+
+message ArmTemperatures {
+    component.orbita2d.Float2d shoulder_temperature = 1;
+    component.orbita2d.Float2d elbow_temperature = 2;
+    component.orbita3d.Float3d wrist_temperature = 3;
+}
+
+service ArmService {
+    rpc GetAllArms (google.protobuf.Empty) returns (ListOfArm);
+
+    rpc GetState (reachy.part.PartId) returns (ArmState);
+
+    rpc ComputeArmFK(ArmFKRequest) returns (ArmFKSolution);
+    rpc ComputeArmIK(ArmIKRequest) returns (ArmIKSolution);
+
+    rpc GetCartesianPosition (reachy.part.PartId) returns (kinematics.Matrix4x4);
+    rpc GetJointPosition (reachy.part.PartId) returns (ArmPosition);
+
+    rpc Audit (reachy.part.PartId) returns (ArmStatus);
+    rpc HeartBeat (reachy.part.PartId) returns (google.protobuf.Empty);
+
+    rpc Restart (reachy.part.PartId) returns (google.protobuf.Empty);
+    rpc ResetDefaultValues(reachy.part.PartId) returns (google.protobuf.Empty);
+
+    rpc TurnOn (reachy.part.PartId) returns (google.protobuf.Empty);
+    rpc TurnOff (reachy.part.PartId) returns (google.protobuf.Empty);
+
+    rpc GetJointsLimits (reachy.part.PartId) returns (ArmLimits);
+    rpc GetTemperatures (reachy.part.PartId) returns (ArmTemperatures);
+    rpc GetJointGoalPosition (reachy.part.PartId) returns (ArmPosition);
+
+    rpc SetSpeedLimit (SpeedLimitRequest) returns (google.protobuf.Empty);
+    rpc SetTorqueLimit (TorqueLimitRequest) returns (google.protobuf.Empty);
+    rpc SendArmCartesianGoal (ArmCartesianGoal) returns (google.protobuf.Empty);
+}

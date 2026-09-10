@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:PollenRobotics.Net.Ui.Controls"
+             mc:Ignorable="d"
+             x:Class="PollenRobotics.Net.Ui.Controls.LogPanel">
+
+  <!--
+    Everything a subsystem wants to say lands here: transports, the simulation engine, the build
+    pipeline, and JavaScript errors bubbled out of the 3D viewport. In a desktop application there
+    is no console anyone will ever look at, so without this panel a failure is completely silent.
+  -->
+  <Border Classes="panel" Padding="0">
+    <Grid RowDefinitions="Auto,1,*">
+
+      <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="12,8,8,8">
+        <TextBlock Grid.Column="0" Classes="eyebrow" Text="LOG" VerticalAlignment="Center" />
+
+        <TextBlock Grid.Column="1"
+                   Name="CountLabel"
+                   Classes="mono faint"
+                   Margin="10,0,0,0"
+                   VerticalAlignment="Center"
+                   Text="empty" />
+
+        <ToggleButton Grid.Column="2"
+                      Name="AutoScrollToggle"
+                      Classes="ghost"
+                      Padding="8,3"
+                      IsChecked="True"
+                      FontSize="10"
+                      Content="Follow"
+                      ToolTip.Tip="Keep the newest line in view" />
+
+        <Button Grid.Column="3"
+                Classes="ghost"
+                Padding="8,3"
+                FontSize="10"
+                Content="Clear"
+                Click="OnClearClicked" />
+      </Grid>
+
+      <Border Grid.Row="1" Classes="rule" />
+
+      <ScrollViewer Grid.Row="2" Name="Scroller" Padding="12,6,12,10">
+        <ItemsControl Name="Entries">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="controls:LogRow">
+              <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,1">
+                <TextBlock Grid.Column="0"
+                           Classes="mono faint"
+                           Text="{Binding Time}"
+                           TextWrapping="NoWrap" />
+
+                <TextBlock Grid.Column="1"
+                           Classes="mono"
+                           Margin="9,0"
+                           Width="76"
+                           TextWrapping="NoWrap"
+                           Foreground="{Binding Accent}"
+                           Text="{Binding Source}" />
+
+                <SelectableTextBlock Grid.Column="2"
+                                     FontFamily="{DynamicResource MonoFont}"
+                                     FontSize="{DynamicResource FontSizeLabel}"
+                                     Foreground="{Binding Foreground}"
+                                     TextWrapping="Wrap"
+                                     Text="{Binding Message}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+    </Grid>
+  </Border>
+</UserControl>

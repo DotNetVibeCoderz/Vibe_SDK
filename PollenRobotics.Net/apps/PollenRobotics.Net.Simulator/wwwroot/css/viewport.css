@@ -1,0 +1,134 @@
+/*
+  The viewport page carries no chrome of its own - it is hosted inside the simulator window, and
+  every control lives in the Avalonia shell around it. All this file does is make the canvas fill
+  the frame and put a small readout in the corner.
+*/
+
+:root {
+    --ground: #14161a;
+    --text: #e6e9ef;
+    --muted: #7c8698;
+    --accent: #f5a524;
+    --signal: #e5484d;
+    --panel: #1c1f25cc;
+    --line: #2e343e;
+    --mono: "JetBrains Mono", "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+}
+
+:root[data-theme="light"] {
+    --ground: #f6f5f2;
+    --text: #14161a;
+    --muted: #5f6875;
+    --accent: #c97f09;
+    --signal: #ce2c31;
+    --panel: #ffffffcc;
+    --line: #e3e1db;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--ground);
+    color: var(--text);
+}
+
+#viewport {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    /* Grab is the honest cursor here: the only interaction is orbiting the camera. */
+    cursor: grab;
+}
+
+#viewport:active {
+    cursor: grabbing;
+}
+
+/* The readout. Monospaced so the clock does not jitter as its digits change. */
+.hud {
+    position: fixed;
+    left: 14px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    user-select: none;
+}
+
+.hud-robot {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.hud-sep {
+    opacity: 0.4;
+}
+
+.hud-state.is-running {
+    color: var(--accent);
+}
+
+.hud-state.is-idle {
+    opacity: 0.7;
+}
+
+.viewport-error {
+    position: fixed;
+    inset: auto 16px 56px 16px;
+    padding: 14px 16px;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    color: var(--signal);
+    background: var(--panel);
+    border: 1px solid var(--signal);
+    border-radius: 8px;
+}
+
+.viewport-error p {
+    margin-top: 6px;
+    color: var(--muted);
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* Blazor puts this up when a circuit drops. The default is an unstyled yellow bar. */
+#blazor-error-ui {
+    position: fixed;
+    inset: 0 0 auto 0;
+    display: none;
+    padding: 10px 16px;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    color: var(--signal);
+    background: var(--panel);
+    border-bottom: 1px solid var(--signal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

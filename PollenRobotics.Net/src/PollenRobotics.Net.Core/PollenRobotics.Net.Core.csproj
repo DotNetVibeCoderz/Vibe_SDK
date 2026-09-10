@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Pollen Robotics SDK core for .NET (unofficial)</Title>
+    <Description>Core primitives shared by every PollenRobotics.Net robot SDK: poses, joints, safety limits, realtime loops and connection state.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

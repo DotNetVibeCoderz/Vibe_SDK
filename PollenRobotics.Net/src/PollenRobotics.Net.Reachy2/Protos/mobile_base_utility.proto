@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+
+import "mobile_base_lidar.proto";
+import "mobile_base_mobility.proto";
+import "error.proto";
+import "part.proto";
+
+package reachy.part.mobile.base.utility;
+    
+message MobileBase {
+    PartId part_id = 1;
+    PartInfo info = 5;
+}
+
+message ListOfMobileBase {
+    repeated MobileBase mobile_base = 1;
+}
+    
+message MobileBaseState {
+    google.protobuf.Timestamp timestamp = 1;
+
+    reachy.part.PartId id = 2;
+
+    bool activated = 3;
+
+    BatteryLevel battery_level = 4;
+    mobile.base.lidar.LidarSafety lidar_safety = 5;
+
+    ZuuuModeCommand zuuu_mode = 6;
+    ControlModeCommand control_mode = 7;
+}
+
+message OdometryVector {
+    google.protobuf.FloatValue x = 1;
+    google.protobuf.FloatValue y = 2;
+    google.protobuf.FloatValue theta = 3;
+}
+
+enum ControlModePossiblities {
+    NONE_CONTROL_MODE = 0;
+    OPEN_LOOP = 1;
+    PID = 2;
+}
+
+message ControlModeCommand {
+    reachy.part.PartId id = 1;
+    ControlModePossiblities mode = 2;
+}
+
+enum ZuuuModePossiblities {
+    NONE_ZUUU_MODE = 0;
+    CMD_VEL = 1;
+    BRAKE = 2;
+    FREE_WHEEL = 3;
+    SPEED = 4;
+    GOTO = 5;
+    EMERGENCY_STOP = 6;
+    CMD_GOTO = 7;
+}
+
+message ZuuuModeCommand {
+    reachy.part.PartId id = 1;
+    ZuuuModePossiblities mode = 2;
+}
+
+message BatteryLevel {
+    google.protobuf.FloatValue level = 1;
+}
+
+message MobileBaseStatus {
+    repeated error.Error errors = 1;
+}
+
+service MobileBaseUtilityService {
+    rpc GetAllMobileBases(google.protobuf.Empty) returns (ListOfMobileBase);
+
+    rpc GetState(reachy.part.PartId) returns (MobileBaseState);
+
+    rpc Audit (reachy.part.PartId) returns (MobileBaseStatus);
+    rpc HeartBeat (reachy.part.PartId) returns (google.protobuf.Empty);
+
+    rpc Restart (reachy.part.PartId) returns (google.protobuf.Empty);
+    rpc ResetDefaultValues(reachy.part.PartId) returns (google.protobuf.Empty);
+
+    rpc TurnOn (reachy.part.PartId) returns (google.protobuf.Empty);
+    rpc TurnOff (reachy.part.PartId) returns (google.protobuf.Empty);
+
+    rpc SetControlMode(ControlModeCommand) returns (mobile.base.mobility.MobilityServiceAck);
+    rpc GetControlMode(reachy.part.PartId) returns (ControlModeCommand);
+
+    rpc SetZuuuMode(ZuuuModeCommand) returns (mobile.base.mobility.MobilityServiceAck);
+    rpc GetZuuuMode(reachy.part.PartId) returns (ZuuuModeCommand);
+
+    rpc GetBatteryLevel(reachy.part.PartId) returns (BatteryLevel);
+
+    rpc GetOdometry(reachy.part.PartId) returns (OdometryVector);
+    rpc ResetOdometry(reachy.part.PartId) returns (mobile.base.mobility.MobilityServiceAck);
+}
