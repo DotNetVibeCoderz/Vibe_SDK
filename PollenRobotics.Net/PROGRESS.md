@@ -27,7 +27,7 @@ Run and observed working, in the simulation or on this machine.
 | Area | Evidence |
 |---|---|
 | Solution builds | `dotnet build PollenRobotics.Net.slnx` — 0 warnings, 0 errors |
-| Tests | 40 pass (`dotnet run --project tests/PollenRobotics.Net.Tests`) |
+| Tests | 47 pass (`dotnet run --project tests/PollenRobotics.Net.Tests`) |
 | Templates | 20/20 scaffold and compile (`tools/PollenRobotics.Net.TemplateCheck`) |
 | Reachy Mini simulation | Head pose, antennas, body yaw, gotos, easing curves, idle breath, motor modes, the 65-degree yaw constraint |
 | MicroDuck simulation | Init, velocity intents, gait, the seven action slots, falls and recovery, the velocity watchdog |
@@ -43,6 +43,7 @@ Run and observed working, in the simulation or on this machine.
 | Packaging | `dotnet pack` produces 11 NuGet packages into `artifacts/packages`, IDs prefixed `Gravicode.` |
 | Package install | A fresh `dotnet new console` restored `Gravicode.PollenRobotics.Net.ReachyMini` and `.Simulation` and ran a head goto against the simulation |
 | Published | 11 packages at 0.1.1 on nuget.org, tag `pollenrobotics-v0.1.1`. 0.1.0 came from `b2ec200` |
+| 0.1.1 verified live | Installed from nuget.org with no local feed: a generated project runs on a bare `dotnet run`, and a .csproj written by Jack's plugin restores |
 
 ---
 

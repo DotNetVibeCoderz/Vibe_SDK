@@ -9,7 +9,7 @@ MicroDuck, Reachy 2), plus an Avalonia gallery, a 3D simulator and an LLM-assist
 `requirements.md` (Indonesian) is the original spec; `PLAN.md` is the roadmap and `PROGRESS.md`
 tracks what is verified.
 
-The solution builds clean and 40 tests pass. **Nothing has been run against physical hardware** —
+The solution builds clean and 47 tests pass. **Nothing has been run against physical hardware** —
 read the "Written but not verified" section of `PROGRESS.md` before claiming anything works on a
 robot.
 
