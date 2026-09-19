@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="TypeSafe.Api/TypeSafe.Api.csproj" />
+  <Project Path="TypeSafe.Blazor/TypeSafe.Blazor.csproj" />
+  <Project Path="TypeSafe.BoardGames/TypeSafe.BoardGames.csproj" />
+  <Project Path="TypeSafe.Cli/TypeSafe.Cli.csproj" />
+  <Project Path="TypeSafeAppGen/TypeSafeAppGen.csproj" />
+  <Project Path="TypeSafeSdk.Tests/TypeSafeSdk.Tests.csproj" />
+  <Project Path="TypeSafeSdk/TypeSafeSdk.csproj" />
+</Solution>

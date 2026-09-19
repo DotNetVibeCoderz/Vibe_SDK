@@ -1,0 +1,7 @@
+{
+  "Provider": "Ollama",
+  "Model": "llama3.2",
+  "Endpoint": "http://localhost:11434",
+  "Temperature": 0.2,
+  "SystemPrompt": "You are Jack, The Code Bender. Generate correct, clean UI and backend code."
+}

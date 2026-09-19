@@ -1,0 +1,119 @@
+#!markdown
+# TypeSafe .NET SDK Examples
+
+Notebook examples for TypeSafe SDK. Run with .NET Interactive / Polyglot Notebook.
+
+Created by Gravicode Studios, led by Kang Fadhil.
+
+#!csharp
+#r "nuget: Microsoft.Extensions.Logging.Console, 10.0.0"
+#r "../TypeSafeSdk/bin/Debug/net10.0/TypeSafeSdk.dll"
+using TypeSafeSdk;
+using Microsoft.Extensions.Logging;
+
+#!markdown
+## 1. Simulator classification
+
+#!csharp
+await using var simulator = new TypeSafeClient(new TypeSafeOptions { Simulator = true });
+var ticket = new { document = "I was charged twice. Please fix this ASAP." };
+var choices = Choice.Create("billing", "technical", "other");
+var simulated = await simulator.SystemOneAsync(ticket, choices);
+simulated.Choices?["category"].Choice
+
+#!markdown
+## 2. Multiple support tickets
+
+#!csharp
+var tickets = new[]
+{
+    "I was charged twice",
+    "The application throws a bug",
+    "Please change my account address"
+};
+foreach (var item in tickets)
+{
+    var response = await simulator.SystemOneAsync(new { document = item }, choices);
+    Console.WriteLine($"{item} => {response.Choices?["category"].Choice}");
+}
+
+#!markdown
+## 3. Domain-specific choices
+
+#!csharp
+var alarmResponse = await simulator.SystemOneAsync(
+    new { alarm = "Pump temperature exceeded threshold" },
+    Choice.Create("critical", "warning", "info"));
+alarmResponse.Choices?["category"].Choice
+
+#!markdown
+## 4. Environment configuration
+
+#!csharp
+var environmentOptions = TypeSafeOptions.FromEnvironment();
+new { environmentOptions.Endpoint, environmentOptions.DefaultModel, HasApiKey = !string.IsNullOrWhiteSpace(environmentOptions.ApiKey) }
+
+#!markdown
+## 5. Parsing a local API key file without displaying it
+
+#!csharp
+var keyPath = Environment.GetEnvironmentVariable("TYPESAFE_API_KEY_FILE");
+if (!string.IsNullOrWhiteSpace(keyPath) && File.Exists(keyPath))
+{
+    var parsedKey = TypeSafeApiKeyLoader.LoadFromFile(keyPath);
+    Console.WriteLine($"API key parsed successfully. Length: {parsedKey.Length}");
+}
+else
+{
+    Console.WriteLine("Set TYPESAFE_API_KEY_FILE to run this cell.");
+}
+
+#!markdown
+## 6. Live API call
+
+Set `TYPESAFE_API_KEY_FILE` before running this cell. The key is parsed locally and never printed.
+
+#!csharp
+if (!string.IsNullOrWhiteSpace(keyPath) && File.Exists(keyPath))
+{
+    var liveOptions = TypeSafeOptions.FromEnvironment();
+    liveOptions.ApiKey = TypeSafeApiKeyLoader.LoadFromFile(keyPath);
+    liveOptions.Simulator = false;
+    await using var liveClient = new TypeSafeClient(liveOptions);
+    try
+    {
+        var liveResponse = await liveClient.SystemOneAsync(ticket, choices);
+        liveResponse.Choices?["category"].Choice
+    }
+    catch (TypeSafeApiException ex)
+    {
+        Console.WriteLine($"API returned HTTP {ex.StatusCode}: {ex.Message}");
+    }
+}
+
+#!markdown
+## 7. Logging
+
+#!csharp
+using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+var logger = loggerFactory.CreateLogger<TypeSafeClient>();
+await using var loggedClient = new TypeSafeClient(new TypeSafeOptions { Simulator = true }, logger: logger);
+var loggedResponse = await loggedClient.SystemOneAsync(new { document = "billing issue" }, choices);
+loggedResponse.Choices?["category"].Choice
+
+#!markdown
+## 8. Cancellation
+
+#!csharp
+using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+var cancellableResponse = await simulator.SystemOneAsync(
+    new { document = "technical error" }, choices, cancellation.Token);
+cancellableResponse.Choices?["category"].Choice
+
+#!markdown
+## 9. Notes
+
+- The official endpoint is `POST https://api.typesafe.ai/v1/systemone`.
+- The official default model is `jev-latest`.
+- Use the simulator for deterministic notebooks and CI.
+- Never display, commit, or embed API keys in notebooks.

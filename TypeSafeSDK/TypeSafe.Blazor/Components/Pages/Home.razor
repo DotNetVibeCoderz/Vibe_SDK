@@ -1,0 +1,8 @@
+@page "/"
+@rendermode InteractiveServer
+<PageTitle>TypeSafe Classifier</PageTitle>
+<div class="hero"><span class="eyebrow">JACK / TYPESAFE</span><h1>Turn support noise<br /><em>into a clear next step.</em></h1><p>Classify customer tickets dengan simulator lokal yang aman untuk demo dan CI.</p><textarea @bind="document" placeholder="Contoh: I was charged twice..."></textarea><button @onclick="Classify">Classify ticket</button>@if (result is not null) { <div class="result">Category <strong>@result</strong></div> }</div>
+@code { private string document = ""; private string? result; private void Classify() { result = TypeSafeSimulator.Classify(document).Choices?.GetValueOrDefault("category")?.Choice ?? "other"; } }
+<style>
+.hero{max-width:760px;margin:9vh auto;padding:48px;color:#e9f0ff;background:#101936;border:1px solid #33436e;border-radius:24px;box-shadow:0 24px 80px #071022}.eyebrow{color:#7cf2cf;letter-spacing:.2em;font-size:12px}h1{font-size:clamp(42px,7vw,82px);line-height:.95;margin:22px 0}em{color:#7cf2cf;font-style:normal}p{color:#aab7d6;font-size:18px}textarea{display:block;width:100%;min-height:130px;margin:28px 0;padding:18px;background:#0a1128;color:white;border:1px solid #3b4d7d;border-radius:12px;font:inherit}button{padding:13px 20px;border:0;border-radius:9px;background:#7cf2cf;color:#081326;font-weight:700;cursor:pointer}.result{margin-top:24px;padding:18px;background:#18264a;border-radius:10px}.result strong{color:#7cf2cf;margin-left:12px}
+</style>
