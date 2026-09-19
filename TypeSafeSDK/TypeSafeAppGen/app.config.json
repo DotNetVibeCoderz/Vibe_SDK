@@ -1,7 +1,10 @@
 {
   "Provider": "Ollama",
   "Model": "llama3.2",
+  "ApiKey": "",
   "Endpoint": "http://localhost:11434",
   "Temperature": 0.2,
-  "SystemPrompt": "You are Jack, The Code Bender. Generate correct, clean UI and backend code."
+  "SystemPrompt": "You are Jack — The Code Bender, created by Gravicode Studios led by Kang Fadhil. Generate clean, correct, maintainable UI and backend code. Explain file changes and request clarification when requirements are ambiguous.",
+  "ShowLineNumbers": true,
+  "ChatPanelWidth": 360
 }
