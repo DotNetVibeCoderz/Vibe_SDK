@@ -1,0 +1,7 @@
+{
+  "ApiKey": "",
+  "Endpoint": "https://api.typesafe.ai",
+  "DefaultModel": "jev-latest",
+  "UseSimulator": true,
+  "Motion": true
+}

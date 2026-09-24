@@ -17,13 +17,13 @@ dotnet build TypeSafeSDK.slnx
 dotnet test TypeSafeSDK.slnx
 ```
 
-Add the SDK project or package to your application:
+Add the package to your application:
 
 ```bash
-dotnet add package TypeSafeSdk
+dotnet add package Gravicode.TypeSafeSdk
 ```
 
-> NuGet publishing is intentionally postponed until all applications and final tests are complete.
+The id is prefixed because this is an unofficial port of the Python SDK; the namespace is still `TypeSafeSdk`. It targets .NET 10 and depends only on `Microsoft.Extensions.Logging.Abstractions`, so console, desktop, and web apps can all use it.
 
 ## First program with the simulator
 
@@ -69,6 +69,21 @@ The official Python SDK contract used by this .NET SDK is:
 
 ```text
 POST https://api.typesafe.ai/v1/systemone
+GET  https://api.typesafe.ai/v1/models
 ```
+
+## See it working
+
+`TypeSafe.JevGallery` is an Avalonia catalogue of fifteen runnable use cases across games, education, work, science, and simulation. Each one shows its answer, its probability distribution, and the exact C# that produced it.
+
+```bash
+dotnet run --project TypeSafe.JevGallery
+```
+
+## Where to go next
+
+- [SDK Usage Guide](sdk-guide.en.md) — questions, errors, retry, timeout, headers
+- [Parity with the Python SDK](parity-python.en.md) — what matches and what deliberately differs
+- [Jev Gallery](jev-gallery.en.md) — the use case catalogue
 
 Created by **Gravicode Studios**, led by Kang Fadhil.

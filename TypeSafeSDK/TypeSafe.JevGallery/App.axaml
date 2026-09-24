@@ -1,0 +1,97 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TypeSafe.JevGallery.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Resources>
+    <!-- Instrument casing: warm near-black, bone, moss signal, rust residual, brass marker. -->
+    <SolidColorBrush x:Key="Bark"    Color="#191714" />
+    <SolidColorBrush x:Key="Casing"  Color="#23201B" />
+    <SolidColorBrush x:Key="Recess"  Color="#14120F" />
+    <SolidColorBrush x:Key="Rule"    Color="#3A352C" />
+    <SolidColorBrush x:Key="Bone"    Color="#E6DFCE" />
+    <SolidColorBrush x:Key="Ash"     Color="#9A9284" />
+    <SolidColorBrush x:Key="Moss"    Color="#86A22F" />
+    <SolidColorBrush x:Key="MossDim" Color="#3D4A1B" />
+    <SolidColorBrush x:Key="Rust"    Color="#B4522E" />
+    <SolidColorBrush x:Key="Brass"   Color="#D9A62B" />
+
+    <FontFamily x:Key="Display">Bahnschrift</FontFamily>
+    <FontFamily x:Key="Body">Segoe UI</FontFamily>
+    <FontFamily x:Key="Mono">Cascadia Mono,Consolas</FontFamily>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+
+    <!-- Eyebrow: letterspaced utility caps used for every structural label. -->
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+      <Setter Property="FontSize" Value="10.5" />
+      <Setter Property="LetterSpacing" Value="1.8" />
+      <Setter Property="Foreground" Value="{StaticResource Ash}" />
+    </Style>
+
+    <Style Selector="TextBlock.display">
+      <Setter Property="FontFamily" Value="{StaticResource Display}" />
+      <Setter Property="Foreground" Value="{StaticResource Bone}" />
+    </Style>
+
+    <Style Selector="TextBlock.body">
+      <Setter Property="FontFamily" Value="{StaticResource Body}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{StaticResource Ash}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="LineHeight" Value="20" />
+    </Style>
+
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{StaticResource Rule}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Foreground" Value="{StaticResource Bone}" />
+      <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2C281F" />
+      <Setter Property="BorderBrush" Value="{StaticResource Brass}" />
+    </Style>
+
+    <Style Selector="Button.run">
+      <Setter Property="Background" Value="{StaticResource Moss}" />
+      <Setter Property="Foreground" Value="#14120F" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Padding" Value="20,10" />
+    </Style>
+    <Style Selector="Button.run:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#9CBA39" />
+    </Style>
+    <Style Selector="Button.run:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource MossDim}" />
+      <Setter Property="Foreground" Value="{StaticResource Ash}" />
+    </Style>
+
+    <Style Selector="TextBox.field">
+      <Setter Property="Background" Value="{StaticResource Recess}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Rule}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Foreground" Value="{StaticResource Bone}" />
+      <Setter Property="CaretBrush" Value="{StaticResource Brass}" />
+      <Setter Property="SelectionBrush" Value="{StaticResource MossDim}" />
+      <Setter Property="FontFamily" Value="{StaticResource Body}" />
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <Style Selector="ScrollViewer">
+      <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+    </Style>
+  </Application.Styles>
+</Application>

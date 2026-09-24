@@ -25,4 +25,9 @@
     <ProjectReference Include="..\TypeSafeSdk\TypeSafeSdk.csproj" />
   </ItemGroup>
 
+  <!-- Katalog Jev Gallery diuji langsung; file ini tidak bergantung pada Avalonia. -->
+  <ItemGroup>
+    <Compile Include="..\TypeSafe.JevGallery\Specimens.cs" Link="Gallery\Specimens.cs" />
+  </ItemGroup>
+
 </Project>

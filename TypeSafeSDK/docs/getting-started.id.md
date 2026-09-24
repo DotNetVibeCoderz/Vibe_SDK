@@ -20,7 +20,7 @@ dotnet test TypeSafeSDK.slnx
 Tambahkan referensi project SDK:
 
 ```bash
-dotnet add package TypeSafeSdk
+dotnet add package Gravicode.TypeSafeSdk
 ```
 
 > Paket NuGet akan dipublikasikan setelah seluruh aplikasi dan pengujian final selesai.
@@ -82,3 +82,17 @@ POST https://api.typesafe.ai/v1/systemone
 ```
 
 Dibuat oleh **Gravicode Studios**, dipimpin Kang Fadhil.
+
+## Melihatnya bekerja
+
+`TypeSafe.JevGallery` adalah katalog Avalonia berisi lima belas use case yang bisa dijalankan, mencakup game, edukasi, pekerjaan, sains, dan simulasi. Tiap use case menampilkan jawaban, distribusi probabilitasnya, dan kode C# persis yang menghasilkannya.
+
+```bash
+dotnet run --project TypeSafe.JevGallery
+```
+
+## Selanjutnya
+
+- [Panduan Penggunaan SDK](sdk-guide.id.md) — pertanyaan, error, retry, timeout, header
+- [Kesejajaran dengan Python SDK](parity-python.id.md) — apa yang sejajar dan apa yang sengaja berbeda
+- [Jev Gallery](jev-gallery.id.md) — katalog use case
