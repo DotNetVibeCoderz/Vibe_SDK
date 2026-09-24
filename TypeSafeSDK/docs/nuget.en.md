@@ -1,5 +1,7 @@
 # Publishing to NuGet
 
+[Bahasa Indonesia](nuget.id.md) · **English**
+
 The SDK ships as `Gravicode.TypeSafeSdk`. The package id is prefixed because this is an **unofficial** port: an unprefixed `TypeSafeSdk` would read as a vendor package, and it is not one.
 
 ## Install

@@ -1,5 +1,7 @@
 # Getting Started — TypeSafe .NET SDK
 
+[Bahasa Indonesia](getting-started.id.md) · **English**
+
 A quick start guide for TypeSafe SDK on .NET 10.
 
 ## Prerequisites

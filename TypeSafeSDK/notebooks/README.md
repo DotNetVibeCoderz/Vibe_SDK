@@ -1,5 +1,7 @@
 # .NET Notebook Examples
 
+**Bahasa Indonesia** · [English](README.en.md)
+
 File `TypeSafeSdkExamples.dib` adalah notebook .NET Interactive/Polyglot Notebook.
 
 ## Menjalankan

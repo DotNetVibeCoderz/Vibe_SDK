@@ -1,5 +1,7 @@
 # TypeSafe Arcade — WPF Board Games
 
+**Bahasa Indonesia** · [English](board-games.en.md)
+
 `TypeSafe.BoardGames` adalah aplikasi WPF .NET 10 dengan UI arcade modern dan Jack — The Code Bender sebagai Player 2.
 
 ## Identitas pemain

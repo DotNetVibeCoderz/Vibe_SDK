@@ -1,5 +1,7 @@
 # Panduan Penggunaan SDK
 
+**Bahasa Indonesia** · [English](sdk-guide.en.md)
+
 Panduan ini mengikuti Python SDK resmi TypeSafe.
 
 ## System One dengan beberapa question

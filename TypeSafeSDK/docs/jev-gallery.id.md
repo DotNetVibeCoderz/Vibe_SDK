@@ -1,5 +1,7 @@
 # Jev Gallery
 
+**Bahasa Indonesia** · [English](jev-gallery.en.md)
+
 Katalog desktop Avalonia berisi lima belas use case TypeSafe yang bisa dijalankan. Setiap specimen benar-benar memanggil `SystemOneAsync` — ke simulator lokal secara default, atau ke `api.typesafe.ai` bila Anda menyediakan API key — lalu menampilkan jawaban beserta distribusi probabilitasnya dan kode C# persis yang menghasilkannya.
 
 ![Jev Gallery menjalankan specimen tiket dukungan](images/jev-gallery.png)

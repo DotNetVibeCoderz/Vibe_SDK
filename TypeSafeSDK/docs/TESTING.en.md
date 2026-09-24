@@ -1,5 +1,7 @@
 # Testing
 
+[Bahasa Indonesia](TESTING.id.md) · **English**
+
 ## Running the suite
 
 ```bash

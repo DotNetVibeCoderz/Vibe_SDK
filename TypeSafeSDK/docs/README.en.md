@@ -1,13 +1,15 @@
 # TypeSafe .NET Documentation
 
+[Bahasa Indonesia](README.id.md) · **English**
+
 - [Getting Started](getting-started.en.md)
 - [SDK Usage Guide](sdk-guide.en.md)
 - [Parity with the Python SDK](parity-python.en.md)
 - [Jev Gallery](jev-gallery.en.md)
 - [Publishing to NuGet](nuget.en.md)
-- [Testing](TESTING.md)
-- [.NET Notebook Examples](../notebooks/README.md)
-- [TypeSafe Board Games](board-games.id.md)
+- [Testing](TESTING.en.md)
+- [.NET Notebook Examples](../notebooks/README.en.md)
+- [TypeSafe Board Games](board-games.en.md)
 
 ## Install
 

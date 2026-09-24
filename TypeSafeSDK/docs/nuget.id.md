@@ -1,5 +1,7 @@
 # Publikasi ke NuGet
 
+**Bahasa Indonesia** · [English](nuget.en.md)
+
 SDK ini dirilis sebagai `Gravicode.TypeSafeSdk`. Id paket diberi awalan karena ini port **tidak resmi**: `TypeSafeSdk` tanpa awalan akan terbaca seperti paket resmi vendor, padahal bukan.
 
 ## Instalasi

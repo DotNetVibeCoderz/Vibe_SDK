@@ -1,5 +1,7 @@
 # Getting Started — TypeSafe .NET SDK
 
+**Bahasa Indonesia** · [English](getting-started.en.md)
+
 Panduan cepat untuk mulai menggunakan TypeSafe SDK pada .NET 10.
 
 ## Prasyarat

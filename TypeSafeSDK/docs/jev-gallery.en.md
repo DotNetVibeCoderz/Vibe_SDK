@@ -1,5 +1,7 @@
 # Jev Gallery
 
+[Bahasa Indonesia](jev-gallery.id.md) · **English**
+
 An Avalonia desktop catalogue of fifteen runnable TypeSafe use cases. Every specimen calls `SystemOneAsync` for real — against the local simulator by default, or against `api.typesafe.ai` when you supply a key — and shows the answer together with its probability distribution and the exact C# that produced it.
 
 ![Jev Gallery running a support ticket specimen](images/jev-gallery.png)

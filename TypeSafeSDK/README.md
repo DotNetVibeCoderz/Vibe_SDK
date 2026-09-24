@@ -1,5 +1,7 @@
 # TypeSafe .NET SDK
 
+**Bahasa Indonesia** · [English](README.en.md)
+
 SDK .NET 10 strongly typed untuk workflow klasifikasi TypeSafe, ditambah simulator lokal, CLI, REST API, Blazor Server, aplikasi desktop, dan .NET Notebook.
 
 Port tidak resmi dari [Python SDK resmi](https://github.com/typesafe-ai/typesafe-sdk-python).
@@ -57,9 +59,9 @@ dotnet run --project TypeSafe.JevGallery
 | [Kesejajaran dengan Python SDK](docs/parity-python.id.md) | [Parity with the Python SDK](docs/parity-python.en.md) |
 | [Jev Gallery](docs/jev-gallery.id.md) | [Jev Gallery](docs/jev-gallery.en.md) |
 | [Publikasi NuGet](docs/nuget.id.md) | [Publishing to NuGet](docs/nuget.en.md) |
-| [Board Games](docs/board-games.id.md) | — |
-
-Lainnya: [Testing](docs/TESTING.md) · [Notebook examples](notebooks/README.md)
+| [Board Games](docs/board-games.id.md) | [Board Games](docs/board-games.en.md) |
+| [Pengujian](docs/TESTING.id.md) | [Testing](docs/TESTING.en.md) |
+| [Contoh notebook](notebooks/README.md) | [Notebook examples](notebooks/README.en.md) |
 
 ## Aplikasi
 

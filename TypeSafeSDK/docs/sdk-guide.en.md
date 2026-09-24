@@ -1,5 +1,7 @@
 # SDK Usage Guide
 
+[Bahasa Indonesia](sdk-guide.id.md) · **English**
+
 ## 1. Core concepts
 
 TypeSafe answers one or more named questions about a `state`. The state can be text, an object, or an array. `Choice.Create` describes allowed choices.

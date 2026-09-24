@@ -56,7 +56,7 @@ This is an unofficial .NET port of the TypeSafe Python SDK, plus sample apps tha
 - `TypeSafe.Api` / `TypeSafe.Blazor` / `TypeSafe.BoardGames` — minimal API, Blazor Server, and WPF board games (the SDK only ever sees legal moves; a local tactical fallback guarantees a valid move).
 - `TypeSafeAppGen` — Avalonia shell for the "Jack" assistant. **Note:** `SendAsync` builds a bare `Kernel` with no chat-completion provider and returns a canned reply — provider settings are persisted to `app.config.json` but not yet wired to a live LLM, despite `PLAN.md` having listed the adapters as done. `requirements.md` also describes AppGen features (code explorer, go-to-line, build/run/deploy, template dialog) that are not implemented.
 
-**Tests** (`TypeSafeSdk.Tests/`) are contract tests, not unit tests of internals: `HttpMessageHandler` stubs assert the exact URI, headers, and JSON payload against the Python SDK, plus status mapping, retry, timeout, and simulator behaviour. `GalleryCatalogTests` runs all 15 gallery specimens end to end. The whole suite is offline — live API checks are recorded in `docs/TESTING.md` rather than automated.
+**Tests** (`TypeSafeSdk.Tests/`) are contract tests, not unit tests of internals: `HttpMessageHandler` stubs assert the exact URI, headers, and JSON payload against the Python SDK, plus status mapping, retry, timeout, and simulator behaviour. `GalleryCatalogTests` runs all 15 gallery specimens end to end. The whole suite is offline — live API checks are recorded in `docs/TESTING.en.md` rather than automated.
 
 ## Conventions
 

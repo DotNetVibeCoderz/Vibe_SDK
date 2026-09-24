@@ -1,5 +1,7 @@
 # Parity with the official Python SDK
 
+[Bahasa Indonesia](parity-python.id.md) · **English**
+
 This .NET SDK is an unofficial port of [`typesafe-ai/typesafe-sdk-python`](https://github.com/typesafe-ai/typesafe-sdk-python). This page records what was compared, what is now at parity, and what deliberately differs because .NET is not Python.
 
 ## Public surface, side by side
