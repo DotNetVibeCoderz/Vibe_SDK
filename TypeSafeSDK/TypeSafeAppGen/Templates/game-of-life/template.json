@@ -1,0 +1,10 @@
+{
+  "id": "game-of-life",
+  "name": "Life Automaton",
+  "category": "Simulator",
+  "description": "Conway's Game of Life on a wrapping grid: paint cells, play, step, randomize, and tune the speed.",
+  "useCase": "Explore cellular automata or teach emergent behaviour in class.",
+  "stack": "Avalonia · cellular automaton",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

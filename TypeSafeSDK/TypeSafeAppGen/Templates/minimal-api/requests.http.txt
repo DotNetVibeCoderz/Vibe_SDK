@@ -1,0 +1,21 @@
+@host = http://localhost:5190
+
+GET {{host}}/tasks
+
+###
+
+POST {{host}}/tasks
+Content-Type: application/json
+
+{ "title": "Write release notes", "assignee": "Citra" }
+
+###
+
+PUT {{host}}/tasks/1/status
+Content-Type: application/json
+
+{ "status": "doing" }
+
+###
+
+DELETE {{host}}/tasks/2

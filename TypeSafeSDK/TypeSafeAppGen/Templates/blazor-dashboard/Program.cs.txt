@@ -1,0 +1,17 @@
+using __ProjectName__.Components;
+using __ProjectName__.Services;
+
+// Dibuat dengan TypeSafe App Generator — Gravicode Studios, dipimpin Kang Fadhil.
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddSingleton<MetricsFeed>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MetricsFeed>());
+
+var app = builder.Build();
+
+app.UseAntiforgery();
+app.MapStaticAssets();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
+app.Run();

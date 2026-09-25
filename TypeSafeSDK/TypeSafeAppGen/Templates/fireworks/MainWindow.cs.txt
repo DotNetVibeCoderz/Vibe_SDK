@@ -1,0 +1,125 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Particle Fireworks (click to launch)";
+        Width = 1100;
+        Height = 720;
+        Content = new FireworksCanvas();
+    }
+}
+
+public struct Particle
+{
+    public double X, Y, Vx, Vy, Life, MaxLife, Size;
+    public Color Color;
+    public bool IsShell;
+}
+
+public sealed class FireworksCanvas : Control
+{
+    private static readonly IBrush Night = new SolidColorBrush(Color.Parse("#05060B"));
+    private static readonly Color[] Palette = [Color.Parse("#FFD166"), Color.Parse("#EF476F"), Color.Parse("#06D6A0"), Color.Parse("#118AB2"), Color.Parse("#F78C6B"), Colors.White];
+    // Satu list yang dipakai ulang: partikel mati ditukar dengan elemen terakhir, tanpa alokasi per frame.
+    private readonly List<Particle> _particles = new(4096);
+    private double _autoLaunch;
+
+    public FireworksCanvas()
+    {
+        ClipToBounds = true;
+        var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) => Step(1 / 60.0));
+        timer.Start();
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        var target = e.GetPosition(this);
+        Launch(target.X, target.Y);
+    }
+
+    private void Launch(double targetX, double targetY)
+    {
+        var height = Bounds.Height;
+        var flight = 1.1;
+        _particles.Add(new Particle
+        {
+            X = targetX, Y = height,
+            Vx = 0, Vy = -(height - targetY) / flight - 0.5 * 260 * flight,
+            Life = flight, MaxLife = flight, Size = 3, Color = Colors.White, IsShell = true,
+        });
+    }
+
+    private void Explode(Particle shell)
+    {
+        var color = Palette[Random.Shared.Next(Palette.Length)];
+        var count = Random.Shared.Next(90, 160);
+        for (var i = 0; i < count; i++)
+        {
+            var angle = Random.Shared.NextDouble() * Math.Tau;
+            var speed = 80 + Random.Shared.NextDouble() * 220;
+            var life = 1.2 + Random.Shared.NextDouble() * 1.2;
+            _particles.Add(new Particle
+            {
+                X = shell.X, Y = shell.Y,
+                Vx = Math.Cos(angle) * speed, Vy = Math.Sin(angle) * speed,
+                Life = life, MaxLife = life, Size = 1.5 + Random.Shared.NextDouble() * 2, Color = color,
+            });
+        }
+    }
+
+    private void Step(double dt)
+    {
+        _autoLaunch -= dt;
+        if (_autoLaunch <= 0 && Bounds.Width > 0)
+        {
+            Launch(Bounds.Width * (0.15 + Random.Shared.NextDouble() * 0.7), Bounds.Height * (0.15 + Random.Shared.NextDouble() * 0.3));
+            _autoLaunch = 0.8 + Random.Shared.NextDouble() * 1.4;
+        }
+
+        for (var i = _particles.Count - 1; i >= 0; i--)
+        {
+            var p = _particles[i];
+            p.Life -= dt;
+            p.Vy += 260 * dt;
+            if (!p.IsShell)
+            {
+                p.Vx *= 0.985;
+                p.Vy *= 0.985;
+            }
+            p.X += p.Vx * dt;
+            p.Y += p.Vy * dt;
+            if (p.Life <= 0)
+            {
+                if (p.IsShell) Explode(p);
+                _particles[i] = _particles[^1];
+                _particles.RemoveAt(_particles.Count - 1);
+                continue;
+            }
+            _particles[i] = p;
+        }
+        InvalidateVisual();
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        context.FillRectangle(Night, new Rect(Bounds.Size));
+        foreach (var p in _particles)
+        {
+            var alpha = (byte)(255 * Math.Clamp(p.Life / p.MaxLife, 0, 1));
+            var brush = new SolidColorBrush(Color.FromArgb(alpha, p.Color.R, p.Color.G, p.Color.B));
+            context.DrawEllipse(brush, null, new Point(p.X, p.Y), p.Size, p.Size);
+            // Ekor tipis searah kecepatan memberi kesan gerak.
+            context.DrawLine(new Pen(brush, p.Size * 0.6), new Point(p.X, p.Y), new Point(p.X - p.Vx * 0.03, p.Y - p.Vy * 0.03));
+        }
+        var text = new FormattedText($"{_particles.Count} particles · click to launch", System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 12, Brushes.Gray);
+        context.DrawText(text, new Point(14, 12));
+    }
+}

@@ -1,0 +1,58 @@
+namespace __ProjectName__.Services;
+
+public sealed record MetricSample(DateTimeOffset At, double RequestsPerSecond, double LatencyMs, double ErrorRate);
+
+public sealed record Incident(DateTimeOffset At, string Severity, string Message);
+
+/// <summary>
+/// Sumber metrik simulasi yang berjalan di background. Ganti <see cref="NextSample"/> dengan data nyata
+/// (Prometheus, Application Insights, sensor IoT) tanpa mengubah komponen UI.
+/// </summary>
+public sealed class MetricsFeed : BackgroundService
+{
+    private readonly object _gate = new();
+    private readonly Queue<MetricSample> _samples = new();
+    private readonly LinkedList<Incident> _incidents = new();
+    private double _load = 120;
+
+    public event Action? Updated;
+
+    public IReadOnlyList<MetricSample> Samples
+    {
+        get { lock (_gate) return [.. _samples]; }
+    }
+
+    public IReadOnlyList<Incident> Incidents
+    {
+        get { lock (_gate) return [.. _incidents]; }
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            var sample = NextSample();
+            lock (_gate)
+            {
+                _samples.Enqueue(sample);
+                if (_samples.Count > 60) _samples.Dequeue();
+                if (sample.LatencyMs > 260 || sample.ErrorRate > 2.5)
+                {
+                    var severity = sample.ErrorRate > 2.5 ? "Critical" : "Warning";
+                    _incidents.AddFirst(new Incident(sample.At, severity, $"{sample.LatencyMs:0} ms latency, {sample.ErrorRate:0.0}% errors"));
+                    if (_incidents.Count > 8) _incidents.RemoveLast();
+                }
+            }
+            Updated?.Invoke();
+        }
+    }
+
+    private MetricSample NextSample()
+    {
+        _load = Math.Clamp(_load + (Random.Shared.NextDouble() - 0.5) * 30, 40, 320);
+        var latency = 80 + _load * 0.6 + Random.Shared.NextDouble() * 40;
+        var errors = Math.Max(0, (_load - 200) / 40 + Random.Shared.NextDouble() - 0.5);
+        return new MetricSample(DateTimeOffset.Now, _load, latency, errors);
+    }
+}

@@ -1,0 +1,175 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Outbreak Simulator";
+        Width = 1200;
+        Height = 760;
+        var world = new OutbreakWorld();
+        var chart = new SirChart(world) { Height = 170 };
+        var distancing = new Slider { Minimum = 0, Maximum = 0.9, Value = 0, Width = 200 };
+        distancing.ValueChanged += (_, e) => world.Distancing = e.NewValue;
+        var restart = new Button { Content = "Restart outbreak" };
+        restart.Click += (_, _) => world.Reset();
+
+        var bar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(14, 10) };
+        bar.Children.Add(restart);
+        bar.Children.Add(new TextBlock { Text = "Share staying home (applies on restart)", VerticalAlignment = VerticalAlignment.Center });
+        bar.Children.Add(distancing);
+        bar.Children.Add(new TextBlock { Text = "■ susceptible  ■ infected  ■ recovered", Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center });
+
+        var root = new DockPanel();
+        DockPanel.SetDock(bar, Dock.Top);
+        DockPanel.SetDock(chart, Dock.Bottom);
+        root.Children.Add(bar);
+        root.Children.Add(chart);
+        root.Children.Add(world);
+        Content = root;
+
+        var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) =>
+        {
+            world.Step(1 / 60.0);
+            chart.InvalidateVisual();
+        });
+        timer.Start();
+    }
+}
+
+public enum Health { Susceptible, Infected, Recovered }
+
+public sealed class Person
+{
+    public double X, Y, Vx, Vy, InfectedFor;
+    public Health State;
+    public bool StaysHome;
+}
+
+public sealed class OutbreakWorld : Control
+{
+    public const double RecoveryTime = 9, InfectionRadius = 9, InfectionChance = 0.35;
+    private static readonly IBrush[] StateBrushes = [new SolidColorBrush(Color.Parse("#8FB8DE")), new SolidColorBrush(Color.Parse("#F25F5C")), new SolidColorBrush(Color.Parse("#70C1B3"))];
+    private readonly List<Person> _people = [];
+    private double _sampleClock;
+
+    public OutbreakWorld() => ClipToBounds = true;
+
+    public double Distancing { get; set; }
+    public List<(int S, int I, int R)> History { get; } = [];
+
+    public void Reset()
+    {
+        _people.Clear();
+        History.Clear();
+    }
+
+    private void Populate()
+    {
+        for (var i = 0; i < 400; i++)
+        {
+            var angle = Random.Shared.NextDouble() * Math.Tau;
+            var staysHome = Random.Shared.NextDouble() < Distancing;
+            _people.Add(new Person
+            {
+                X = Random.Shared.NextDouble() * Bounds.Width,
+                Y = Random.Shared.NextDouble() * Bounds.Height,
+                Vx = staysHome ? 0 : Math.Cos(angle) * 40,
+                Vy = staysHome ? 0 : Math.Sin(angle) * 40,
+                StaysHome = staysHome,
+                State = i < 4 ? Health.Infected : Health.Susceptible,
+            });
+        }
+    }
+
+    public void Step(double dt)
+    {
+        if (Bounds.Width < 10) return;
+        if (_people.Count == 0) Populate();
+
+        foreach (var p in _people)
+        {
+            p.X += p.Vx * dt;
+            p.Y += p.Vy * dt;
+            if (p.X < 0 || p.X > Bounds.Width) p.Vx = -p.Vx;
+            if (p.Y < 0 || p.Y > Bounds.Height) p.Vy = -p.Vy;
+            if (p.State == Health.Infected && (p.InfectedFor += dt) > RecoveryTime) p.State = Health.Recovered;
+        }
+
+        // Grid spasial sederhana: hanya cek orang di sel yang sama dan sel tetangga, bukan semua pasangan.
+        var cell = InfectionRadius * 2;
+        var buckets = new Dictionary<(int, int), List<Person>>();
+        foreach (var p in _people)
+        {
+            var key = ((int)(p.X / cell), (int)(p.Y / cell));
+            if (!buckets.TryGetValue(key, out var list)) buckets[key] = list = [];
+            list.Add(p);
+        }
+        foreach (var carrier in _people.Where(p => p.State == Health.Infected))
+        {
+            var (cx, cy) = ((int)(carrier.X / cell), (int)(carrier.Y / cell));
+            for (var dx = -1; dx <= 1; dx++)
+                for (var dy = -1; dy <= 1; dy++)
+                    if (buckets.TryGetValue((cx + dx, cy + dy), out var nearby))
+                        foreach (var other in nearby)
+                            if (other.State == Health.Susceptible
+                                && Math.Abs(other.X - carrier.X) < InfectionRadius && Math.Abs(other.Y - carrier.Y) < InfectionRadius
+                                && Random.Shared.NextDouble() < InfectionChance * dt * 10)
+                                other.State = Health.Infected;
+        }
+
+        if ((_sampleClock += dt) > 0.2)
+        {
+            _sampleClock = 0;
+            History.Add((_people.Count(p => p.State == Health.Susceptible), _people.Count(p => p.State == Health.Infected), _people.Count(p => p.State == Health.Recovered)));
+            if (History.Count > 600) History.RemoveAt(0);
+        }
+        InvalidateVisual();
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        context.FillRectangle(new SolidColorBrush(Color.Parse("#101418")), new Rect(Bounds.Size));
+        foreach (var p in _people)
+            context.DrawEllipse(StateBrushes[(int)p.State], p.StaysHome ? new Pen(Brushes.White, 1) : null, new Point(p.X, p.Y), 4, 4);
+    }
+}
+
+public sealed class SirChart(OutbreakWorld world) : Control
+{
+    private static readonly IBrush[] Fill = [new SolidColorBrush(Color.Parse("#8FB8DE")), new SolidColorBrush(Color.Parse("#F25F5C")), new SolidColorBrush(Color.Parse("#70C1B3"))];
+
+    // Stacked area: infected di bawah, recovered di atas, susceptible di tengah — bentuk kurva SIR klasik.
+    public override void Render(DrawingContext context)
+    {
+        context.FillRectangle(new SolidColorBrush(Color.Parse("#0B0E12")), new Rect(Bounds.Size));
+        var history = world.History;
+        if (history.Count < 2) return;
+        var total = (double)(history[0].S + history[0].I + history[0].R);
+        var dx = Bounds.Width / Math.Max(history.Count - 1, 1);
+        double Y(double value) => Bounds.Height - value / total * Bounds.Height;
+
+        void Band(Func<(int S, int I, int R), double> lower, Func<(int S, int I, int R), double> upper, IBrush brush)
+        {
+            var geometry = new StreamGeometry();
+            using (var g = geometry.Open())
+            {
+                g.BeginFigure(new Point(0, Y(lower(history[0]))), true);
+                for (var i = 0; i < history.Count; i++) g.LineTo(new Point(i * dx, Y(upper(history[i]))));
+                for (var i = history.Count - 1; i >= 0; i--) g.LineTo(new Point(i * dx, Y(lower(history[i]))));
+                g.EndFigure(true);
+            }
+            context.DrawGeometry(brush, null, geometry);
+        }
+
+        Band(_ => 0, h => h.I, Fill[1]);
+        Band(h => h.I, h => h.I + h.S, Fill[0]);
+        Band(h => h.I + h.S, h => total, Fill[2]);
+    }
+}

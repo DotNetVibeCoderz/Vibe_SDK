@@ -1,0 +1,149 @@
+using System.Globalization;
+using System.Numerics;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Orbit Sandbox";
+        Width = 1100;
+        Height = 760;
+        Content = new OrbitView();
+    }
+}
+
+public sealed class Body
+{
+    public Vector2 Position, Velocity, Acceleration;
+    public float Mass, Radius;
+    public Color Color;
+    public readonly Queue<Vector2> Trail = new();
+}
+
+public sealed class OrbitView : Control
+{
+    private const float G = 900f;
+    private static readonly Color[] Palette = [Color.Parse("#4CC9F0"), Color.Parse("#F72585"), Color.Parse("#B5E48C"), Color.Parse("#FFB703"), Color.Parse("#CDB4DB")];
+    private readonly List<Body> _bodies = [];
+    private Vector2? _dragStart;
+    private Vector2 _dragNow;
+
+    public OrbitView()
+    {
+        ClipToBounds = true;
+        _bodies.Add(new Body { Mass = 4000, Radius = 22, Color = Color.Parse("#FFD166") });
+        AddOrbiting(new Vector2(220, 0));
+        AddOrbiting(new Vector2(-340, 0));
+        var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) =>
+        {
+            // Beberapa sub-step per frame menjaga orbit stabil saat benda lewat dekat bintang.
+            for (var i = 0; i < 4; i++) Step(1 / 240f);
+            InvalidateVisual();
+        });
+        timer.Start();
+    }
+
+    private Vector2 Center => new((float)Bounds.Width / 2, (float)Bounds.Height / 2);
+
+    private void AddOrbiting(Vector2 offset)
+    {
+        var speed = MathF.Sqrt(G * _bodies[0].Mass / offset.Length());
+        var tangent = Vector2.Normalize(new Vector2(-offset.Y, offset.X));
+        _bodies.Add(new Body { Position = _bodies[0].Position + offset, Velocity = tangent * speed, Mass = 10, Radius = 7, Color = Palette[_bodies.Count % Palette.Length] });
+    }
+
+    private void Accelerations()
+    {
+        foreach (var body in _bodies) body.Acceleration = Vector2.Zero;
+        for (var i = 0; i < _bodies.Count; i++)
+        {
+            for (var j = i + 1; j < _bodies.Count; j++)
+            {
+                var delta = _bodies[j].Position - _bodies[i].Position;
+                var distanceSquared = MathF.Max(delta.LengthSquared(), 400f);
+                var direction = delta / MathF.Sqrt(distanceSquared);
+                var force = G / distanceSquared;
+                _bodies[i].Acceleration += direction * force * _bodies[j].Mass;
+                _bodies[j].Acceleration -= direction * force * _bodies[i].Mass;
+            }
+        }
+    }
+
+    // Velocity Verlet: jauh lebih hemat energi dibanding Euler, jadi orbit tidak melebar sendiri.
+    private void Step(float dt)
+    {
+        Accelerations();
+        foreach (var body in _bodies)
+        {
+            body.Position += body.Velocity * dt + 0.5f * body.Acceleration * dt * dt;
+            body.Velocity += 0.5f * body.Acceleration * dt;
+        }
+        Accelerations();
+        foreach (var body in _bodies)
+        {
+            body.Velocity += 0.5f * body.Acceleration * dt;
+            body.Trail.Enqueue(body.Position);
+            if (body.Trail.Count > 600) body.Trail.Dequeue();
+        }
+        _bodies.RemoveAll(b => b.Position.Length() > 5000);
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        _dragStart = _dragNow = new Vector2((float)p.X, (float)p.Y);
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        _dragNow = new Vector2((float)p.X, (float)p.Y);
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        if (_dragStart is not { } start) return;
+        _bodies.Add(new Body
+        {
+            Position = start - Center,
+            Velocity = (start - _dragNow) * 2f,
+            Mass = 10, Radius = 7,
+            Color = Palette[_bodies.Count % Palette.Length],
+        });
+        _dragStart = null;
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        context.FillRectangle(new SolidColorBrush(Color.Parse("#070B14")), new Rect(Bounds.Size));
+        var center = Center;
+        foreach (var body in _bodies)
+        {
+            var trailPen = new Pen(new SolidColorBrush(Color.FromArgb(90, body.Color.R, body.Color.G, body.Color.B)), 1.2);
+            Vector2? previous = null;
+            var index = 0;
+            foreach (var point in body.Trail)
+            {
+                // Gambar setiap titik ke-3 saja: trail tetap halus dengan sepertiga garis.
+                if (index++ % 3 != 0) continue;
+                if (previous is { } prev) context.DrawLine(trailPen, ToPoint(prev + center), ToPoint(point + center));
+                previous = point;
+            }
+            context.DrawEllipse(new SolidColorBrush(body.Color), null, ToPoint(body.Position + center), body.Radius, body.Radius);
+        }
+        if (_dragStart is { } start)
+            context.DrawLine(new Pen(Brushes.White, 1.5, new DashStyle([4, 4], 0)), ToPoint(start), ToPoint(_dragNow));
+
+        var hud = new FormattedText($"{_bodies.Count} bodies · drag from a point to throw a planet (pull back like a slingshot)", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 13, Brushes.Gray);
+        context.DrawText(hud, new Point(16, 14));
+    }
+
+    private static Point ToPoint(Vector2 v) => new(v.X, v.Y);
+}

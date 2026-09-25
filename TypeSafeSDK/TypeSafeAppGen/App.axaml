@@ -1,1 +1,280 @@
-<Application xmlns="https://github.com/avaloniaui" x:Class="TypeSafeAppGen.App" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" RequestedThemeVariant="Dark"><Application.Styles><FluentTheme /><Style Selector="Button"><Setter Property="CornerRadius" Value="7"/><Setter Property="Padding" Value="11,7"/></Style></Application.Styles></Application>
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TypeSafeAppGen.App"
+             RequestedThemeVariant="Dark">
+
+  <!--
+    Patina: tembaga yang teroksidasi. Slate kehijauan untuk permukaan kerja yang tenang dipakai berjam-jam,
+    verdigris untuk semua yang milik workspace (fokus, seleksi, tab aktif), dan tembaga khusus untuk Jack.
+    Dua aksen ini tidak pernah dipertukarkan, jadi warna selalu memberi tahu siapa yang sedang bekerja.
+  -->
+  <Application.Resources>
+    <Color x:Key="PatinaDeepColor">#0B1214</Color>
+    <Color x:Key="PatinaBaseColor">#10191C</Color>
+    <Color x:Key="PatinaPanelColor">#142024</Color>
+    <Color x:Key="PatinaRaisedColor">#1A292E</Color>
+    <Color x:Key="PatinaHoverColor">#213339</Color>
+    <Color x:Key="RuleColor">#243539</Color>
+    <Color x:Key="InkColor">#D5E1DD</Color>
+    <Color x:Key="MutedColor">#7E9690</Color>
+    <Color x:Key="FaintColor">#4E6360</Color>
+    <Color x:Key="VerdigrisColor">#4CC3A5</Color>
+    <Color x:Key="CopperColor">#E0874B</Color>
+    <Color x:Key="EmberColor">#EF6B5E</Color>
+    <Color x:Key="BrassColor">#E3BE5B</Color>
+
+    <SolidColorBrush x:Key="PatinaDeep" Color="{StaticResource PatinaDeepColor}" />
+    <SolidColorBrush x:Key="PatinaBase" Color="{StaticResource PatinaBaseColor}" />
+    <SolidColorBrush x:Key="PatinaPanel" Color="{StaticResource PatinaPanelColor}" />
+    <SolidColorBrush x:Key="PatinaRaised" Color="{StaticResource PatinaRaisedColor}" />
+    <SolidColorBrush x:Key="PatinaHover" Color="{StaticResource PatinaHoverColor}" />
+    <SolidColorBrush x:Key="Rule" Color="{StaticResource RuleColor}" />
+    <SolidColorBrush x:Key="Ink" Color="{StaticResource InkColor}" />
+    <SolidColorBrush x:Key="Muted" Color="{StaticResource MutedColor}" />
+    <SolidColorBrush x:Key="Faint" Color="{StaticResource FaintColor}" />
+    <SolidColorBrush x:Key="Verdigris" Color="{StaticResource VerdigrisColor}" />
+    <SolidColorBrush x:Key="VerdigrisWash" Color="#1F4CC3A5" />
+    <SolidColorBrush x:Key="Copper" Color="{StaticResource CopperColor}" />
+    <SolidColorBrush x:Key="CopperWash" Color="#1FE0874B" />
+    <SolidColorBrush x:Key="Ember" Color="{StaticResource EmberColor}" />
+    <SolidColorBrush x:Key="Brass" Color="{StaticResource BrassColor}" />
+
+    <!-- Seleksi daftar/pohon: wash verdigris, bukan blok aksen penuh. -->
+    <SolidColorBrush x:Key="TreeViewItemBackgroundSelected" Color="#264CC3A5" />
+    <SolidColorBrush x:Key="TreeViewItemBackgroundSelectedPointerOver" Color="#334CC3A5" />
+    <SolidColorBrush x:Key="TreeViewItemBackgroundPointerOver" Color="#213339" />
+    <SolidColorBrush x:Key="TreeViewItemForegroundSelected" Color="#D5E1DD" />
+    <SolidColorBrush x:Key="TreeViewItemForegroundSelectedPointerOver" Color="#D5E1DD" />
+    <SolidColorBrush x:Key="SystemControlHighlightListAccentLowBrush" Color="#264CC3A5" />
+    <SolidColorBrush x:Key="SystemControlHighlightListAccentMediumBrush" Color="#334CC3A5" />
+
+    <FontFamily x:Key="Body">fonts:Inter#Inter, Segoe UI, sans-serif</FontFamily>
+    <FontFamily x:Key="Mono">Cascadia Code, Cascadia Mono, JetBrains Mono, Consolas, Menlo, monospace</FontFamily>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark"
+                               Accent="#4CC3A5"
+                               RegionColor="#10191C"
+                               AltHigh="#0B1214"
+                               ChromeLow="#142024"
+                               ChromeMedium="#1A292E"
+                               ChromeMediumLow="#142024"
+                               ChromeHigh="#2C4147"
+                               ChromeAltLow="#D5E1DD"
+                               BaseHigh="#D5E1DD"
+                               BaseMediumHigh="#B4C4BF"
+                               BaseMedium="#7E9690"
+                               BaseLow="#243539"
+                               ListLow="#1A292E"
+                               ListMedium="#213339"
+                               ErrorText="#EF6B5E" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+
+    <Style Selector="Window">
+      <Setter Property="FontFamily" Value="{StaticResource Body}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+      <Setter Property="Background" Value="{StaticResource PatinaBase}" />
+    </Style>
+
+    <!-- Eyebrow: label struktural huruf kapital berjarak, selalu mono. -->
+    <Style Selector="TextBlock.eyebrow">
+      <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+      <Setter Property="FontSize" Value="10.5" />
+      <Setter Property="LetterSpacing" Value="1.4" />
+      <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    </Style>
+    <Style Selector="TextBlock.display">
+      <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    </Style>
+    <Style Selector="TextBlock.mono">
+      <Setter Property="FontFamily" Value="{StaticResource Mono}" />
+    </Style>
+
+    <!-- Tombol toolbar: ikon + label, datar, highlight lembut saat hover. -->
+    <Style Selector="Button.tool">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="8,5" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+    <Style Selector="Button.tool:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaRaised}" />
+    </Style>
+    <Style Selector="Button.tool:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{StaticResource Faint}" />
+    </Style>
+    <Style Selector="Button.tool.run /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="{StaticResource Verdigris}" />
+    </Style>
+    <Style Selector="Button.tool.stop /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="{StaticResource Ember}" />
+    </Style>
+
+    <Style Selector="ToggleButton.tool">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="7,5" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Foreground" Value="{StaticResource Muted}" />
+    </Style>
+    <Style Selector="ToggleButton.tool:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+    <Style Selector="ToggleButton.tool:checked /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource VerdigrisWash}" />
+      <Setter Property="Foreground" Value="{StaticResource Verdigris}" />
+    </Style>
+
+    <Style Selector="Button.icon">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="5" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Foreground" Value="{StaticResource Muted}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{StaticResource Verdigris}" />
+      <Setter Property="Foreground" Value="#0B1214" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="16,8" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#62D4B7" />
+      <Setter Property="Foreground" Value="#0B1214" />
+    </Style>
+    <Style Selector="Button.primary:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaRaised}" />
+      <Setter Property="Foreground" Value="{StaticResource Faint}" />
+    </Style>
+
+    <!-- Tombol milik Jack memakai tembaga, bukan verdigris. -->
+    <Style Selector="Button.jack">
+      <Setter Property="Background" Value="{StaticResource Copper}" />
+      <Setter Property="Foreground" Value="#1A0F08" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="12,7" />
+    </Style>
+    <Style Selector="Button.jack:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#EE9A60" />
+      <Setter Property="Foreground" Value="#1A0F08" />
+    </Style>
+    <Style Selector="Button.jack.busy">
+      <Setter Property="Background" Value="{StaticResource PatinaRaised}" />
+      <Setter Property="Foreground" Value="{StaticResource Copper}" />
+    </Style>
+    <Style Selector="Button.jack.busy:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="Foreground" Value="{StaticResource Copper}" />
+    </Style>
+
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{StaticResource Rule}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+      <Setter Property="Padding" Value="14,7" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Verdigris}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+
+    <!-- Aksi di start page dan saran prompt: baris datar dengan hover. -->
+    <Style Selector="Button.row">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="10,7" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+    <Style Selector="Button.row:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+
+    <!-- Kartu pilihan (mode proyek): terpilih = wash verdigris + garis, bukan blok aksen penuh. -->
+    <Style Selector="ToggleButton.card /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaRaised}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Rule}" />
+    </Style>
+    <Style Selector="ToggleButton.card:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Faint}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+    <Style Selector="ToggleButton.card:checked /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource VerdigrisWash}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Verdigris}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+    <Style Selector="Button.card:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PatinaHover}" />
+      <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    </Style>
+
+    <Style Selector="TextBox">
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="TextBox.field">
+      <Setter Property="Background" Value="{StaticResource PatinaDeep}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Rule}" />
+    </Style>
+
+    <Style Selector="Menu">
+      <Setter Property="FontSize" Value="12.5" />
+    </Style>
+    <Style Selector="MenuItem">
+      <Setter Property="FontSize" Value="12.5" />
+    </Style>
+
+    <Style Selector="GridSplitter">
+      <Setter Property="Background" Value="{StaticResource Rule}" />
+      <Setter Property="MinWidth" Value="1" />
+      <Setter Property="MinHeight" Value="1" />
+    </Style>
+    <Style Selector="GridSplitter:pointerover">
+      <Setter Property="Background" Value="{StaticResource Verdigris}" />
+    </Style>
+
+    <Style Selector="TreeViewItem">
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="FontSize" Value="12.5" />
+    </Style>
+
+    <Style Selector="ScrollBar">
+      <Setter Property="AllowAutoHide" Value="True" />
+    </Style>
+  </Application.Styles>
+</Application>

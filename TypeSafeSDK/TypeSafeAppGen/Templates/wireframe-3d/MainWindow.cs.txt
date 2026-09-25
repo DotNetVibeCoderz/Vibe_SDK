@@ -1,0 +1,156 @@
+using System.Numerics;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Wireframe Studio";
+        Width = 1000;
+        Height = 700;
+        Background = new SolidColorBrush(Color.Parse("#0E1116"));
+
+        var viewport = new WireframeViewport();
+        var picker = new ComboBox { ItemsSource = Mesh.Library.Keys.ToList(), SelectedIndex = 0, Width = 180 };
+        picker.SelectionChanged += (_, _) => viewport.Mesh = Mesh.Library[(string)picker.SelectedItem!];
+        var spin = new CheckBox { Content = "Auto rotate", IsChecked = true };
+        spin.IsCheckedChanged += (_, _) => viewport.AutoRotate = spin.IsChecked == true;
+
+        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, Margin = new Thickness(16, 12) };
+        toolbar.Children.Add(picker);
+        toolbar.Children.Add(spin);
+        toolbar.Children.Add(new TextBlock { Text = "Drag to orbit · wheel to zoom", Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center });
+
+        var root = new DockPanel();
+        DockPanel.SetDock(toolbar, Dock.Top);
+        root.Children.Add(toolbar);
+        root.Children.Add(viewport);
+        Content = root;
+    }
+}
+
+public sealed record Mesh(Vector3[] Vertices, (int A, int B)[] Edges)
+{
+    public static readonly Dictionary<string, Mesh> Library = new()
+    {
+        ["Cube"] = Cube(),
+        ["Icosahedron"] = Icosahedron(),
+        ["Torus"] = Torus(24, 12, 1.2f, 0.45f),
+    };
+
+    private static Mesh Cube()
+    {
+        var v = new Vector3[8];
+        for (var i = 0; i < 8; i++) v[i] = new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1);
+        var edges = new List<(int, int)>();
+        for (var i = 0; i < 8; i++)
+            for (var bit = 1; bit < 8; bit <<= 1)
+                if ((i & bit) == 0) edges.Add((i, i | bit));
+        return new Mesh(v, [.. edges]);
+    }
+
+    private static Mesh Icosahedron()
+    {
+        var t = (1f + MathF.Sqrt(5f)) / 2f;
+        Vector3[] raw =
+        [
+            new(-1, t, 0), new(1, t, 0), new(-1, -t, 0), new(1, -t, 0),
+            new(0, -1, t), new(0, 1, t), new(0, -1, -t), new(0, 1, -t),
+            new(t, 0, -1), new(t, 0, 1), new(-t, 0, -1), new(-t, 0, 1),
+        ];
+        var v = raw.Select(p => Vector3.Normalize(p) * 1.5f).ToArray();
+        var edges = new List<(int, int)>();
+        for (var a = 0; a < v.Length; a++)
+            for (var b = a + 1; b < v.Length; b++)
+                if (Vector3.Distance(v[a], v[b]) < 1.6f) edges.Add((a, b));
+        return new Mesh(v, [.. edges]);
+    }
+
+    private static Mesh Torus(int major, int minor, float r1, float r2)
+    {
+        var v = new List<Vector3>();
+        var edges = new List<(int, int)>();
+        for (var i = 0; i < major; i++)
+        {
+            var u = i * MathF.Tau / major;
+            for (var j = 0; j < minor; j++)
+            {
+                var w = j * MathF.Tau / minor;
+                v.Add(new Vector3((r1 + r2 * MathF.Cos(w)) * MathF.Cos(u), r2 * MathF.Sin(w), (r1 + r2 * MathF.Cos(w)) * MathF.Sin(u)));
+                var index = i * minor + j;
+                edges.Add((index, i * minor + (j + 1) % minor));
+                edges.Add((index, (i + 1) % major * minor + j));
+            }
+        }
+        return new Mesh([.. v], [.. edges]);
+    }
+}
+
+public sealed class WireframeViewport : Control
+{
+    private static readonly IBrush Backdrop = new SolidColorBrush(Color.Parse("#0E1116"));
+    private float _yaw = 0.6f, _pitch = 0.35f, _distance = 5f;
+    private Point? _dragStart;
+
+    public WireframeViewport()
+    {
+        ClipToBounds = true;
+        var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) =>
+        {
+            if (AutoRotate && _dragStart is null) _yaw += 0.01f;
+            InvalidateVisual();
+        });
+        timer.Start();
+    }
+
+    public Mesh Mesh { get; set; } = Mesh.Library["Cube"];
+    public bool AutoRotate { get; set; } = true;
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e) => _dragStart = e.GetPosition(this);
+    protected override void OnPointerReleased(PointerReleasedEventArgs e) => _dragStart = null;
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        if (_dragStart is not { } start) return;
+        var now = e.GetPosition(this);
+        _yaw += (float)(now.X - start.X) * 0.01f;
+        _pitch = Math.Clamp(_pitch + (float)(now.Y - start.Y) * 0.01f, -1.5f, 1.5f);
+        _dragStart = now;
+    }
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e) =>
+        _distance = Math.Clamp(_distance - (float)e.Delta.Y * 0.4f, 2.5f, 20f);
+
+    public override void Render(DrawingContext context)
+    {
+        var size = Bounds.Size;
+        context.FillRectangle(Backdrop, new Rect(size));
+        var rotation = Matrix4x4.CreateRotationY(_yaw) * Matrix4x4.CreateRotationX(_pitch);
+        var focal = (float)Math.Min(size.Width, size.Height) * 0.9f;
+        var projected = new (Point Point, float Depth)[Mesh.Vertices.Length];
+        for (var i = 0; i < Mesh.Vertices.Length; i++)
+        {
+            var p = Vector3.Transform(Mesh.Vertices[i], rotation);
+            var z = p.Z + _distance;
+            projected[i] = (new Point(size.Width / 2 + p.X * focal / z, size.Height / 2 - p.Y * focal / z), z);
+        }
+
+        foreach (var (a, b) in Mesh.Edges)
+        {
+            // Garis yang lebih jauh digambar lebih redup untuk memberi kesan kedalaman.
+            var depth = (projected[a].Depth + projected[b].Depth) / 2;
+            var shade = (byte)Math.Clamp(255 - (depth - _distance + 2) * 45, 60, 255);
+            var pen = new Pen(new SolidColorBrush(Color.FromRgb(90, shade, 230)), 1.6);
+            context.DrawLine(pen, projected[a].Point, projected[b].Point);
+        }
+        foreach (var (point, _) in projected)
+            context.DrawEllipse(Brushes.White, null, point, 2, 2);
+    }
+}

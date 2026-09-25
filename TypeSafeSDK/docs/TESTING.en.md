@@ -65,6 +65,16 @@ Nothing in the suite touches the network or needs an API key. HTTP behaviour is 
 ### API key loading (`ApiKeyLoaderTests`)
 Raw, `KEY=VALUE`, `KEY: VALUE`, and JSON files; unknown formats rejected. The key is never printed.
 
+### App Generator (`TypeSafeAppGen.Tests`)
+
+77 offline tests for the non-UI parts of TypeSafeAppGen: the project path guard (including sibling-prefix escapes), the `dotnet build` diagnostic parser, the math expression evaluator, the code formatter, `app.config.json` migration and corrupt-file fallback, scaffolding of every template (no leftover placeholders or `.txt` files), a chat service for each of the five LLM providers, and the kernel functions against a fake host.
+
+```bash
+dotnet test TypeSafeAppGen.Tests/TypeSafeAppGen.Tests.csproj
+```
+
+The UI and live-model behaviour were checked by hand on 2026-09-25: Jack on Azure OpenAI `gpt-5-mini` edited a file and got the build passing, "Build the project and fix every error" repaired an injected CS1002, Settings › Test connection returned OK, and the Claude connector returned a mapped 401 for a fake key. All 12 templates were scaffolded and built with zero warnings.
+
 ## Live API verification
 
 The suite is offline by design, so the live contract was checked by hand against `api.typesafe.ai` using the key file named by `TYPESAFE_API_KEY_FILE`.

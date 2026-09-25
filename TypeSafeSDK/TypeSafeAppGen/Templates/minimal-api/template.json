@@ -1,0 +1,9 @@
+{
+  "id": "minimal-api",
+  "name": "Task Board API",
+  "category": "Web",
+  "description": "ASP.NET Core minimal API with typed results, validation, an in-memory repository, OpenAPI, and a ready-to-run .http file.",
+  "useCase": "Backend for a mobile or SPA client, a microservice seed, or an integration mock.",
+  "stack": "ASP.NET Core minimal API",
+  "mainFile": "Program.cs"
+}

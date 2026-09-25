@@ -1,0 +1,10 @@
+{
+  "id": "breakout",
+  "name": "Brick Breaker",
+  "category": "Game",
+  "description": "Breakout with a mouse-driven paddle, angle control from the hit point, rows of bricks, lives, and levels.",
+  "useCase": "Base for physics-light arcade games, collision detection practice, or a game-jam starter.",
+  "stack": "Avalonia · collision",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

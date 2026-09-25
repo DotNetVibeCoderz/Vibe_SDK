@@ -1,0 +1,163 @@
+using System.Globalization;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Snake Arcade";
+        Width = 760;
+        Height = 820;
+        var board = new SnakeBoard();
+        Content = board;
+        // Keyboard ditangani di window supaya selalu aktif tanpa perlu klik papan dulu.
+        KeyDown += (_, e) => board.HandleKey(e.Key);
+    }
+}
+
+public readonly record struct Cell(int X, int Y);
+
+/// <summary>Aturan permainan terpisah dari tampilan agar mudah diuji dan dikembangkan.</summary>
+public sealed class SnakeGame
+{
+    public const int Columns = 24, Rows = 24;
+    private readonly LinkedList<Cell> _body = new();
+    private readonly Queue<Cell> _pendingTurns = new();
+    private Cell _direction = new(1, 0);
+
+    public SnakeGame() => Reset();
+
+    public IEnumerable<Cell> Body => _body;
+    public Cell Food { get; private set; }
+    public int Score { get; private set; }
+    public int HighScore { get; private set; }
+    public bool IsOver { get; private set; }
+    public TimeSpan Interval => TimeSpan.FromMilliseconds(Math.Max(55, 140 - Score * 3));
+
+    public void Reset()
+    {
+        _body.Clear();
+        for (var i = 0; i < 4; i++) _body.AddFirst(new Cell(6 + i, Rows / 2));
+        _direction = new Cell(1, 0);
+        _pendingTurns.Clear();
+        Score = 0;
+        IsOver = false;
+        PlaceFood();
+    }
+
+    public void Turn(Cell direction)
+    {
+        // Buffer maksimal dua belokan agar tekan cepat (mis. atas lalu kiri) tidak hilang.
+        var last = _pendingTurns.Count > 0 ? _pendingTurns.Last() : _direction;
+        if (_pendingTurns.Count < 2 && direction.X != -last.X && direction.Y != -last.Y) _pendingTurns.Enqueue(direction);
+    }
+
+    public void Tick()
+    {
+        if (IsOver) return;
+        if (_pendingTurns.Count > 0) _direction = _pendingTurns.Dequeue();
+        var head = _body.First!.Value;
+        var next = new Cell(head.X + _direction.X, head.Y + _direction.Y);
+        var eats = next == Food;
+        if (!eats) _body.RemoveLast();
+        if (next.X < 0 || next.Y < 0 || next.X >= Columns || next.Y >= Rows || _body.Contains(next))
+        {
+            IsOver = true;
+            HighScore = Math.Max(HighScore, Score);
+            return;
+        }
+        _body.AddFirst(next);
+        if (eats)
+        {
+            Score++;
+            PlaceFood();
+        }
+    }
+
+    private void PlaceFood()
+    {
+        do Food = new Cell(Random.Shared.Next(Columns), Random.Shared.Next(Rows));
+        while (_body.Contains(Food));
+    }
+}
+
+public sealed class SnakeBoard : Control
+{
+    private static readonly IBrush Floor = new SolidColorBrush(Color.Parse("#1D2B1F"));
+    private static readonly IBrush FloorAlt = new SolidColorBrush(Color.Parse("#213223"));
+    private static readonly IBrush SnakeBrush = new SolidColorBrush(Color.Parse("#A7E36F"));
+    private static readonly IBrush HeadBrush = new SolidColorBrush(Color.Parse("#E6FF9E"));
+    private static readonly IBrush FoodBrush = new SolidColorBrush(Color.Parse("#FF5D5D"));
+    private readonly SnakeGame _game = new();
+    private readonly DispatcherTimer _timer;
+    private bool _paused;
+
+    public SnakeBoard()
+    {
+        _timer = new DispatcherTimer(_game.Interval, DispatcherPriority.Normal, (_, _) => Tick());
+        _timer.Start();
+    }
+
+    private void Tick()
+    {
+        if (_paused) return;
+        _game.Tick();
+        _timer.Interval = _game.Interval;
+        InvalidateVisual();
+    }
+
+    public void HandleKey(Key key)
+    {
+        switch (key)
+        {
+            case Key.Up or Key.W: _game.Turn(new Cell(0, -1)); break;
+            case Key.Down or Key.S: _game.Turn(new Cell(0, 1)); break;
+            case Key.Left or Key.A: _game.Turn(new Cell(-1, 0)); break;
+            case Key.Right or Key.D: _game.Turn(new Cell(1, 0)); break;
+            case Key.P: _paused = !_paused; InvalidateVisual(); break;
+            case Key.Space or Key.Enter when _game.IsOver: _game.Reset(); InvalidateVisual(); break;
+        }
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        var header = 56.0;
+        var cell = Math.Floor(Math.Min(Bounds.Width, Bounds.Height - header) / SnakeGame.Columns);
+        var origin = new Point((Bounds.Width - cell * SnakeGame.Columns) / 2, header);
+        context.FillRectangle(new SolidColorBrush(Color.Parse("#111A12")), new Rect(Bounds.Size));
+
+        for (var x = 0; x < SnakeGame.Columns; x++)
+            for (var y = 0; y < SnakeGame.Rows; y++)
+                context.FillRectangle((x + y) % 2 == 0 ? Floor : FloorAlt, new Rect(origin.X + x * cell, origin.Y + y * cell, cell, cell));
+
+        Rect CellRect(Cell c, double inset) => new(origin.X + c.X * cell + inset, origin.Y + c.Y * cell + inset, cell - inset * 2, cell - inset * 2);
+        context.DrawEllipse(FoodBrush, null, CellRect(_game.Food, cell * 0.18));
+        var first = true;
+        foreach (var part in _game.Body)
+        {
+            context.DrawRectangle(first ? HeadBrush : SnakeBrush, null, CellRect(part, 1.5), 4, 4);
+            first = false;
+        }
+
+        Text(context, $"SCORE {_game.Score}    BEST {_game.HighScore}", new Point(origin.X, 16), 20, Brushes.White);
+        Text(context, "Arrows/WASD move · P pause", new Point(Bounds.Width - 230, 22), 12, Brushes.Gray);
+        if (_game.IsOver) Banner(context, "Game over — press Space to play again");
+        else if (_paused) Banner(context, "Paused — press P to continue");
+    }
+
+    private void Banner(DrawingContext context, string message)
+    {
+        context.FillRectangle(new SolidColorBrush(Color.FromArgb(170, 0, 0, 0)), new Rect(Bounds.Size));
+        var text = new FormattedText(message, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 24, Brushes.White);
+        context.DrawText(text, new Point((Bounds.Width - text.Width) / 2, (Bounds.Height - text.Height) / 2));
+    }
+
+    private static void Text(DrawingContext context, string value, Point at, double size, IBrush brush) =>
+        context.DrawText(new FormattedText(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, size, brush), at);
+}

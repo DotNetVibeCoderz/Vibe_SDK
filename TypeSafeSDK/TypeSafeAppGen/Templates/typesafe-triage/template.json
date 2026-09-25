@@ -1,0 +1,10 @@
+{
+  "id": "typesafe-triage",
+  "name": "Ticket Triage (TypeSafe)",
+  "category": "AI",
+  "description": "Console app that routes support tickets with the TypeSafe SDK: category choice, urgency score, and a probability bar per answer. Runs on the offline simulator until you add an API key.",
+  "useCase": "Help-desk routing, inbox triage, or a first TypeSafe integration.",
+  "stack": "Console · Gravicode.TypeSafeSdk",
+  "base": "console",
+  "mainFile": "Program.cs"
+}

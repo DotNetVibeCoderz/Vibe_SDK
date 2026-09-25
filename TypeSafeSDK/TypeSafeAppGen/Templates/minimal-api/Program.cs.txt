@@ -1,0 +1,90 @@
+using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Http.HttpResults;
+
+// Dibuat dengan TypeSafe App Generator — Gravicode Studios, dipimpin Kang Fadhil.
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<TaskRepository>();
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+app.MapOpenApi();
+
+var tasks = app.MapGroup("/tasks");
+
+tasks.MapGet("/", (TaskRepository repo, string? status) =>
+    TypedResults.Ok(repo.All().Where(t => status is null || t.Status.Equals(status, StringComparison.OrdinalIgnoreCase))));
+
+tasks.MapGet("/{id:int}", Results<Ok<TaskItem>, NotFound> (int id, TaskRepository repo) =>
+    repo.Find(id) is { } task ? TypedResults.Ok(task) : TypedResults.NotFound());
+
+tasks.MapPost("/", Results<Created<TaskItem>, ValidationProblem> (CreateTask request, TaskRepository repo) =>
+{
+    if (request.Validate() is { Count: > 0 } errors) return TypedResults.ValidationProblem(errors);
+    var task = repo.Add(request.Title.Trim(), request.Assignee);
+    return TypedResults.Created($"/tasks/{task.Id}", task);
+});
+
+tasks.MapPut("/{id:int}/status", Results<Ok<TaskItem>, NotFound, ValidationProblem> (int id, UpdateStatus request, TaskRepository repo) =>
+{
+    if (!TaskItem.Statuses.Contains(request.Status))
+        return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["status"] = [$"Use one of: {string.Join(", ", TaskItem.Statuses)}."] });
+    return repo.SetStatus(id, request.Status) is { } task ? TypedResults.Ok(task) : TypedResults.NotFound();
+});
+
+tasks.MapDelete("/{id:int}", Results<NoContent, NotFound> (int id, TaskRepository repo) =>
+    repo.Remove(id) ? TypedResults.NoContent() : TypedResults.NotFound());
+
+app.MapGet("/", () => "Task Board API is running. Try GET /tasks or open /openapi/v1.json.");
+
+app.Run();
+
+public sealed record TaskItem(int Id, string Title, string? Assignee, string Status, DateTimeOffset CreatedAt)
+{
+    public static readonly string[] Statuses = ["todo", "doing", "done"];
+}
+
+public sealed record CreateTask(string Title, string? Assignee)
+{
+    public Dictionary<string, string[]> Validate()
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (string.IsNullOrWhiteSpace(Title)) errors["title"] = ["Title is required."];
+        else if (Title.Length > 120) errors["title"] = ["Keep the title under 120 characters."];
+        return errors;
+    }
+}
+
+public sealed record UpdateStatus(string Status);
+
+/// <summary>Penyimpanan in-memory yang thread-safe. Ganti dengan EF Core untuk data permanen.</summary>
+public sealed class TaskRepository
+{
+    private readonly ConcurrentDictionary<int, TaskItem> _items = new();
+    private int _nextId;
+
+    public TaskRepository()
+    {
+        Add("Sketch the landing page", "Ayu");
+        Add("Wire the payment webhook", "Budi");
+    }
+
+    public IEnumerable<TaskItem> All() => _items.Values.OrderBy(t => t.Id);
+    public TaskItem? Find(int id) => _items.GetValueOrDefault(id);
+
+    public TaskItem Add(string title, string? assignee)
+    {
+        var task = new TaskItem(Interlocked.Increment(ref _nextId), title, assignee, "todo", DateTimeOffset.UtcNow);
+        _items[task.Id] = task;
+        return task;
+    }
+
+    public TaskItem? SetStatus(int id, string status)
+    {
+        if (!_items.TryGetValue(id, out var task)) return null;
+        var updated = task with { Status = status };
+        _items[id] = updated;
+        return updated;
+    }
+
+    public bool Remove(int id) => _items.TryRemove(id, out _);
+}

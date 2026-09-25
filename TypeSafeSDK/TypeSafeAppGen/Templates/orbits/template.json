@@ -1,0 +1,10 @@
+{
+  "id": "orbits",
+  "name": "Orbit Sandbox",
+  "category": "Simulator",
+  "description": "N-body gravity simulation with a velocity-Verlet integrator, orbit trails, and drag-to-throw new planets.",
+  "useCase": "Physics lessons, space-game prototypes, or testing numerical integrators.",
+  "stack": "Avalonia · physics",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

@@ -50,6 +50,16 @@ Katalog Avalonia berisi lima belas use case yang bisa dijalankan — game, eduka
 dotnet run --project TypeSafe.JevGallery
 ```
 
+## TypeSafe App Generator
+
+Code editor Avalonia dengan **Jack — The Code Bender**. Jelaskan aplikasi yang Anda mau; Jack menulis file-nya, menjalankan build, dan memperbaiki error sampai berhasil. Mendukung OpenAI, Azure OpenAI, Claude, Gemini, dan Ollama lewat Semantic Kernel, plus 12 template siap jalan (3D, animasi, game, simulator, web, AI).
+
+![TypeSafe App Generator](docs/images/appgen-jack-edit.png)
+
+```bash
+dotnet run --project TypeSafeAppGen
+```
+
 ## Dokumentasi
 
 | Indonesia | English |
@@ -58,6 +68,7 @@ dotnet run --project TypeSafe.JevGallery
 | [Panduan SDK](docs/sdk-guide.id.md) | [SDK Guide](docs/sdk-guide.en.md) |
 | [Kesejajaran dengan Python SDK](docs/parity-python.id.md) | [Parity with the Python SDK](docs/parity-python.en.md) |
 | [Jev Gallery](docs/jev-gallery.id.md) | [Jev Gallery](docs/jev-gallery.en.md) |
+| [TypeSafe App Generator](docs/app-generator.id.md) | [TypeSafe App Generator](docs/app-generator.en.md) |
 | [Publikasi NuGet](docs/nuget.id.md) | [Publishing to NuGet](docs/nuget.en.md) |
 | [Board Games](docs/board-games.id.md) | [Board Games](docs/board-games.en.md) |
 | [Pengujian](docs/TESTING.id.md) | [Testing](docs/TESTING.en.md) |
@@ -72,7 +83,7 @@ dotnet run --project TypeSafe.JevGallery
 | `TypeSafe.Api` | Pembungkus Minimal API |
 | `TypeSafe.Blazor` | Pengklasifikasi tiket Blazor Server |
 | `TypeSafe.BoardGames` | WPF Tic Tac Toe, Othello, Connect Four |
-| `TypeSafeAppGen` | Code editor Avalonia untuk asisten Jack |
+| `TypeSafeAppGen` | Code editor Avalonia dengan Jack: explorer, editor bertab, build/run/deploy, 12 template, 5 penyedia LLM |
 
 ## Endpoint
 

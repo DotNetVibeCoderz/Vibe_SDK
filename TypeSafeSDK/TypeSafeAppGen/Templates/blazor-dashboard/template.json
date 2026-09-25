@@ -1,0 +1,9 @@
+{
+  "id": "blazor-dashboard",
+  "name": "Live Ops Dashboard",
+  "category": "Web",
+  "description": "Blazor Server dashboard with interactive server rendering, a background metrics feed, KPI tiles, a live sparkline, and an incident list.",
+  "useCase": "Internal monitoring pages, factory or IoT status boards, admin consoles.",
+  "stack": "Blazor Server · .NET 10",
+  "mainFile": "Components/Pages/Home.razor"
+}

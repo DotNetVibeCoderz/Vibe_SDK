@@ -1,0 +1,49 @@
+using TypeSafeSdk;
+
+// __ProjectName__ — ticket triage dengan TypeSafe SDK.
+// Dibuat dengan TypeSafe App Generator — Gravicode Studios, dipimpin Kang Fadhil.
+//
+// Tanpa TYPESAFE_API_KEY aplikasi memakai simulator lokal (offline, deterministik).
+// Set TYPESAFE_API_KEY untuk memakai model TypeSafe sungguhan.
+
+var options = TypeSafeOptions.FromEnvironment();
+if (string.IsNullOrWhiteSpace(options.ApiKey)) options.Simulator = true;
+await using var client = new TypeSafeClient(options);
+
+var questions = new Dictionary<string, object>
+{
+    ["team"] = Choice.Create(new Dictionary<string, string?>
+    {
+        ["billing"] = "payments, invoices, refunds, charged twice, subscription price",
+        ["technical"] = "bug, crash, error message, login failure, app not loading, slow",
+        ["account"] = "password reset, profile change, email update, close account",
+        ["sales"] = "pricing question, upgrade plan, demo request, enterprise quote",
+    }, "Which team should handle this ticket?"),
+    ["urgency"] = new ScoreSchema("How urgent is this ticket?", "can wait", "normal", "soon", "urgent", "critical outage"),
+};
+
+string[] tickets = args.Length > 0
+    ? [string.Join(' ', args)]
+    :
+    [
+        "I was charged twice for my subscription this month. Please refund ASAP.",
+        "The app crashes every time I open the reports page since the last update.",
+        "How do I change the email address on my profile?",
+        "We are 400 people — can we get an enterprise quote and a demo next week?",
+        "Production is down for all our users, nobody can log in!",
+    ];
+
+Console.WriteLine(options.Simulator ? "Mode: simulator (offline)\n" : $"Mode: live · {options.DefaultModel}\n");
+
+foreach (var ticket in tickets)
+{
+    var response = await client.SystemOneAsync(new { ticket }, questions, model: null, CancellationToken.None);
+    var team = response.ChoiceAnswers["team"];
+    var urgency = response.Scores["urgency"];
+
+    Console.WriteLine($"“{ticket}”");
+    Console.WriteLine($"  → {team.Choice,-10} confidence {team.Confidence:P0}");
+    foreach (var (label, probability) in team.Probabilities.OrderByDescending(p => p.Value))
+        Console.WriteLine($"    {label,-10} {new string('█', (int)Math.Round(probability * 30)),-30} {probability:P0}");
+    Console.WriteLine($"  urgency {urgency.Score:0.00} ({urgency.NearestLabel})\n");
+}

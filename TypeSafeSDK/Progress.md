@@ -1,5 +1,29 @@
 # Development Progress
 
+## 2026-09-25
+- TypeSafeAppGen ditulis ulang dari kerangka menjadi code editor yang berfungsi sesuai `requirements.md`:
+  - Jack terhubung ke LLM sungguhan lewat Semantic Kernel: OpenAI (plus endpoint kompatibel), Azure OpenAI,
+    Claude (SDK resmi `Anthropic` via `IChatClient`), Gemini, dan Ollama. Streaming, auto function calling,
+    batas putaran tool, dan pesan error yang menunjukkan cara memperbaikinya.
+  - Kernel functions: workspace (baca/tulis/edit/cari file, dibatasi ke folder proyek), project (build dengan
+    diagnostic, test, NuGet, `dotnet new`, template), web (Tavily, scrape), math (parser ekspresi sendiri),
+    time, dan typesafe (referensi SDK + klasifikasi simulator).
+  - Editor AvaloniaEdit bertab dengan highlighting TextMate tema "Patina", line number show/hide, find/replace,
+    go to line, format code (Roslyn, JSON, XML/XAML), auto-reload saat file berubah di disk.
+  - Code explorer dengan lazy loading, context menu, dan FileSystemWatcher.
+  - Build/Run/Stop/Deploy (`dotnet publish` dengan pilihan runtime), panel Output/Problems/Logs, status bar.
+  - Panel Jack: pemilih model, lampiran gambar (tombol dan drag-drop), Ctrl+Enter, Stop, Clear thread,
+    resize dan hide/show; balasan dirender markdown dengan blok kode Copy/Insert dan chip tool call.
+  - Dialog New Project (Blank / From Template) dengan 12 template yang semuanya build tanpa warning:
+    Wireframe Studio, Terrain Flyover, Particle Fireworks, Motion Lab, Snake Arcade, Brick Breaker,
+    Life Automaton, Orbit Sandbox, Outbreak Simulator, Live Ops Dashboard (Blazor), Task Board API,
+    Ticket Triage (TypeSafe SDK).
+  - Dialog Settings untuk seluruh `app.config.json`, termasuk Test connection; format konfigurasi lama dimigrasikan.
+- Diuji langsung dengan Azure OpenAI `gpt-5-mini`: Jack mengedit file lalu build berhasil, dan memperbaiki error build yang disisipkan.
+- Avalonia di AppGen dan template dinaikkan ke 11.3.20 (Tmds.DBus.Protocol 0.21.3, bebas advisory NU1903).
+- Project test baru `TypeSafeAppGen.Tests`: 77 test offline. Total solution 173 test lulus.
+- Dokumentasi bilingual `app-generator` dengan tujuh screenshot.
+
 ## 2026-09-24
 - Jev Gallery ditambahkan: aplikasi Avalonia berisi 15 specimen use case (game, edukasi, pekerjaan,
   sains, simulasi), masing-masing memanggil `SystemOneAsync` sungguhan dan menampilkan distribution

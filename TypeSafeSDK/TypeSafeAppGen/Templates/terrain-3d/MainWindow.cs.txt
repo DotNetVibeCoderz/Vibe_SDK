@@ -1,0 +1,134 @@
+using System.Numerics;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Terrain Flyover";
+        Width = 1100;
+        Height = 700;
+        var terrain = new TerrainView();
+        var regenerate = new Button { Content = "New terrain" };
+        regenerate.Click += (_, _) => terrain.Regenerate(Random.Shared.Next());
+        var bar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(14, 10) };
+        bar.Children.Add(regenerate);
+        bar.Children.Add(new TextBlock { Text = "The camera flies forward over endless procedural terrain.", VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.Gray });
+        var root = new DockPanel();
+        DockPanel.SetDock(bar, Dock.Top);
+        root.Children.Add(bar);
+        root.Children.Add(terrain);
+        Content = root;
+    }
+}
+
+public sealed class TerrainView : Control
+{
+    private const int GridSize = 48;
+    private static readonly IBrush Sky = new LinearGradientBrush
+    {
+        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+        EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+        GradientStops = { new GradientStop(Color.Parse("#1B2A4A"), 0), new GradientStop(Color.Parse("#E8A87C"), 0.6) },
+    };
+    private int _seed = 7;
+    private float _offset;
+
+    public TerrainView()
+    {
+        ClipToBounds = true;
+        var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(33), DispatcherPriority.Render, (_, _) =>
+        {
+            _offset += 0.08f;
+            InvalidateVisual();
+        });
+        timer.Start();
+    }
+
+    public void Regenerate(int seed) => _seed = seed;
+
+    private float HeightAt(float x, float z)
+    {
+        // Value noise berlapis (fractal): cukup untuk bukit dan lembah yang meyakinkan.
+        float total = 0, amplitude = 1, frequency = 0.08f;
+        for (var octave = 0; octave < 4; octave++)
+        {
+            total += Noise(x * frequency, z * frequency) * amplitude;
+            amplitude *= 0.5f;
+            frequency *= 2f;
+        }
+        return total * 3.2f;
+    }
+
+    private float Noise(float x, float z)
+    {
+        int xi = (int)MathF.Floor(x), zi = (int)MathF.Floor(z);
+        float xf = x - xi, zf = z - zi;
+        float Hash(int a, int b)
+        {
+            var h = unchecked((uint)(a * 374761393 + b * 668265263 + _seed * 1442695041));
+            h = unchecked((h ^ (h >> 13)) * 1274126177);
+            return (h ^ (h >> 16)) / (float)uint.MaxValue;
+        }
+        static float Smooth(float t) => t * t * (3 - 2 * t);
+        var top = float.Lerp(Hash(xi, zi), Hash(xi + 1, zi), Smooth(xf));
+        var bottom = float.Lerp(Hash(xi, zi + 1), Hash(xi + 1, zi + 1), Smooth(xf));
+        return float.Lerp(top, bottom, Smooth(zf));
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        var w = Bounds.Width;
+        var h = Bounds.Height;
+        context.FillRectangle(Sky, new Rect(Bounds.Size));
+
+        var camera = Matrix4x4.CreateRotationX(0.45f);
+        var light = Vector3.Normalize(new Vector3(-0.4f, 1f, -0.3f));
+        var start = MathF.Floor(_offset);
+        var shift = _offset - start;
+        Point Project(Vector3 p)
+        {
+            var v = Vector3.Transform(p, camera);
+            var z = MathF.Max(v.Z + 30, 0.1f);
+            return new Point(w / 2 + v.X * w * 0.9 / z, h * 0.35 - v.Y * w * 0.9 / z);
+        }
+        Vector3 Corner(int c, int r) => new(c - GridSize / 2f, HeightAt(c, r + start), r - shift);
+
+        // Painter's algorithm: baris terjauh digambar dulu supaya baris dekat menutupinya.
+        for (var row = GridSize - 2; row >= 0; row--)
+        {
+            for (var col = 0; col < GridSize - 1; col++)
+            {
+                var a = Corner(col, row);
+                var b = Corner(col + 1, row);
+                var c = Corner(col + 1, row + 1);
+                var d = Corner(col, row + 1);
+                var normal = Vector3.Normalize(Vector3.Cross(d - a, b - a));
+                var brightness = Math.Clamp(MathF.Abs(Vector3.Dot(normal, light)), 0.25f, 1f);
+                var altitude = (a.Y + c.Y) / 2;
+                var baseColor = altitude < 1.4f ? Color.Parse("#2E6B8F") : altitude < 2.4f ? Color.Parse("#4F8A3B") : altitude < 3.6f ? Color.Parse("#7A6A4F") : Color.Parse("#EDEDED");
+                var fog = Math.Clamp(row / (float)GridSize, 0, 1) * 0.6f;
+                var color = Color.FromRgb(
+                    (byte)(baseColor.R * brightness * (1 - fog) + 232 * fog),
+                    (byte)(baseColor.G * brightness * (1 - fog) + 168 * fog),
+                    (byte)(baseColor.B * brightness * (1 - fog) + 124 * fog));
+                var geometry = new StreamGeometry();
+                using (var g = geometry.Open())
+                {
+                    g.BeginFigure(Project(a), true);
+                    g.LineTo(Project(b));
+                    g.LineTo(Project(c));
+                    g.LineTo(Project(d));
+                    g.EndFigure(true);
+                }
+                context.DrawGeometry(new SolidColorBrush(color), null, geometry);
+            }
+        }
+    }
+}

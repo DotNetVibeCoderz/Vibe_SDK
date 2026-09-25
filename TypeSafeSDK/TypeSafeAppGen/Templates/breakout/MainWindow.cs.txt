@@ -1,0 +1,151 @@
+using System.Globalization;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Brick Breaker";
+        Width = 900;
+        Height = 720;
+        Content = new BreakoutArena();
+    }
+}
+
+public sealed class BreakoutArena : Control
+{
+    private const double PaddleWidth = 120, PaddleHeight = 14, BallRadius = 8;
+    private const int BrickColumns = 12, BrickRows = 6;
+    private static readonly Color[] RowColors = [Color.Parse("#FF595E"), Color.Parse("#FF924C"), Color.Parse("#FFCA3A"), Color.Parse("#8AC926"), Color.Parse("#1982C4"), Color.Parse("#6A4C93")];
+    private readonly bool[,] _bricks = new bool[BrickColumns, BrickRows];
+    private double _paddleX = 400, _ballX, _ballY, _vx, _vy;
+    private int _lives = 3, _score, _level = 1;
+    private bool _attached = true;
+
+    public BreakoutArena()
+    {
+        ClipToBounds = true;
+        Focusable = true;
+        ResetBricks();
+        var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) => Step(1 / 60.0));
+        timer.Start();
+    }
+
+    private void ResetBricks()
+    {
+        for (var c = 0; c < BrickColumns; c++)
+            for (var r = 0; r < BrickRows; r++)
+                _bricks[c, r] = true;
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e) =>
+        _paddleX = Math.Clamp(e.GetPosition(this).X - PaddleWidth / 2, 0, Bounds.Width - PaddleWidth);
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        if (_lives == 0)
+        {
+            _lives = 3;
+            _score = 0;
+            _level = 1;
+            ResetBricks();
+        }
+        if (_attached)
+        {
+            _attached = false;
+            var speed = 380 + _level * 40;
+            _vx = speed * 0.45;
+            _vy = -speed * 0.9;
+        }
+    }
+
+    private Rect BrickRect(int c, int r)
+    {
+        var width = (Bounds.Width - 40) / BrickColumns;
+        return new Rect(20 + c * width + 2, 70 + r * 26, width - 4, 22);
+    }
+
+    private void Step(double dt)
+    {
+        var paddleY = Bounds.Height - 50;
+        if (_attached)
+        {
+            _ballX = _paddleX + PaddleWidth / 2;
+            _ballY = paddleY - BallRadius - 1;
+            InvalidateVisual();
+            return;
+        }
+
+        _ballX += _vx * dt;
+        _ballY += _vy * dt;
+        if (_ballX < BallRadius || _ballX > Bounds.Width - BallRadius) { _vx = -_vx; _ballX = Math.Clamp(_ballX, BallRadius, Bounds.Width - BallRadius); }
+        if (_ballY < BallRadius) { _vy = Math.Abs(_vy); }
+
+        // Sudut pantul ditentukan titik kena di paddle: tepi kiri membelok ke kiri, tepi kanan ke kanan.
+        if (_vy > 0 && _ballY + BallRadius >= paddleY && _ballY < paddleY + PaddleHeight && _ballX >= _paddleX && _ballX <= _paddleX + PaddleWidth)
+        {
+            var hit = (_ballX - (_paddleX + PaddleWidth / 2)) / (PaddleWidth / 2);
+            var speed = Math.Sqrt(_vx * _vx + _vy * _vy);
+            var angle = hit * 1.05;
+            _vx = speed * Math.Sin(angle);
+            _vy = -speed * Math.Cos(angle);
+        }
+
+        var ball = new Rect(_ballX - BallRadius, _ballY - BallRadius, BallRadius * 2, BallRadius * 2);
+        for (var c = 0; c < BrickColumns; c++)
+        {
+            for (var r = 0; r < BrickRows; r++)
+            {
+                if (!_bricks[c, r]) continue;
+                var brick = BrickRect(c, r);
+                if (!brick.Intersects(ball)) continue;
+                _bricks[c, r] = false;
+                _score += (BrickRows - r) * 10;
+                var overlapX = Math.Min(ball.Right - brick.Left, brick.Right - ball.Left);
+                var overlapY = Math.Min(ball.Bottom - brick.Top, brick.Bottom - ball.Top);
+                if (overlapX < overlapY) _vx = -_vx; else _vy = -_vy;
+                goto BricksDone;
+            }
+        }
+        BricksDone:
+
+        if (_ballY > Bounds.Height + 20)
+        {
+            _lives--;
+            _attached = true;
+        }
+        if (!_bricks.Cast<bool>().Any(b => b))
+        {
+            _level++;
+            ResetBricks();
+            _attached = true;
+        }
+        InvalidateVisual();
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        context.FillRectangle(new SolidColorBrush(Color.Parse("#14121F")), new Rect(Bounds.Size));
+        for (var c = 0; c < BrickColumns; c++)
+            for (var r = 0; r < BrickRows; r++)
+                if (_bricks[c, r]) context.DrawRectangle(new SolidColorBrush(RowColors[r]), null, BrickRect(c, r), 4, 4);
+
+        context.DrawRectangle(Brushes.White, null, new Rect(_paddleX, Bounds.Height - 50, PaddleWidth, PaddleHeight), 7, 7);
+        context.DrawEllipse(new SolidColorBrush(Color.Parse("#FFE66D")), null, new Point(_ballX, _ballY), BallRadius, BallRadius);
+
+        var hud = new FormattedText($"SCORE {_score}   LIVES {_lives}   LEVEL {_level}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 18, Brushes.White);
+        context.DrawText(hud, new Point(20, 24));
+        var hint = _lives == 0 ? "Game over — click to restart" : _attached ? "Click to launch the ball" : null;
+        if (hint is not null)
+        {
+            var text = new FormattedText(hint, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 22, Brushes.White);
+            context.DrawText(text, new Point((Bounds.Width - text.Width) / 2, Bounds.Height * 0.6));
+        }
+    }
+}

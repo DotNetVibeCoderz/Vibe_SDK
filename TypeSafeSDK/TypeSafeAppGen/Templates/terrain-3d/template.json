@@ -1,0 +1,10 @@
+{
+  "id": "terrain-3d",
+  "name": "Terrain Flyover",
+  "category": "3D Graphics",
+  "description": "Procedural height-map terrain drawn as lit 3D polygons with a painter's-algorithm renderer and a camera that flies forward.",
+  "useCase": "Prototype landscapes, preview maps, or teach procedural generation.",
+  "stack": "Avalonia · procedural noise",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

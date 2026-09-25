@@ -1,0 +1,10 @@
+{
+  "id": "fireworks",
+  "name": "Particle Fireworks",
+  "category": "Animation",
+  "description": "A particle system with gravity, drag, fading trails, and additive glow. Click anywhere to launch a shell.",
+  "useCase": "Celebration screens, loading moments, or learning particle physics.",
+  "stack": "Avalonia · particle system",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

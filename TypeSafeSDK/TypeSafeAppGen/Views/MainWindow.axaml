@@ -1,0 +1,233 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ae="https://github.com/avaloniaui/avaloniaedit"
+        x:Class="TypeSafeAppGen.Views.MainWindow"
+        Width="1440" Height="900" MinWidth="1024" MinHeight="640"
+        WindowStartupLocation="CenterScreen" WindowState="Maximized"
+        Title="TypeSafe App Generator">
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+    <!-- ============ Menu ============ -->
+    <Border Grid.Row="0" Background="{StaticResource PatinaDeep}">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="12,0,6,0" Spacing="8" VerticalAlignment="Center">
+          <Path Data="M5 21V11a7 7 0 0 1 7-7h8" Stroke="{StaticResource Copper}" StrokeThickness="2.6" StrokeLineCap="Round"
+                Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
+          <TextBlock Text="AppGen" Classes="display" FontSize="12.5" VerticalAlignment="Center" />
+        </StackPanel>
+        <Menu x:Name="MainMenu" Background="Transparent">
+          <MenuItem Header="_File">
+            <MenuItem Header="New Project…" InputGesture="Ctrl+Shift+N" Click="NewProject_Click" />
+            <MenuItem Header="New File" InputGesture="Ctrl+N" Click="NewFile_Click" />
+            <Separator />
+            <MenuItem Header="Open Folder…" InputGesture="Ctrl+K" Click="OpenFolder_Click" />
+            <MenuItem Header="Open File…" InputGesture="Ctrl+O" Click="OpenFile_Click" />
+            <MenuItem x:Name="RecentMenu" Header="Open Recent" />
+            <Separator />
+            <MenuItem Header="Save" InputGesture="Ctrl+S" Click="Save_Click" />
+            <MenuItem Header="Save All" InputGesture="Ctrl+Shift+S" Click="SaveAll_Click" />
+            <Separator />
+            <MenuItem Header="Close Tab" InputGesture="Ctrl+W" Click="CloseTab_Click" />
+            <MenuItem Header="Close Project" Click="CloseProject_Click" />
+            <Separator />
+            <MenuItem Header="Exit" InputGesture="Alt+F4" Click="Exit_Click" />
+          </MenuItem>
+          <MenuItem Header="_Edit">
+            <MenuItem Header="Undo" InputGesture="Ctrl+Z" Click="Undo_Click" />
+            <MenuItem Header="Redo" InputGesture="Ctrl+Y" Click="Redo_Click" />
+            <Separator />
+            <MenuItem Header="Find / Replace" InputGesture="Ctrl+F" Click="Find_Click" />
+            <MenuItem Header="Go to Line…" InputGesture="Ctrl+G" Click="GoToLine_Click" />
+            <MenuItem Header="Format Code" InputGesture="Shift+Alt+F" Click="FormatCode_Click" />
+          </MenuItem>
+          <MenuItem Header="_View">
+            <MenuItem x:Name="ExplorerMenu" Header="Explorer" InputGesture="Ctrl+B" ToggleType="CheckBox" Click="ToggleExplorer_Click" />
+            <MenuItem x:Name="PanelMenu" Header="Output Panel" InputGesture="Ctrl+J" ToggleType="CheckBox" Click="TogglePanel_Click" />
+            <MenuItem x:Name="ChatMenu" Header="Jack Panel" InputGesture="Ctrl+Alt+B" ToggleType="CheckBox" Click="ToggleChat_Click" />
+            <Separator />
+            <MenuItem x:Name="LineNumbersMenu" Header="Line Numbers" ToggleType="CheckBox" Click="LineNumbers_Click" />
+            <MenuItem x:Name="WordWrapMenu" Header="Word Wrap" InputGesture="Alt+Z" ToggleType="CheckBox" Click="WordWrap_Click" />
+            <Separator />
+            <MenuItem Header="Zoom In" InputGesture="Ctrl+OemPlus" Click="ZoomIn_Click" />
+            <MenuItem Header="Zoom Out" InputGesture="Ctrl+OemMinus" Click="ZoomOut_Click" />
+          </MenuItem>
+          <MenuItem Header="_Build">
+            <MenuItem Header="Build" InputGesture="Ctrl+Shift+B" Click="Build_Click" />
+            <MenuItem Header="Run" InputGesture="F5" Click="Run_Click" />
+            <MenuItem Header="Stop" InputGesture="Shift+F5" Click="Stop_Click" />
+            <Separator />
+            <MenuItem Header="Deploy (Publish)…" Click="Deploy_Click" />
+          </MenuItem>
+          <MenuItem Header="_Tools">
+            <MenuItem Header="Template Gallery…" Click="Templates_Click" />
+            <MenuItem Header="Talk to Jack" InputGesture="Ctrl+L" Click="FocusJack_Click" />
+            <MenuItem Header="Ask Jack About This File" InputGesture="Ctrl+I" Click="AskJackFile_Click" />
+            <Separator />
+            <MenuItem Header="Settings…" InputGesture="Ctrl+OemComma" Click="Settings_Click" />
+          </MenuItem>
+          <MenuItem Header="_Help">
+            <MenuItem Header="Keyboard Shortcuts" Click="Shortcuts_Click" />
+            <MenuItem Header="About TypeSafe App Generator" Click="About_Click" />
+          </MenuItem>
+        </Menu>
+      </DockPanel>
+    </Border>
+
+    <!-- ============ Toolbar ============ -->
+    <Border Grid.Row="1" Background="{StaticResource PatinaDeep}" BorderBrush="{StaticResource Rule}" BorderThickness="0,0,0,1" Padding="8,3">
+      <DockPanel>
+        <StackPanel x:Name="ToggleBar" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" />
+        <StackPanel x:Name="ToolBar" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" />
+      </DockPanel>
+    </Border>
+
+    <!-- ============ Workspace ============ -->
+    <Grid Grid.Row="2" x:Name="WorkspaceGrid" ColumnDefinitions="250,Auto,*,Auto,400">
+
+      <!-- Explorer -->
+      <Border Grid.Column="0" x:Name="ExplorerPanel" Background="{StaticResource PatinaPanel}">
+        <DockPanel>
+          <DockPanel DockPanel.Dock="Top" Height="36" Margin="14,0,6,0">
+            <StackPanel x:Name="ExplorerActions" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" />
+            <TextBlock x:Name="ExplorerTitle" Classes="eyebrow" Text="EXPLORER" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+          </DockPanel>
+          <Panel>
+            <TreeView x:Name="Explorer" Margin="4,0,4,8" />
+            <StackPanel x:Name="ExplorerEmpty" Margin="18,8,18,0" Spacing="10">
+              <TextBlock Text="No folder is open." Classes="muted" />
+              <Button Content="Open folder…" Classes="ghost" Click="OpenFolder_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Content="New project…" Classes="ghost" Click="NewProject_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            </StackPanel>
+          </Panel>
+        </DockPanel>
+      </Border>
+      <GridSplitter Grid.Column="1" x:Name="ExplorerSplitter" Width="3" ResizeDirection="Columns" />
+
+      <!-- Editor + bottom panel -->
+      <Grid Grid.Column="2" x:Name="CenterGrid" RowDefinitions="Auto,*,Auto,200">
+        <Border Grid.Row="0" Background="{StaticResource PatinaDeep}" BorderBrush="{StaticResource Rule}" BorderThickness="0,0,0,1" MinHeight="34">
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <StackPanel x:Name="TabStrip" Orientation="Horizontal" />
+          </ScrollViewer>
+        </Border>
+
+        <Panel Grid.Row="1">
+          <ae:TextEditor x:Name="Editor"
+                         Background="{StaticResource PatinaBase}"
+                         Foreground="{StaticResource Ink}"
+                         LineNumbersForeground="#3F5552"
+                         FontFamily="{StaticResource Mono}"
+                         FontSize="14"
+                         Padding="4,6,0,0"
+                         ShowLineNumbers="True"
+                         HorizontalScrollBarVisibility="Auto"
+                         VerticalScrollBarVisibility="Auto" />
+          <Border x:Name="StartHost" Background="{StaticResource PatinaBase}" />
+
+          <!-- Go to line: overlay kecil di atas editor, seperti command palette -->
+          <Border x:Name="GoToLinePanel" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
+                  Width="380" Background="{StaticResource PatinaRaised}" BorderBrush="{StaticResource Verdigris}" BorderThickness="1"
+                  CornerRadius="8" Padding="12,10" BoxShadow="0 8 24 0 #80000000">
+            <StackPanel Spacing="6">
+              <TextBox x:Name="GoToLineInput" Classes="field" Watermark="Line number, or line:column" />
+              <TextBlock x:Name="GoToLineHint" Classes="muted" FontSize="11.5" />
+            </StackPanel>
+          </Border>
+        </Panel>
+
+        <GridSplitter Grid.Row="2" x:Name="PanelSplitter" Height="3" ResizeDirection="Rows" />
+
+        <Border Grid.Row="3" x:Name="BottomPanel" Background="{StaticResource PatinaPanel}">
+          <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Height="32" Margin="8,0,6,0">
+              <StackPanel x:Name="PanelActions" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" />
+              <StackPanel x:Name="PanelTabs" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" />
+            </DockPanel>
+            <Panel>
+              <ae:TextEditor x:Name="OutputView" IsReadOnly="True" Background="{StaticResource PatinaPanel}" Foreground="#B4C4BF"
+                             FontFamily="{StaticResource Mono}" FontSize="12" Padding="10,2,0,0" WordWrap="True" ShowLineNumbers="False" />
+              <ListBox x:Name="ProblemsList" IsVisible="False" Background="Transparent" Margin="4,0" />
+              <ae:TextEditor x:Name="LogsView" IsReadOnly="True" IsVisible="False" Background="{StaticResource PatinaPanel}" Foreground="#B4C4BF"
+                             FontFamily="{StaticResource Mono}" FontSize="12" Padding="10,2,0,0" WordWrap="True" ShowLineNumbers="False" />
+            </Panel>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      <GridSplitter Grid.Column="3" x:Name="ChatSplitter" Width="3" ResizeDirection="Columns" />
+
+      <!-- Jack -->
+      <Border Grid.Column="4" x:Name="ChatPanel" Background="{StaticResource PatinaPanel}" DragDrop.AllowDrop="True">
+        <DockPanel>
+          <!-- Header -->
+          <Border DockPanel.Dock="Top" Padding="14,10,8,8" BorderBrush="{StaticResource Rule}" BorderThickness="0,0,0,1">
+            <StackPanel Spacing="8">
+              <DockPanel>
+                <StackPanel x:Name="ChatActions" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <Path Data="M5 21V11a7 7 0 0 1 7-7h8" Stroke="{StaticResource Copper}" StrokeThickness="3" StrokeLineCap="Round"
+                        Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center" />
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Jack" Classes="display" FontSize="17" Foreground="{StaticResource Copper}" />
+                    <TextBlock Text="THE CODE BENDER" Classes="eyebrow" FontSize="9.5" />
+                  </StackPanel>
+                </StackPanel>
+              </DockPanel>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="MODEL" Classes="eyebrow" VerticalAlignment="Center" Margin="0,0,10,0" />
+                <ComboBox x:Name="ModelPicker" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" FontSize="12" MaxDropDownHeight="420" />
+              </DockPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- Composer -->
+          <Border DockPanel.Dock="Bottom" Padding="10,8,10,10" BorderBrush="{StaticResource Rule}" BorderThickness="0,1,0,0">
+            <StackPanel Spacing="8">
+              <WrapPanel x:Name="AttachmentStrip" IsVisible="False" />
+              <Border x:Name="ComposerFrame" Background="{StaticResource PatinaDeep}" BorderBrush="{StaticResource Rule}" BorderThickness="1" CornerRadius="8">
+                <DockPanel>
+                  <DockPanel DockPanel.Dock="Bottom" Margin="6,0,6,6">
+                    <Button x:Name="SendButton" DockPanel.Dock="Right" Classes="jack" Click="Send_Click" />
+                    <StackPanel x:Name="ComposerTools" Orientation="Horizontal" VerticalAlignment="Center" Spacing="2" />
+                  </DockPanel>
+                  <TextBox x:Name="ChatInput" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="220"
+                           Background="Transparent" BorderThickness="0" Padding="10,8"
+                           Watermark="Describe what to build or change… (Ctrl+Enter to send)" />
+                </DockPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <!-- Thread -->
+          <Panel>
+            <ScrollViewer x:Name="ChatScroll" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel x:Name="ChatThread" Margin="14,14,16,4" />
+            </ScrollViewer>
+            <Border x:Name="DropHint" IsVisible="False" Background="#CC0B1214" BorderBrush="{StaticResource Copper}" BorderThickness="2" CornerRadius="10" Margin="12">
+              <TextBlock Text="Drop images to attach them" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Copper}" FontSize="14" />
+            </Border>
+          </Panel>
+        </DockPanel>
+      </Border>
+    </Grid>
+
+    <!-- ============ Status bar ============ -->
+    <Border Grid.Row="3" x:Name="StatusBar" Background="{StaticResource PatinaDeep}" BorderBrush="{StaticResource Rule}" BorderThickness="0,1,0,0" Height="26">
+      <DockPanel Margin="10,0">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="18" VerticalAlignment="Center">
+          <TextBlock x:Name="CaretStatus" FontSize="11.5" Classes="muted" />
+          <TextBlock x:Name="LanguageStatus" FontSize="11.5" Classes="muted" />
+          <TextBlock Text="UTF-8" FontSize="11.5" Classes="muted" />
+          <TextBlock x:Name="ModelStatus" FontSize="11.5" Foreground="{StaticResource Copper}" />
+          <TextBlock Text="Gravicode Studios · dipimpin Kang Fadhil" FontSize="11.5" Foreground="{StaticResource Faint}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource Verdigris}" />
+          <TextBlock x:Name="StatusText" Text="Ready" FontSize="11.5" TextTrimming="CharacterEllipsis" MaxWidth="560" />
+          <TextBlock x:Name="ProblemStatus" FontSize="11.5" Classes="muted" Cursor="Hand" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
+</Window>

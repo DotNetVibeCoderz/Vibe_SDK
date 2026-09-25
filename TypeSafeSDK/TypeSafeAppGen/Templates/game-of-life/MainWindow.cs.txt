@@ -1,0 +1,136 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Life Automaton";
+        Width = 1000;
+        Height = 760;
+        var grid = new LifeGrid();
+        var play = new Button { Content = "Play" };
+        var step = new Button { Content = "Step" };
+        var random = new Button { Content = "Randomize" };
+        var clear = new Button { Content = "Clear" };
+        var speed = new Slider { Minimum = 1, Maximum = 60, Value = 12, Width = 180 };
+        var generation = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.Gray };
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1 / speed.Value) };
+        timer.Tick += (_, _) => grid.Advance();
+        play.Click += (_, _) =>
+        {
+            timer.IsEnabled = !timer.IsEnabled;
+            play.Content = timer.IsEnabled ? "Pause" : "Play";
+        };
+        step.Click += (_, _) => grid.Advance();
+        random.Click += (_, _) => grid.Randomize();
+        clear.Click += (_, _) => grid.Clear();
+        speed.ValueChanged += (_, e) => timer.Interval = TimeSpan.FromSeconds(1 / e.NewValue);
+        grid.Changed += () => generation.Text = $"Generation {grid.Generation} · {grid.Population} alive · drag to paint";
+
+        var bar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(14, 10) };
+        foreach (var control in new Control[] { play, step, random, clear, new TextBlock { Text = "Speed", VerticalAlignment = VerticalAlignment.Center }, speed, generation })
+            bar.Children.Add(control);
+        var root = new DockPanel();
+        DockPanel.SetDock(bar, Dock.Top);
+        root.Children.Add(bar);
+        root.Children.Add(grid);
+        Content = root;
+        grid.Randomize();
+    }
+}
+
+public sealed class LifeGrid : Control
+{
+    private const int Columns = 120, Rows = 80;
+    private static readonly IBrush Alive = new SolidColorBrush(Color.Parse("#7CF3C4"));
+    private static readonly IBrush Dead = new SolidColorBrush(Color.Parse("#0C1A1A"));
+    // Dua buffer bergantian: generasi berikut ditulis ke buffer kedua lalu ditukar, tanpa alokasi.
+    private bool[] _cells = new bool[Columns * Rows];
+    private bool[] _next = new bool[Columns * Rows];
+    private bool? _paintValue;
+
+    public event Action? Changed;
+    public int Generation { get; private set; }
+    public int Population => _cells.Count(c => c);
+
+    public void Randomize()
+    {
+        for (var i = 0; i < _cells.Length; i++) _cells[i] = Random.Shared.NextDouble() < 0.22;
+        Generation = 0;
+        Refresh();
+    }
+
+    public void Clear()
+    {
+        Array.Clear(_cells);
+        Generation = 0;
+        Refresh();
+    }
+
+    public void Advance()
+    {
+        for (var y = 0; y < Rows; y++)
+        {
+            for (var x = 0; x < Columns; x++)
+            {
+                var neighbours = 0;
+                for (var dy = -1; dy <= 1; dy++)
+                    for (var dx = -1; dx <= 1; dx++)
+                        if ((dx != 0 || dy != 0) && _cells[(y + dy + Rows) % Rows * Columns + (x + dx + Columns) % Columns]) neighbours++;
+                var alive = _cells[y * Columns + x];
+                _next[y * Columns + x] = neighbours == 3 || (alive && neighbours == 2);
+            }
+        }
+        (_cells, _next) = (_next, _cells);
+        Generation++;
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        Changed?.Invoke();
+        InvalidateVisual();
+    }
+
+    private double CellSize => Math.Min(Bounds.Width / Columns, Bounds.Height / Rows);
+
+    private int? IndexAt(Point p)
+    {
+        var x = (int)(p.X / CellSize);
+        var y = (int)(p.Y / CellSize);
+        return x is >= 0 and < Columns && y is >= 0 and < Rows ? y * Columns + x : null;
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        if (IndexAt(e.GetPosition(this)) is not { } index) return;
+        _paintValue = !_cells[index];
+        _cells[index] = _paintValue.Value;
+        Refresh();
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        if (_paintValue is not { } value || IndexAt(e.GetPosition(this)) is not { } index) return;
+        _cells[index] = value;
+        Refresh();
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e) => _paintValue = null;
+
+    public override void Render(DrawingContext context)
+    {
+        var size = CellSize;
+        context.FillRectangle(Dead, new Rect(0, 0, Columns * size, Rows * size));
+        for (var i = 0; i < _cells.Length; i++)
+            if (_cells[i]) context.FillRectangle(Alive, new Rect(i % Columns * size + 0.5, i / Columns * size + 0.5, size - 1, size - 1));
+    }
+}

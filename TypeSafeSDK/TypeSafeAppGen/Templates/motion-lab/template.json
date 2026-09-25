@@ -1,0 +1,10 @@
+{
+  "id": "motion-lab",
+  "name": "Motion Lab",
+  "category": "Animation",
+  "description": "Side-by-side easing curves (linear, cubic, back, elastic, bounce) racing on a loop, each with its plotted curve.",
+  "useCase": "Pick the right easing for UI transitions and explain motion to a design team.",
+  "stack": "Avalonia · easing functions",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

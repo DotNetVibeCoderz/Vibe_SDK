@@ -1,0 +1,4 @@
+// __ProjectName__ — dibuat dengan TypeSafe App Generator (Gravicode Studios, dipimpin Kang Fadhil).
+// Minta Jack di panel kanan untuk mengembangkan aplikasi ini.
+
+Console.WriteLine("Hello from __ProjectName__!");

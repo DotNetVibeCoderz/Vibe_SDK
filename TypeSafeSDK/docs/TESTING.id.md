@@ -65,6 +65,16 @@ Tidak ada satu pun test yang menyentuh jaringan atau memerlukan API key. Perilak
 ### Pemuatan API key (`ApiKeyLoaderTests`)
 File format mentah, `KEY=VALUE`, `KEY: VALUE`, dan JSON; format tak dikenal ditolak. Key tidak pernah dicetak.
 
+### App Generator (`TypeSafeAppGen.Tests`)
+
+77 test offline untuk bagian non-UI TypeSafeAppGen: path guard proyek (termasuk lolos lewat folder bertetangga dengan prefiks sama), parser diagnostic `dotnet build`, evaluator ekspresi matematika, code formatter, migrasi `app.config.json` dan fallback saat file rusak, scaffolding setiap template (tanpa sisa placeholder atau file `.txt`), chat service untuk kelima penyedia LLM, dan kernel functions dengan host palsu.
+
+```bash
+dotnet test TypeSafeAppGen.Tests/TypeSafeAppGen.Tests.csproj
+```
+
+UI dan perilaku dengan model live diperiksa manual pada 2026-09-25: Jack di Azure OpenAI `gpt-5-mini` mengedit file dan membuat build berhasil, "Build the project and fix every error" memperbaiki CS1002 yang disisipkan, Settings › Test connection mengembalikan OK, dan konektor Claude mengembalikan 401 yang dipetakan untuk key palsu. Ke-12 template di-scaffold dan di-build tanpa warning.
+
 ## Verifikasi API live
 
 Seluruh test sengaja offline, jadi kontrak live diperiksa manual terhadap `api.typesafe.ai` memakai file key yang ditunjuk `TYPESAFE_API_KEY_FILE`.

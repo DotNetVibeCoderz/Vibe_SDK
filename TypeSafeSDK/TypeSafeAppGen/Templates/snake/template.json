@@ -1,0 +1,10 @@
+{
+  "id": "snake",
+  "name": "Snake Arcade",
+  "category": "Game",
+  "description": "Classic snake with a fixed-step game loop, input buffering, rising speed, pause, and a session high score.",
+  "useCase": "Starting point for grid-based arcade games and teaching game loops.",
+  "stack": "Avalonia · game loop",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

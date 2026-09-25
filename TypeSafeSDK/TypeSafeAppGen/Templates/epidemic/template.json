@@ -1,0 +1,10 @@
+{
+  "id": "epidemic",
+  "name": "Outbreak Simulator",
+  "category": "Simulator",
+  "description": "Agent-based SIR epidemic: people move, infect on contact, recover, and a live chart tracks susceptible, infected, and recovered.",
+  "useCase": "Public-health teaching, what-if analysis of distancing, or a data-viz starter.",
+  "stack": "Avalonia · agent-based model",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

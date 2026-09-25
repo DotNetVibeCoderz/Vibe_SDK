@@ -1,0 +1,10 @@
+{
+  "id": "wireframe-3d",
+  "name": "Wireframe Studio",
+  "category": "3D Graphics",
+  "description": "Real-time 3D wireframe viewer with perspective projection, depth shading, orbit by drag, and zoom by wheel.",
+  "useCase": "Learn 3D projection math or preview simple product shapes.",
+  "stack": "Avalonia · custom rendering",
+  "base": "avalonia",
+  "mainFile": "MainWindow.cs"
+}

@@ -13,6 +13,7 @@ dotnet test TypeSafeSDK.slnx
 # single test / subset (xUnit)
 dotnet test TypeSafeSdk.Tests/TypeSafeSdk.Tests.csproj --filter "FullyQualifiedName~RetryPolicy_Retries429"
 dotnet test TypeSafeSdk.Tests/TypeSafeSdk.Tests.csproj --filter "FullyQualifiedName~ParityTests"
+dotnet test TypeSafeAppGen.Tests/TypeSafeAppGen.Tests.csproj   # AppGen logic, offline
 
 # run the apps
 dotnet run --project TypeSafe.Cli -- classify "I was charged twice"   # simulator (default)
@@ -54,9 +55,9 @@ This is an unofficial .NET port of the TypeSafe Python SDK, plus sample apps tha
 - `TypeSafe.Cli` — `classify | noul | score | evaluate | models | validate | config`; `--live` loads the key file.
 - `TypeSafe.JevGallery` — Avalonia catalogue of 15 use cases. `Specimens.cs` holds the data and has no Avalonia dependency, which is why the test project links it directly and executes every specimen. UI is built in code-behind, not bindings, matching the other desktop apps. Design tokens live in `App.axaml`.
 - `TypeSafe.Api` / `TypeSafe.Blazor` / `TypeSafe.BoardGames` — minimal API, Blazor Server, and WPF board games (the SDK only ever sees legal moves; a local tactical fallback guarantees a valid move).
-- `TypeSafeAppGen` — Avalonia shell for the "Jack" assistant. **Note:** `SendAsync` builds a bare `Kernel` with no chat-completion provider and returns a canned reply — provider settings are persisted to `app.config.json` but not yet wired to a live LLM, despite `PLAN.md` having listed the adapters as done. `requirements.md` also describes AppGen features (code explorer, go-to-line, build/run/deploy, template dialog) that are not implemented.
+- `TypeSafeAppGen` — Avalonia code editor for "Jack". `Ai/JackAgent.cs` builds a fresh `Kernel` per message from `Ai/LlmFactory.cs` (OpenAI, Azure OpenAI, Claude via the official `Anthropic` SDK's `IChatClient`, Gemini, Ollama) and streams with auto function calling. Kernel functions live in `Ai/Plugins/`; every file access goes through `ProjectWorkspace.Resolve`, which confines paths to the open project — keep it that way. Plugins talk to the UI only through `IJackHost`, whose implementation in `MainWindow.Jack.cs` marshals to the UI thread because functions run on the thread pool. `MainWindow` is split into partials (Project, Build, Jack, Start) and built in code-behind. Project templates are in `Templates/<id>/` with a `.txt` suffix and a `template.json`; `__ProjectName__` is replaced on scaffold, and `_base/` holds shared skeletons. Settings persist to `app.config.json` next to the exe (the checked-in copy must never contain keys). See `docs/app-generator.*.md`.
 
-**Tests** (`TypeSafeSdk.Tests/`) are contract tests, not unit tests of internals: `HttpMessageHandler` stubs assert the exact URI, headers, and JSON payload against the Python SDK, plus status mapping, retry, timeout, and simulator behaviour. `GalleryCatalogTests` runs all 15 gallery specimens end to end. The whole suite is offline — live API checks are recorded in `docs/TESTING.en.md` rather than automated.
+**Tests**: `TypeSafeAppGen.Tests/` covers AppGen's non-UI logic (path guard, diagnostic parser, formatter, config migration, template scaffolding, kernel functions against a fake `IJackHost`). `TypeSafeSdk.Tests/` holds contract tests, not unit tests of internals: `HttpMessageHandler` stubs assert the exact URI, headers, and JSON payload against the Python SDK, plus status mapping, retry, timeout, and simulator behaviour. `GalleryCatalogTests` runs all 15 gallery specimens end to end. The whole suite is offline — live API checks are recorded in `docs/TESTING.en.md` rather than automated.
 
 ## Conventions
 

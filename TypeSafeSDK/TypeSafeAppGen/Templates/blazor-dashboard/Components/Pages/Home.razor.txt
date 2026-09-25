@@ -1,0 +1,89 @@
+@page "/"
+@implements IDisposable
+@inject MetricsFeed Feed
+
+<PageTitle>__ProjectName__ — Live Ops</PageTitle>
+
+<main class="board">
+    <header>
+        <h1>__ProjectName__</h1>
+        <p class="muted">Live service health · updates every second</p>
+    </header>
+
+    @if (_latest is null)
+    {
+        <p class="muted">Waiting for the first sample…</p>
+    }
+    else
+    {
+        <section class="tiles">
+            <article class="tile">
+                <span class="label">Requests / s</span>
+                <strong>@_latest.RequestsPerSecond.ToString("0")</strong>
+            </article>
+            <article class="tile @(_latest.LatencyMs > 260 ? "warn" : "")">
+                <span class="label">Latency</span>
+                <strong>@_latest.LatencyMs.ToString("0") ms</strong>
+            </article>
+            <article class="tile @(_latest.ErrorRate > 2.5 ? "bad" : "")">
+                <span class="label">Error rate</span>
+                <strong>@_latest.ErrorRate.ToString("0.0")%</strong>
+            </article>
+        </section>
+
+        <section class="panel">
+            <h2>Requests, last 60 seconds</h2>
+            <svg viewBox="0 0 600 120" preserveAspectRatio="none" class="spark" role="img" aria-label="Requests per second over the last minute">
+                <polyline points="@SparkPoints()" />
+            </svg>
+        </section>
+
+        <section class="panel">
+            <h2>Incidents</h2>
+            @if (Feed.Incidents.Count == 0)
+            {
+                <p class="muted">No incidents. Latency above 260 ms or errors above 2.5% will appear here.</p>
+            }
+            else
+            {
+                <ul class="incidents">
+                    @foreach (var incident in Feed.Incidents)
+                    {
+                        <li class="@incident.Severity.ToLowerInvariant()">
+                            <time>@incident.At.ToString("HH:mm:ss")</time>
+                            <span>@incident.Severity</span>
+                            <span>@incident.Message</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+</main>
+
+@code {
+    private MetricSample? _latest;
+
+    protected override void OnInitialized()
+    {
+        _latest = Feed.Samples.LastOrDefault();
+        Feed.Updated += OnUpdated;
+    }
+
+    private void OnUpdated()
+    {
+        _latest = Feed.Samples.LastOrDefault();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string SparkPoints()
+    {
+        var samples = Feed.Samples;
+        if (samples.Count < 2) return "";
+        var max = Math.Max(samples.Max(s => s.RequestsPerSecond), 1);
+        return string.Join(' ', samples.Select((s, i) =>
+            FormattableString.Invariant($"{i * 600.0 / (samples.Count - 1):0.#},{120 - s.RequestsPerSecond / max * 110:0.#}")));
+    }
+
+    public void Dispose() => Feed.Updated -= OnUpdated;
+}

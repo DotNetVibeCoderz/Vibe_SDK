@@ -6,6 +6,7 @@
 - [SDK Usage Guide](sdk-guide.en.md)
 - [Parity with the Python SDK](parity-python.en.md)
 - [Jev Gallery](jev-gallery.en.md)
+- [TypeSafe App Generator](app-generator.en.md)
 - [Publishing to NuGet](nuget.en.md)
 - [Testing](TESTING.en.md)
 - [.NET Notebook Examples](../notebooks/README.en.md)
@@ -40,7 +41,7 @@ The SDK follows the official Python SDK contract: `POST https://api.typesafe.ai/
 | `TypeSafe.Api` | Minimal API wrapper |
 | `TypeSafe.Blazor` | Blazor Server ticket classifier |
 | `TypeSafe.BoardGames` | WPF Tic Tac Toe, Othello, Connect Four |
-| `TypeSafeAppGen` | Avalonia code editor for the Jack assistant |
+| `TypeSafeAppGen` | Avalonia code editor with Jack — see [the guide](app-generator.en.md) |
 
 ```bash
 dotnet run --project TypeSafe.Cli -- classify "I was charged twice"

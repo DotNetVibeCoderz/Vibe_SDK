@@ -1,0 +1,7 @@
+@using System.Net.Http
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using __ProjectName__
+@using __ProjectName__.Components
+@using __ProjectName__.Services

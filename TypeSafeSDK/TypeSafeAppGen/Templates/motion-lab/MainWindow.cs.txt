@@ -1,0 +1,105 @@
+using System.Diagnostics;
+using System.Globalization;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace __ProjectName__;
+
+public sealed class MainWindow : Window
+{
+    public MainWindow()
+    {
+        Title = "__ProjectName__ — Motion Lab";
+        Width = 1000;
+        Height = 640;
+        Background = new SolidColorBrush(Color.Parse("#F5F3EE"));
+        var lab = new EasingLab();
+        var duration = new Slider { Minimum = 0.4, Maximum = 4, Value = 1.6, Width = 220 };
+        duration.ValueChanged += (_, e) => lab.Duration = e.NewValue;
+        var bar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(20, 14) };
+        bar.Children.Add(new TextBlock { Text = "Duration", VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.Black });
+        bar.Children.Add(duration);
+        var root = new DockPanel();
+        DockPanel.SetDock(bar, Dock.Top);
+        root.Children.Add(bar);
+        root.Children.Add(lab);
+        Content = root;
+    }
+}
+
+public static class Easings
+{
+    public static readonly (string Name, Func<double, double> Ease, Color Color)[] All =
+    [
+        ("Linear", t => t, Color.Parse("#6C757D")),
+        ("Ease out cubic", t => 1 - Math.Pow(1 - t, 3), Color.Parse("#1D6FB8")),
+        ("Ease in-out cubic", t => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2, Color.Parse("#2A9D8F")),
+        ("Ease out back", t => 1 + 2.70158 * Math.Pow(t - 1, 3) + 1.70158 * Math.Pow(t - 1, 2), Color.Parse("#E76F51")),
+        ("Ease out elastic", t => t is 0 or 1 ? t : Math.Pow(2, -10 * t) * Math.Sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1, Color.Parse("#9B5DE5")),
+        ("Ease out bounce", Bounce, Color.Parse("#F4A261")),
+    ];
+
+    private static double Bounce(double t)
+    {
+        const double n = 7.5625, d = 2.75;
+        if (t < 1 / d) return n * t * t;
+        if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+        if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+        return n * (t -= 2.625 / d) * t + 0.984375;
+    }
+}
+
+public sealed class EasingLab : Control
+{
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+
+    public EasingLab()
+    {
+        var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) => InvalidateVisual());
+        timer.Start();
+    }
+
+    public double Duration { get; set; } = 1.6;
+
+    public override void Render(DrawingContext context)
+    {
+        var rows = Easings.All.Length;
+        var rowHeight = (Bounds.Height - 20) / rows;
+        var trackLeft = 220.0;
+        var trackRight = Bounds.Width - 140;
+        // Maju lalu diam sejenak lalu kembali: ping-pong dengan jeda 0,4 dtk di tiap ujung.
+        var cycle = Duration * 2 + 0.8;
+        var phase = _clock.Elapsed.TotalSeconds % cycle;
+        var t = phase < Duration ? phase / Duration : phase < Duration + 0.4 ? 1 : phase < Duration * 2 + 0.4 ? 1 - (phase - Duration - 0.4) / Duration : 0;
+
+        for (var i = 0; i < rows; i++)
+        {
+            var (name, ease, color) = Easings.All[i];
+            var brush = new SolidColorBrush(color);
+            var y = 10 + i * rowHeight + rowHeight / 2;
+            var label = new FormattedText(name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 14, Brushes.Black);
+            context.DrawText(label, new Point(24, y - label.Height / 2));
+            context.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#D6D2C8")), 2), new Point(trackLeft, y), new Point(trackRight, y));
+            var x = trackLeft + (trackRight - trackLeft) * ease(t);
+            context.DrawRectangle(brush, null, new Rect(x - 14, y - 14, 28, 28), 6, 6);
+
+            // Plot kurva kecil di kanan sebagai referensi bentuk easing.
+            var plot = new Rect(Bounds.Width - 110, y - rowHeight * 0.35, 90, rowHeight * 0.7);
+            var geometry = new StreamGeometry();
+            using (var g = geometry.Open())
+            {
+                g.BeginFigure(new Point(plot.Left, plot.Bottom), false);
+                for (var s = 1; s <= 40; s++)
+                {
+                    var u = s / 40.0;
+                    g.LineTo(new Point(plot.Left + u * plot.Width, plot.Bottom - ease(u) * plot.Height));
+                }
+            }
+            context.DrawGeometry(null, new Pen(brush, 2), geometry);
+            context.DrawEllipse(brush, null, new Point(plot.Left + t * plot.Width, plot.Bottom - ease(t) * plot.Height), 3, 3);
+        }
+    }
+}

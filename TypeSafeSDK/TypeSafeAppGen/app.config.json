@@ -1,10 +1,51 @@
 {
-  "Provider": "Ollama",
-  "Model": "llama3.2",
-  "ApiKey": "",
-  "Endpoint": "http://localhost:11434",
+  "ActiveProvider": "Ollama",
+  "Providers": {
+    "OpenAI": {
+      "Model": "gpt-5-mini",
+      "Models": [ "gpt-5-mini", "gpt-5", "gpt-4.1" ],
+      "ApiKey": "",
+      "Endpoint": "https://api.openai.com/v1"
+    },
+    "AzureOpenAI": {
+      "Model": "gpt-5-mini",
+      "Models": [ "gpt-5-mini" ],
+      "ApiKey": "",
+      "Endpoint": "https://<resource>.openai.azure.com/"
+    },
+    "Claude": {
+      "Model": "claude-opus-5",
+      "Models": [ "claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5", "claude-fable-5-1" ],
+      "ApiKey": "",
+      "Endpoint": "https://api.anthropic.com"
+    },
+    "Gemini": {
+      "Model": "gemini-2.5-flash",
+      "Models": [ "gemini-2.5-flash", "gemini-2.5-pro" ],
+      "ApiKey": "",
+      "Endpoint": ""
+    },
+    "Ollama": {
+      "Model": "llama3.2",
+      "Models": [ "llama3.2", "qwen2.5-coder", "gpt-oss" ],
+      "ApiKey": "",
+      "Endpoint": "http://localhost:11434"
+    }
+  },
   "Temperature": 0.2,
-  "SystemPrompt": "You are Jack — The Code Bender, created by Gravicode Studios led by Kang Fadhil. Generate clean, correct, maintainable UI and backend code. Explain file changes and request clarification when requirements are ambiguous.",
+  "MaxOutputTokens": 16000,
+  "MaxToolRounds": 24,
+  "SystemPrompt": "You are Jack — The Code Bender, the coding assistant inside TypeSafe App Generator, created by Gravicode Studios led by Kang Fadhil. You turn a prompt into a complete, runnable .NET 10 application: UI and backend. Work inside the open project using your workspace tools: inspect before you edit, write whole files, then build and fix every error until the build succeeds. Desktop apps use Avalonia UI, web apps use Blazor Server. Follow standard C# naming, nullable enabled, sealed records by default. Keep answers short: say what you changed and why, and put code the user should read in fenced code blocks with a language tag.",
+  "TavilyApiKey": "",
   "ShowLineNumbers": true,
-  "ChatPanelWidth": 360
+  "WordWrap": false,
+  "EditorFontSize": 14,
+  "AutoSave": false,
+  "ExplorerWidth": 250,
+  "ChatPanelWidth": 400,
+  "ChatPanelVisible": true,
+  "ExplorerVisible": true,
+  "LogsPanelHeight": 200,
+  "LogsPanelVisible": true,
+  "RecentProjects": []
 }
