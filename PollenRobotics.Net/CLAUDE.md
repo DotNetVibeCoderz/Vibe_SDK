@@ -47,6 +47,7 @@ src/      Core · Kinematics · Transport · ReachyMini · MicroDuck · Reachy2
           Simulation · Ml · Ai · Ui · Wizard.Core
 apps/     Gallery · Simulator (Avalonia+Blazor+three.js) · Wizard · Cli (`pollen`)
 tools/    TemplateCheck — compiles every template; sync-protos.ps1
+          blender/ — generates the simulator's robot .glb models from images/
 tests/    PollenRobotics.Net.Tests (xunit.v3 + Shouldly)
 docs/     architecture, getting-started, per-robot guides, kinematics, simulator, wizard, safety
           docs/images/ holds the screenshots used by README.md and the docs
@@ -108,6 +109,13 @@ there and reports relative to it — without that a neutral head reads as 118 de
 the head pose each tick instead of applied as an offset; the pose integrated out of the workspace,
 the solver threw into a `catch`, and every branch reported zero while the status said "moving".
 
+**The simulator's robots are generated glTF, not hand-built primitives.** Edit
+`tools/blender/*.py` and re-run `build_models.py`; never the `.glb`. Joints are empties named for
+their SDK joint, and **three.js strips dots out of node names as it loads** - `common.node_name` and
+`viewport.js`'s `nodeName` both substitute underscores, and they have to agree or every joint lookup
+silently misses. Author in parent-local coordinates: `matrix_world` is the identity in a background
+build until the depsgraph runs, so keep-world-position parenting quietly does nothing.
+
 **Templates are hand-written against the SDK and nothing recompiles them.** Run `TemplateCheck`
 after any public API change. Four of twenty failed the first time it ran.
 
@@ -162,7 +170,8 @@ known. Each is documented at the point it is used and summarised in `docs/kinema
   `StewartGeometry.ForEnvelope`, not guessed
 - Reachy 2's arm link lengths — right proportions, not Pollen's URDF
 - MicroDuck's joint table and its gait — a scripted gait standing in for a learned policy
-- The 3D rigs — primitives, because no meshes ship under a licence this project could vendor
+- The 3D models — our own meshes, modelled from photographs in `images/`; silhouettes and
+  colours are close, panel detail and mechanism interiors are not modelled at all
 
 The solvers themselves are exact. On hardware, prefer the robot's own kinematics.
 

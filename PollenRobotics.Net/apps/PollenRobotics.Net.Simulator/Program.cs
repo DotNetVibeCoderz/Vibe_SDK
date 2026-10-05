@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Avalonia;
+using PollenRobotics.Net.Core.Robots;
 using PollenRobotics.Net.Simulator.Hosting;
 
 namespace PollenRobotics.Net.Simulator;
@@ -21,6 +22,11 @@ internal static partial class Program
     {
         HideConsoleWindow();
 
+        // `--robot reachy-mini|microduck|reachy2` picks what the window opens on. Without it every
+        // check of a robot other than the first means driving a combo box by hand, which is why the
+        // other two rigs went unverified for so long.
+        SimulatorApp.InitialRobot = ParseRobot(args);
+
         try
         {
             SimulatorApp.Viewport = ViewportHost.StartAsync(SimulatorApp.Engine).GetAwaiter().GetResult();
@@ -33,6 +39,21 @@ internal static partial class Program
         }
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    /// <summary>Reads <c>--robot</c> from the command line.</summary>
+    private static RobotKind? ParseRobot(string[] args)
+    {
+        int index = Array.FindIndex(args, a => string.Equals(a, "--robot", StringComparison.OrdinalIgnoreCase));
+
+        if (index < 0 || index + 1 >= args.Length)
+        {
+            return null;
+        }
+
+        string value = args[index + 1].Replace("-", string.Empty);
+
+        return Enum.TryParse(value, ignoreCase: true, out RobotKind kind) ? kind : null;
     }
 
     /// <summary>Builds the Avalonia application. Named by convention for the XAML previewer.</summary>

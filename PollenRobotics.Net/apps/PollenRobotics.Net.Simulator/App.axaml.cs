@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using PollenRobotics.Net.Core.Robots;
 using PollenRobotics.Net.Simulation;
 using PollenRobotics.Net.Simulator.Hosting;
 using PollenRobotics.Net.Simulator.Views;
@@ -16,6 +17,9 @@ public partial class SimulatorApp : Application
 
     /// <summary>The in-process web host serving the 3D viewport.</summary>
     public static ViewportHost? Viewport { get; set; }
+
+    /// <summary>Which robot the window opens on, from <c>--robot</c>. Null means the first.</summary>
+    public static RobotKind? InitialRobot { get; set; }
 
     /// <inheritdoc />
     public override void Initialize() => AvaloniaXamlLoader.Load(this);

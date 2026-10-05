@@ -58,7 +58,14 @@ public partial class MainWindow : Window
 
         ComboBox picker = this.FindControl<ComboBox>("RobotPicker")!;
         picker.ItemsSource = RobotCatalog.All.Select(d => d.DisplayName).ToList();
-        picker.SelectedIndex = 0;
+
+        // Setting the index raises the same SelectionChanged the user's own click does, so the
+        // engine loads the robot through exactly one path whether it came from --robot or a click.
+        int initial = SimulatorApp.InitialRobot is { } kind
+            ? Math.Max(0, RobotCatalog.All.ToList().FindIndex(d => d.Kind == kind))
+            : 0;
+
+        picker.SelectedIndex = initial;
 
         _engine.FrameProduced += OnFrameProduced;
         _engine.RunStateChanged += OnRunStateChanged;

@@ -8,3 +8,7 @@ artifacts/
 node_modules/
 appsettings.Local.json
 *.local.config
+
+# Blender preview renders. Build output for checking a model against its reference photograph,
+# not an asset - the .glb files under wwwroot/models are what ships.
+tools/blender/preview/
