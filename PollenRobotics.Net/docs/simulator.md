@@ -65,15 +65,17 @@ from photographs.
 
 | Robot | What carries the likeness |
 |---|---|
-| Reachy Mini | A bell body over a dark base, a rounded slab head with two large lenses joined by a bridge, and the spring wound into each antenna |
-| MicroDuck | Pastel printed shells over a bare black servo spine, one oversized flat beak, one big round eye per side, and feet far larger than the legs need |
+| Reachy Mini | An open bowl body with all six steel neck struts exposed on brass fittings, a rounded slab head with two large lenses joined by a bridge, and a spring at the base of each antenna |
+| MicroDuck | A helmet head carried well forward, one huge bezelled eye per side, a broad flat bill, pastel shells over a bare black servo spine, and feet far larger than the legs need |
 | Reachy 2 | The navy Breton stripes - separate rings, not a texture - white limb shells over silver actuator barrels, raked ball-tipped antennas, and a round mobile base |
 
 Reachy Mini's neck struts are the detail worth pointing at: each one is stretched and aimed between
 its base and platform anchor every frame, from the solved branch angles, so the parallel mechanism
-visibly behaves like a parallel mechanism. The fabric cuff that hides the neck on the real robot is
-modelled *inside* the strut circle rather than over it - the robot hides its mechanism, and a
-simulator whose purpose is showing that mechanism move cannot.
+visibly behaves like a parallel mechanism. Nothing covers them, because nothing covers them on the
+robot either: `images/reachy_mini3.jpg` shows a part-assembled Mini with six bare rods rising out of
+an open bowl. An earlier version of this model put a grey fabric cuff in the gap, which was wrong
+twice over - the robot has no such part, and it hid the one mechanism this simulator exists to
+show.
 
 ### Articulation is by name
 

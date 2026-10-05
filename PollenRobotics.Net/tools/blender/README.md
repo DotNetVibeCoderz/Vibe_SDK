@@ -35,8 +35,8 @@ EEVEE engine identifier, which the preview code probes for rather than hard-codi
 | File | Contents |
 |---|---|
 | `common.py` | Modelling helpers: rounded boxes, lathes, tubes, helices, joints, export |
-| `reachy_mini.py` | Bell body, Stewart neck, slab head, sprung antennas |
-| `microduck.py` | Pastel shells over a bare servo spine, flat beak, oversized feet |
+| `reachy_mini.py` | Open bowl body, six exposed steel struts with brass fittings, slab head, base-sprung antennas |
+| `microduck.py` | Helmet head with an oversized eye and bill, pastel shells over a bare servo spine, oversized feet |
 | `reachy2.py` | Striped torso, two seven-axis arms, Orbita neck, mobile base |
 | `build_models.py` | Entry point, preview renderer |
 
@@ -73,6 +73,11 @@ in exactly one place, where the duck's world pose is applied in `viewport.js`.
 
 Pollen publishes no meshes under a licence this project could vendor, so every shape here is
 modelled from photographs. Silhouettes, proportions and colours are close; panel lines, fasteners
-and the interior of any mechanism are not there at all. See
+and circuit boards are not there at all.
+
+`images/reachy_mini3.jpg` is worth keeping: it is the only photograph of a Reachy Mini with its neck
+exposed, and it settled three things no finished product shot could - the neck has no shroud, the
+antenna spring sits at the base of the wire rather than half-way up, and the struts land on brass
+fittings under a plate. The first version of this model guessed all three wrong. See
 [docs/kinematics.md](../../docs/kinematics.md) for which *dimensions* are derived rather than known
 - a model that looks right is not evidence that a link length is right.

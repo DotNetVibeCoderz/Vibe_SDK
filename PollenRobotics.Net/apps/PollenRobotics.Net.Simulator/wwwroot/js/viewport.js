@@ -60,11 +60,11 @@ const pending = new Set();
 // These must agree with tools/blender/reachy_mini.py. They are the strut anchor ring that the
 // viewport re-aims every frame, and there is no way to read them back out of a .glb.
 
-const MINI_STRUT_BASE_RADIUS = 0.0430;
-const MINI_STRUT_PLATFORM_RADIUS = 0.0235;
-const MINI_STRUT_BASE_Y = 0.012;
-const MINI_NECK_Y = 0.129;
-const MINI_PLATFORM_Y = MINI_NECK_Y - 0.004;
+const MINI_STRUT_BASE_RADIUS = 0.0345;
+const MINI_STRUT_PLATFORM_RADIUS = 0.0255;
+const MINI_STRUT_BASE_Y = 0.082;
+const MINI_NECK_Y = 0.140;
+const MINI_PLATFORM_Y = 0.138;
 
 const MINI_ANCHORS = [];
 
@@ -318,7 +318,7 @@ const DRIVERS = {
     ReachyMini: {
         drive: driveReachyMini,
         joints: ['body', 'neck', 'antenna.right', 'antenna.left', 'strut.0', 'strut.5'],
-        framing: { camera: [0.38, 0.30, 0.45], target: [0, 0.15, 0], maxDistance: 4 },
+        framing: { camera: [0.38, 0.32, 0.46], target: [0, 0.16, 0], maxDistance: 4 },
     },
     MicroDuck: {
         drive: driveMicroDuck,
