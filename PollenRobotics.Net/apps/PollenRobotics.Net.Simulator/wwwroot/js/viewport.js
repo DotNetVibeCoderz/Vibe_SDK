@@ -211,29 +211,34 @@ function driveReachyMini(model, nodes) {
 function driveMicroDuck(model, nodes) {
     const body = nodes.get('body');
 
-    // The catalogue lists the left leg first, so index 0 is left.
     const legs = ['left', 'right'].map((side) => ({
-        hipYaw: nodes.get(`${side}.hip_yaw`),
-        hipRoll: nodes.get(`${side}.hip_roll`),
-        hipPitch: nodes.get(`${side}.hip_pitch`),
-        knee: nodes.get(`${side}.knee`),
-        ankle: nodes.get(`${side}.ankle_pitch`),
+        hipYaw: nodes.get(`${side}_hip_yaw`),
+        hipRoll: nodes.get(`${side}_hip_roll`),
+        hipPitch: nodes.get(`${side}_hip_pitch`),
+        knee: nodes.get(`${side}_knee`),
+        ankle: nodes.get(`${side}_ankle`),
     }));
 
-    const neckPitch = nodes.get('neck.pitch');
-    const neckYaw = nodes.get('neck.yaw');
-    const headPitch = nodes.get('head.pitch');
-    const headRoll = nodes.get('head.roll');
-    const beak = nodes.get('beak');
+    const neckPitch = nodes.get('neck_pitch');
+    const headPitch = nodes.get('head_pitch');
+    const headYaw = nodes.get('head_yaw');
+    const headRoll = nodes.get('head_roll');
+
+    // The head sits between the legs in the catalogue, not after them. Pollen's own MuJoCo model
+    // orders the DOFs depth-first - left leg, then the neck and head, then the right leg - and an
+    // earlier version of this driver assumed leg-leg-head, so every index past the left ankle was
+    // reading the wrong joint.
+    const LEFT = 0;
+    const NECK = 5;
+    const RIGHT = 9;
 
     return {
         group: model,
 
         apply(joints, worldPose) {
-            // Catalogue order: left leg 0..4, right leg 5..9, neck 10..11, head 12..13, beak 14.
             for (let i = 0; i < 2; i++) {
                 const leg = legs[i];
-                const base = i * 5;
+                const base = i === 0 ? LEFT : RIGHT;
 
                 leg.hipYaw.rotation.y = joints[base] ?? 0;
                 leg.hipRoll.rotation.z = joints[base + 1] ?? 0;
@@ -242,11 +247,10 @@ function driveMicroDuck(model, nodes) {
                 leg.ankle.rotation.x = joints[base + 4] ?? 0;
             }
 
-            neckPitch.rotation.x = joints[10] ?? 0;
-            neckYaw.rotation.y = joints[11] ?? 0;
-            headPitch.rotation.x = joints[12] ?? 0;
-            headRoll.rotation.z = joints[13] ?? 0;
-            beak.rotation.x = joints[14] ?? 0;
+            neckPitch.rotation.x = joints[NECK] ?? 0;
+            headPitch.rotation.x = joints[NECK + 1] ?? 0;
+            headYaw.rotation.y = joints[NECK + 2] ?? 0;
+            headRoll.rotation.z = joints[NECK + 3] ?? 0;
 
             // The duck walks, so its body pose moves in the world rather than staying at the
             // origin. This is the one place the robotics frame meets the three.js one.
@@ -322,7 +326,7 @@ const DRIVERS = {
     },
     MicroDuck: {
         drive: driveMicroDuck,
-        joints: ['body', 'left.knee', 'right.knee', 'neck.pitch', 'neck.yaw', 'head.pitch', 'head.roll', 'beak'],
+        joints: ['body', 'left_knee', 'right_knee', 'neck_pitch', 'head_pitch', 'head_yaw', 'head_roll'],
         framing: { camera: [0.52, 0.40, 0.62], target: [0, 0.16, 0], maxDistance: 6 },
     },
     Reachy2: {

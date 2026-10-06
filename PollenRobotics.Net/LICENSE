@@ -28,3 +28,15 @@ and licensed under the Apache License 2.0. See
 src/PollenRobotics.Net.Reachy2/Protos/LICENSE-reachy2-sdk-api.txt.
 
 This project is not affiliated with or endorsed by Pollen Robotics.
+
+---
+
+Vendored third-party files, under the Apache License 2.0 and not covered by the MIT licence above:
+
+  src/PollenRobotics.Net.Reachy2/Protos/*.proto
+      Copyright Pollen Robotics, from reachy2-sdk-api.
+      Licence text: src/PollenRobotics.Net.Reachy2/LICENSE-reachy2-sdk-api.txt
+
+  src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml
+      Copyright Pollen Robotics, from pollen-robotics/microduck.
+      Licence text: src/PollenRobotics.Net.MicroDuck/Reference/LICENSE-microduck.txt

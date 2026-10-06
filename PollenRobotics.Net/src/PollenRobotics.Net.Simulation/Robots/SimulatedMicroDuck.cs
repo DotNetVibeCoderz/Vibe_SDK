@@ -187,9 +187,9 @@ public sealed class SimulatedMicroDuck : ISimulatedRobot
 
         // The head counter-rotates a little against the turn, which reads as the duck looking
         // where it is going.
-        Set("neck.yaw", -_velocity.YawRadiansPerSecond * 0.35);
-        Set("neck.pitch", lean * 0.4);
-        Set("head.roll", Math.Sin(_gaitPhase) * 0.05);
+        Set("head_yaw", -_velocity.YawRadiansPerSecond * 0.35);
+        Set("neck_pitch", lean * 0.4);
+        Set("head_roll", Math.Sin(_gaitPhase) * 0.05);
     }
 
     private void SetLeg(bool isLeft, double phase, double amplitude, double lean)
@@ -198,11 +198,11 @@ public sealed class SimulatedMicroDuck : ISimulatedRobot
         double swing = Math.Sin(phase);
         double lift = Math.Max(0, Math.Cos(phase));
 
-        Set($"{prefix}.hip_pitch", (swing * amplitude * 0.5) - lean);
-        Set($"{prefix}.knee", lift * amplitude);
-        Set($"{prefix}.ankle_pitch", (-swing * amplitude * 0.3) + (lean * 0.5));
-        Set($"{prefix}.hip_roll", (isLeft ? 1 : -1) * _velocity.LateralMetersPerSecond * 1.5);
-        Set($"{prefix}.hip_yaw", (isLeft ? 1 : -1) * _velocity.YawRadiansPerSecond * 0.15);
+        Set($"{prefix}_hip_pitch", (swing * amplitude * 0.5) - lean);
+        Set($"{prefix}_knee", lift * amplitude);
+        Set($"{prefix}_ankle", (-swing * amplitude * 0.3) + (lean * 0.5));
+        Set($"{prefix}_hip_roll", (isLeft ? 1 : -1) * _velocity.LateralMetersPerSecond * 1.5);
+        Set($"{prefix}_hip_yaw", (isLeft ? 1 : -1) * _velocity.YawRadiansPerSecond * 0.15);
     }
 
     private void IntegrateOdometry(TimeSpan delta)
@@ -234,18 +234,18 @@ public sealed class SimulatedMicroDuck : ISimulatedRobot
         {
             case DuckActionSlot.SitStand:
                 double crouch = Math.Sin(progress * Math.PI) * 1.1;
-                Set("left.knee", crouch);
-                Set("right.knee", crouch);
-                Set("left.hip_pitch", -crouch * 0.6);
-                Set("right.hip_pitch", -crouch * 0.6);
+                Set("left_knee", crouch);
+                Set("right_knee", crouch);
+                Set("left_hip_pitch", -crouch * 0.6);
+                Set("right_hip_pitch", -crouch * 0.6);
                 break;
 
             case DuckActionSlot.GroundPick:
                 double reach = Math.Sin(progress * Math.PI);
-                Set("neck.pitch", reach * 0.7);
-                Set("beak", reach > 0.5 ? 0 : reach * 0.7);
-                Set("left.hip_pitch", -reach * 0.5);
-                Set("right.hip_pitch", -reach * 0.5);
+                Set("neck_pitch", reach * 0.7);
+                Set("head_pitch", reach * 0.5);
+                Set("left_hip_pitch", -reach * 0.5);
+                Set("right_hip_pitch", -reach * 0.5);
                 break;
 
             case DuckActionSlot.KickLeft:
@@ -258,9 +258,9 @@ public sealed class SimulatedMicroDuck : ISimulatedRobot
 
             case DuckActionSlot.Roulade:
                 double roll = Math.Sin(progress * Math.PI);
-                Set("head.roll", roll * 0.4);
-                Set("left.hip_roll", roll * 0.5);
-                Set("right.hip_roll", -roll * 0.5);
+                Set("head_roll", roll * 0.4);
+                Set("left_hip_roll", roll * 0.5);
+                Set("right_hip_roll", -roll * 0.5);
                 break;
 
             case DuckActionSlot.Stand:
@@ -292,11 +292,11 @@ public sealed class SimulatedMicroDuck : ISimulatedRobot
     {
         // Sprawled: hips out, knees loose. Distinct enough on screen that "it has fallen over" is
         // obvious without reading the status panel.
-        Set("left.hip_roll", 0.5);
-        Set("right.hip_roll", -0.5);
-        Set("left.knee", 0.3);
-        Set("right.knee", 0.3);
-        Set("head.roll", 0.4);
+        Set("left_hip_roll", 0.5);
+        Set("right_hip_roll", -0.5);
+        Set("left_knee", 0.3);
+        Set("right_knee", 0.3);
+        Set("head_roll", 0.4);
     }
 
     private double[] StandPose()
@@ -304,12 +304,12 @@ public sealed class SimulatedMicroDuck : ISimulatedRobot
         double[] pose = new double[_joints.Length];
 
         // A slight crouch: knees bent, hips and ankles compensating so the body stays level.
-        pose[Description["left.hip_pitch"].Index] = -0.25;
-        pose[Description["right.hip_pitch"].Index] = -0.25;
-        pose[Description["left.knee"].Index] = 0.5;
-        pose[Description["right.knee"].Index] = 0.5;
-        pose[Description["left.ankle_pitch"].Index] = -0.25;
-        pose[Description["right.ankle_pitch"].Index] = -0.25;
+        pose[Description["left_hip_pitch"].Index] = -0.25;
+        pose[Description["right_hip_pitch"].Index] = -0.25;
+        pose[Description["left_knee"].Index] = 0.5;
+        pose[Description["right_knee"].Index] = 0.5;
+        pose[Description["left_ankle"].Index] = -0.25;
+        pose[Description["right_ankle"].Index] = -0.25;
 
         return pose;
     }

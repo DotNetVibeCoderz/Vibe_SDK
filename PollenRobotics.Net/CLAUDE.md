@@ -9,7 +9,7 @@ MicroDuck, Reachy 2), plus an Avalonia gallery, a 3D simulator and an LLM-assist
 `requirements.md` (Indonesian) is the original spec; `PLAN.md` is the roadmap and `PROGRESS.md`
 tracks what is verified.
 
-The solution builds clean and 47 tests pass. **Nothing has been run against physical hardware** —
+The solution builds clean and 51 tests pass. **Nothing has been run against physical hardware** —
 read the "Written but not verified" section of `PROGRESS.md` before claiming anything works on a
 robot.
 
@@ -152,6 +152,15 @@ with `IClipboard.SetDataAsync`.
 - Every subsystem logs to a shared `RobotLogSink`. In a desktop app there is no console anyone will
   look at, so a failure that does not reach the log panel is invisible.
 
+## Two upstream files are vendored, not written
+
+`src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml` is Pollen's own MuJoCo model, Apache 2.0
+from `pollen-robotics/microduck`. It defines the duck's joint names, order and limits, and
+`RobotCatalog.MicroDuck` is a transcription of it — **the head sits between the legs**, not after
+them, and there is no beak joint. `MicroDuckCatalogueTests` checks the catalogue against that file;
+without it the tests take the catalogue as the definition of truth and agree with whatever it says,
+which is exactly how a fifteen-joint table with an invented beak survived this long.
+
 ## The Reachy 2 protos are vendored, not written
 
 `src/PollenRobotics.Net.Reachy2/Protos/*.proto` are Pollen's own files, copied verbatim from
@@ -169,7 +178,9 @@ known. Each is documented at the point it is used and summarised in `docs/kinema
 - Reachy Mini's Stewart geometry — link lengths derived from the published envelope by
   `StewartGeometry.ForEnvelope`, not guessed
 - Reachy 2's arm link lengths — right proportions, not Pollen's URDF
-- MicroDuck's joint table and its gait — a scripted gait standing in for a learned policy
+- MicroDuck's gait — a scripted gait standing in for a learned policy. Its joint *table* is no
+  longer a guess: it is transcribed from Pollen's own MuJoCo model, vendored at
+  `src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml`
 - The 3D models — our own meshes, modelled from photographs in `images/`; silhouettes and
   colours are close, panel detail and mechanism interiors are not modelled at all
 

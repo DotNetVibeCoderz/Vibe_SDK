@@ -52,35 +52,48 @@ public static class RobotCatalog
         ]);
 
     /// <summary>
-    /// MicroDuck: fifteen servos - two five-DOF legs, a two-DOF neck, a head joint and a beak.
+    /// MicroDuck: fourteen servos - two five-DOF legs and a four-DOF neck and head.
     /// </summary>
     /// <remarks>
-    /// The daemon documentation states the servo count and the 50 Hz loop rate but does not publish
-    /// a per-joint name table, so the names below follow the biped convention used by the open
-    /// hardware description and the limits are conservative. Treat them as a starting point to be
-    /// corrected against <c>robotctl monitor</c> output on a real duck.
+    /// <para>
+    /// Transcribed from Pollen's own MuJoCo model, vendored at
+    /// <c>src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml</c> (Apache 2.0, upstream commit
+    /// 8904b65d3628). Names, order and limits are the robot's, not this project's.
+    /// </para>
+    /// <para>
+    /// The order is the model's depth-first DOF order, which is <b>not</b> left leg then right leg:
+    /// the head sits between them. An earlier version of this table guessed fifteen joints in
+    /// leg-leg-head order with a beak on the end, and every index past the left ankle was wrong.
+    /// </para>
+    /// <para>
+    /// <b>There is no beak joint.</b> The head carries a <c>mouth_tip</c> site but nothing actuates
+    /// it, so the bill is fixed geometry. Head yaw also reaches much further than a neck normally
+    /// would - plus or minus 170 degrees - because it is the joint that lets the duck look behind
+    /// itself without turning its feet.
+    /// </para>
     /// </remarks>
     public static RobotDescription MicroDuck { get; } = new(
         RobotKind.MicroDuck,
         "MicroDuck",
         [
-            JointDescriptor.Degrees("left.hip_yaw", 0, -45, 45),
-            JointDescriptor.Degrees("left.hip_roll", 1, -35, 35),
-            JointDescriptor.Degrees("left.hip_pitch", 2, -90, 60),
-            JointDescriptor.Degrees("left.knee", 3, -10, 130),
-            JointDescriptor.Degrees("left.ankle_pitch", 4, -70, 70),
+            JointDescriptor.Degrees("left_hip_yaw", 0, -25, 30),
+            JointDescriptor.Degrees("left_hip_roll", 1, -22, 22),
+            JointDescriptor.Degrees("left_hip_pitch", 2, -90, 90),
+            JointDescriptor.Degrees("left_knee", 3, -90, 90),
+            JointDescriptor.Degrees("left_ankle", 4, -90, 90),
 
-            JointDescriptor.Degrees("right.hip_yaw", 5, -45, 45),
-            JointDescriptor.Degrees("right.hip_roll", 6, -35, 35),
-            JointDescriptor.Degrees("right.hip_pitch", 7, -90, 60),
-            JointDescriptor.Degrees("right.knee", 8, -10, 130),
-            JointDescriptor.Degrees("right.ankle_pitch", 9, -70, 70),
+            JointDescriptor.Degrees("neck_pitch", 5, -90, 60),
+            JointDescriptor.Degrees("head_pitch", 6, -90, 90),
+            JointDescriptor.Degrees("head_yaw", 7, -170, 170),
+            JointDescriptor.Degrees("head_roll", 8, -25, 25),
 
-            JointDescriptor.Degrees("neck.pitch", 10, -40, 45),
-            JointDescriptor.Degrees("neck.yaw", 11, -90, 90),
-            JointDescriptor.Degrees("head.pitch", 12, -30, 30),
-            JointDescriptor.Degrees("head.roll", 13, -25, 25),
-            JointDescriptor.Degrees("beak", 14, 0, 45),
+            // Hip yaw mirrors: the left reaches further outward, the right further inward, so the
+            // same value on both legs does not produce a symmetric stance.
+            JointDescriptor.Degrees("right_hip_yaw", 9, -30, 25),
+            JointDescriptor.Degrees("right_hip_roll", 10, -22, 22),
+            JointDescriptor.Degrees("right_hip_pitch", 11, -90, 90),
+            JointDescriptor.Degrees("right_knee", 12, -90, 90),
+            JointDescriptor.Degrees("right_ankle", 13, -90, 90),
         ]);
 
     /// <summary>

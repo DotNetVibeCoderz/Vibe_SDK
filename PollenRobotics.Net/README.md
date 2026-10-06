@@ -175,13 +175,13 @@ Clamping is still available — you just have to ask for it.
 
 ## Status
 
-The SDK builds clean and 47 tests pass. **Nothing has been run against physical hardware.** Read
+The SDK builds clean and 51 tests pass. **Nothing has been run against physical hardware.** Read
 [PROGRESS.md](PROGRESS.md) before relying on any of it on a robot — it separates what is verified
 from what is written against published documentation.
 
 ### Packages
 
-Eleven packages, published on nuget.org at 0.1.1:
+Eleven packages, published on nuget.org at 0.2.0:
 
 ```bash
 dotnet add package Gravicode.PollenRobotics.Net.ReachyMini
@@ -358,13 +358,13 @@ Penjepitan tetap tersedia — Anda hanya perlu memintanya secara eksplisit.
 
 ## Status
 
-SDK ini build bersih dan 47 test lulus. **Belum pernah dijalankan pada perangkat keras sungguhan.**
+SDK ini build bersih dan 51 test lulus. **Belum pernah dijalankan pada perangkat keras sungguhan.**
 Baca [PROGRESS.md](PROGRESS.md) sebelum mengandalkannya di robot — di sana dipisahkan mana yang sudah
 terverifikasi dan mana yang ditulis berdasarkan dokumentasi publik.
 
 ### Paket
 
-Sebelas paket, sudah terbit di nuget.org pada versi 0.1.1:
+Sebelas paket, sudah terbit di nuget.org pada versi 0.2.0:
 
 ```bash
 dotnet add package Gravicode.PollenRobotics.Net.ReachyMini

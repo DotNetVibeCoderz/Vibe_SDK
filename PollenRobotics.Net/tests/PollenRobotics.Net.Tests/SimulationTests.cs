@@ -333,9 +333,11 @@ public class SimulationEngineTests
 
         engine.Robot.Description.JointCount.ShouldBe(9);
 
+        // Fourteen, from Pollen's own MuJoCo model. This read 15 while the catalogue carried an
+        // invented beak joint, so the test agreed with the bug rather than catching it.
         await engine.LoadRobotAsync(RobotKind.MicroDuck, TestContext.Current.CancellationToken);
-        engine.Robot.Description.JointCount.ShouldBe(15);
-        engine.LatestSnapshot.JointPositions.Count.ShouldBe(15);
+        engine.Robot.Description.JointCount.ShouldBe(14);
+        engine.LatestSnapshot.JointPositions.Count.ShouldBe(14);
 
         await engine.LoadRobotAsync(RobotKind.Reachy2, TestContext.Current.CancellationToken);
         engine.Robot.Description.JointCount.ShouldBe(21);

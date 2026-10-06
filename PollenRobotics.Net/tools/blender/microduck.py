@@ -31,13 +31,13 @@ import math
 
 import common as c
 
-# The duck is squat: legs are roughly 40% of its height, not the 55% the first version gave it.
-# These lengths are purely visual - the simulation's gait is an amplitude in radians and its body
-# velocity is computed independently, so nothing downstream depends on them.
-STANDING_HIP = 0.105        # hip height with the legs straight
-THIGH = 0.044
-SHIN = 0.038
-HIP_SEPARATION = 0.036
+# Link lengths are Pollen's own, read off the body offsets in
+# src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml rather than measured off a photograph.
+# The trunk sits at z = 0.12 in that model, which is the standing hip height here.
+STANDING_HIP = 0.120
+THIGH = 0.0358              # left_upper_leg -> leg
+SHIN = 0.0420               # leg -> ankle_left
+HIP_SEPARATION = 0.035      # +/- 0.0175 from the trunk centre line
 
 # Forward is -Y in Blender, which the Y-up export turns into +Z in three.js - the direction the
 # rest of the viewport already treats as the front of a robot.
@@ -119,9 +119,9 @@ def build():
     # ---------------------------------------------------------------- legs
 
     for side, sign in (("left", 1), ("right", -1)):
-        hip_yaw = c.joint(f"{side}.hip_yaw", location=(sign * HIP_SEPARATION / 2, 0, -0.004), parent=body)
-        hip_roll = c.joint(f"{side}.hip_roll", parent=hip_yaw)
-        hip_pitch = c.joint(f"{side}.hip_pitch", parent=hip_roll)
+        hip_yaw = c.joint(f"{side}_hip_yaw", location=(sign * HIP_SEPARATION / 2, 0, -0.004), parent=body)
+        hip_roll = c.joint(f"{side}_hip_roll", parent=hip_yaw)
+        hip_pitch = c.joint(f"{side}_hip_pitch", parent=hip_roll)
 
         servo_block(f"{side}.hip.servo", mat, (0.028, 0.034, 0.034), parent=hip_pitch)
 
@@ -139,7 +139,7 @@ def build():
         )
         c.attach(plate, hip_pitch)
 
-        knee = c.joint(f"{side}.knee", location=(0, 0, -THIGH - 0.016), parent=hip_pitch)
+        knee = c.joint(f"{side}_knee", location=(0, 0, -THIGH - 0.016), parent=hip_pitch)
         servo_block(f"{side}.knee.servo", mat, (0.028, 0.032, 0.032), parent=knee)
 
         shin = c.rounded_box(
@@ -148,7 +148,7 @@ def build():
         )
         c.attach(shin, knee)
 
-        ankle = c.joint(f"{side}.ankle_pitch", location=(0, 0, -SHIN - 0.015), parent=knee)
+        ankle = c.joint(f"{side}_ankle", location=(0, 0, -SHIN - 0.015), parent=knee)
         servo_block(f"{side}.ankle.servo", mat, (0.026, 0.030, 0.028), parent=ankle)
 
         # The shoe. Big, flat, rounded, and in the accent colour.
@@ -168,16 +168,15 @@ def build():
 
     # Exposed servo column, raked forward. The duck has no neck shell at all; leaving it bare is
     # what gives the silhouette its thin mechanical throat between two pastel masses.
-    neck_pitch = c.joint("neck.pitch", location=(0, FORWARD * 0.032, 0.070), parent=body)
-    neck_yaw = c.joint("neck.yaw", parent=neck_pitch)
+    neck_pitch = c.joint("neck_pitch", location=(0, FORWARD * 0.026, 0.062), parent=body)
 
     spine = c.rounded_box(
         "neck.spine", (0.025, 0.023, 0.036), 0.003, mat["servo"], segments=3, location=(0, 0, 0.018)
     )
-    c.attach(spine, neck_yaw)
+    c.attach(spine, neck_pitch)
 
     for i, z in enumerate((0.008, 0.021, 0.034)):
-        servo = servo_block(f"neck.servo.{i}", mat, (0.023, 0.026, 0.013), parent=neck_yaw)
+        servo = servo_block(f"neck.servo.{i}", mat, (0.023, 0.026, 0.013), parent=neck_pitch)
         servo.location = (0, 0, z)
 
     cable = c.tube(
@@ -185,12 +184,13 @@ def build():
         [(0.009, 0.014, 0.004), (0.013, 0.020, 0.020), (0.010, 0.021, 0.034), (0.005, 0.016, 0.046)],
         0.0018, mat["wire"], segments=6,
     )
-    c.attach(cable, neck_yaw)
+    c.attach(cable, neck_pitch)
 
     # ---------------------------------------------------------------- head
 
-    head_pitch = c.joint("head.pitch", location=(0, 0, 0.040), parent=neck_yaw)
-    head_roll = c.joint("head.roll", parent=head_pitch)
+    head_pitch = c.joint("head_pitch", location=(0, 0, 0.040), parent=neck_pitch)
+    head_yaw = c.joint("head_yaw", parent=head_pitch)
+    head_roll = c.joint("head_roll", parent=head_yaw)
 
     # The helmet, built as two overlapping rounded boxes rather than one: the back is tall and
     # round, the front lower and shorter, and the step between them is the brow the eye sits under.
@@ -221,20 +221,20 @@ def build():
 
     # ---------------------------------------------------------------- bill
 
-    # Two broad slabs. The upper is fixed to the head and continues its line forward; the lower is
-    # the only moving jaw. Both are as wide as the head and project well past it.
+    # Two broad slabs, both fixed. Pollen's model carries a `mouth_tip` site on the head shell but
+    # no joint behind it, so the bill does not open - an earlier version of this model invented a
+    # beak joint, and the SDK invented a fifteenth servo to drive it.
     upper = c.rounded_box(
         "head.bill.upper", (0.064, 0.060, 0.014), 0.0055, mat["accent"], segments=4,
         location=(0, FORWARD * 0.056, 0.000), rotation=(math.radians(-5), 0, 0),
     )
     c.attach(upper, head_roll)
 
-    beak = c.joint("beak", location=(0, FORWARD * 0.028, -0.010), parent=head_roll)
     lower = c.rounded_box(
         "head.bill.lower", (0.058, 0.052, 0.011), 0.0045, mat["beak"], segments=4,
-        location=(0, FORWARD * 0.027, 0.002),
+        location=(0, FORWARD * 0.055, -0.010),
     )
-    c.attach(lower, beak)
+    c.attach(lower, head_roll)
 
     return root
 

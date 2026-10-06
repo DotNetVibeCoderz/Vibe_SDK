@@ -66,54 +66,72 @@ mechanism for 40° of *total* tilt, which is the sensible reading. See
 
 ---
 
-## MicroDuck — 15 joints
+## MicroDuck — 14 joints
 
 ```
-[ 0] left.hip_yaw       -45 .. 45     Conservative guess
-[ 1] left.hip_roll      -35 .. 35     Conservative guess
-[ 2] left.hip_pitch     -90 .. 60     Conservative guess
-[ 3] left.knee          -10 .. 130    Conservative guess
-[ 4] left.ankle_pitch   -70 .. 70     Conservative guess
-[ 5] right.hip_yaw      -45 .. 45     Conservative guess
-[ 6] right.hip_roll     -35 .. 35     Conservative guess
-[ 7] right.hip_pitch    -90 .. 60     Conservative guess
-[ 8] right.knee         -10 .. 130    Conservative guess
-[ 9] right.ankle_pitch  -70 .. 70     Conservative guess
-[10] neck.pitch         -40 .. 45     Conservative guess
-[11] neck.yaw           -90 .. 90     Conservative guess
-[12] head.pitch         -30 .. 30     Conservative guess
-[13] head.roll          -25 .. 25     Conservative guess
-[14] beak                 0 .. 45     Conservative guess
+[ 0] left_hip_yaw      -25 .. 30     Documented
+[ 1] left_hip_roll     -22 .. 22     Documented
+[ 2] left_hip_pitch    -90 .. 90     Documented
+[ 3] left_knee         -90 .. 90     Documented
+[ 4] left_ankle        -90 .. 90     Documented
+[ 5] neck_pitch        -90 .. 60     Documented
+[ 6] head_pitch        -90 .. 90     Documented
+[ 7] head_yaw         -170 .. 170    Documented
+[ 8] head_roll         -25 .. 25     Documented
+[ 9] right_hip_yaw     -30 .. 25     Documented   <- mirrored
+[10] right_hip_roll    -22 .. 22     Documented
+[11] right_hip_pitch   -90 .. 90     Documented
+[12] right_knee        -90 .. 90     Documented
+[13] right_ankle       -90 .. 90     Documented
 ```
 
-**Everything here is a guess, and the whole table should be replaced.**
+Transcribed from Pollen's own MuJoCo model, vendored verbatim at
+[`src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml`](../src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml)
+under Apache 2.0 from [pollen-robotics/microduck](https://github.com/pollen-robotics/microduck),
+upstream commit `8904b65d3628`. Refresh it from there rather than editing it.
 
-What *is* documented: fifteen servos, a 50 Hz control loop, and an RK3566. The joint names and
-limits follow the usual biped convention — two five-DOF legs, a two-DOF neck, a head joint and a
-beak — which fits fifteen servos and matches what the robot visibly does. Neither the names nor the
-ordering is confirmed.
+**The head sits between the legs.** The order is the model's depth-first DOF order: left leg, then
+the neck and head, then the right leg. It is not leg-leg-head, and that is the single most
+dangerous thing on this page to get wrong - every index past the left ankle shifts, so code that
+thinks it is reading the right knee reads head yaw instead.
 
-### How to correct it
+**There is no beak joint.** The head carries a `mouth_tip` site but nothing actuates it, so the bill
+is fixed geometry. `DuckActionSlot.GroundPick` still picks things up; it does so by moving the whole
+head, which is what the robot does.
 
-```bash
-robotctl monitor --json > duck-joints.jsonl
-```
+**Hip yaw is asymmetric and mirrors between the legs** - the left runs −25..30 and the right
+−30..25. The same commanded value on both legs therefore does not give a symmetric stance: one leg
+has travel left when the other has reached its stop.
 
-`robotctl monitor` prints one line per tick with joint state in radians. Move each joint through its
-full travel by hand (with the servos relaxed) and take the extremes. Then:
+**Head yaw reaches ±170°**, far beyond a neck's usual travel. It is the joint that lets the duck
+look behind itself without moving its feet, and a table that clamps it to ±90 silently refuses half
+of what the robot can do.
 
-1. Replace the names and limits in `RobotCatalog.MicroDuck`.
-2. Run `dotnet run --project tools/PollenRobotics.Net.TemplateCheck` — the templates index joints by
-   name and will not compile if a name goes away.
-3. Re-run the tests: `EveryJointStaysInsideItsLimits` asserts the gait model stays legal, and it
-   will fail if the new limits are tighter than the gait's range.
-4. Update the *Written but not verified* table in [PROGRESS.md](../PROGRESS.md).
+### What this replaced
 
-**None of this affects how you drive the duck.** You send velocity intents and action slots; a
-policy owns the servos. The joint table matters for the simulation, for the instrument panels, and
-for anyone reading state — not for commanding.
+Every row above used to be a conservative guess, and it was wrong in ways that would have failed
+silently on hardware:
 
----
+| | Guessed | Actual |
+|---|---|---|
+| Joint count | 15 | 14 |
+| `beak` | 0..45° | does not exist |
+| Order | leg, leg, neck, head, beak | leg, neck+head, leg |
+| Names | `left.ankle_pitch`, `neck.yaw` | `left_ankle`, `head_yaw` |
+| `left_hip_yaw` | ±45 | −25..30 |
+| `left_knee` | −10..130 | ±90 |
+| `head_yaw` | ±90 | ±170 |
+
+The lesson worth keeping: the tests agreed with the wrong table, because they took the catalogue as
+the definition of truth. `MicroDuckCatalogueTests` now restates what the vendored model says, so the
+catalogue is checked against Pollen's file rather than against itself.
+
+### Other things the model settles
+
+The sites in `robot_walk.xml` corroborate parts of the SDK that were also assumptions: there is a
+`tof` site on the head shell (so `ReadTimeOfFlightAsync` is pointed at something real), an `imu` on
+the trunk and a second `head_imu`, and a `head_camera`. Link lengths come from the same file -
+thigh 35.8 mm, shin 42.0 mm, trunk at 120 mm - and are what the simulator's 3D model is built to.
 
 ## Reachy 2 — 21 joints
 
