@@ -4,7 +4,7 @@ What exists, what is verified, and what is not. The distinction in the last two 
 point of this file: a great deal here builds, runs and looks right without ever having touched a
 robot.
 
-Last updated: 10 September 2026. Published to nuget.org at 0.1.0, then 0.1.1, on the same day.
+Last updated: 6 October 2026. Published to nuget.org at 0.1.0 and 0.1.1 (10 September), then 0.2.0.
 
 ---
 
@@ -42,7 +42,7 @@ Run and observed working, in the simulation or on this machine.
 | Sample | `samples/DeskCompanion` runs end to end against the simulation - idles, notices a face, engages, parks on exit |
 | Packaging | `dotnet pack` produces 11 NuGet packages into `artifacts/packages`, IDs prefixed `Gravicode.` |
 | Package install | A fresh `dotnet new console` restored `Gravicode.PollenRobotics.Net.ReachyMini` and `.Simulation` and ran a head goto against the simulation |
-| Published | 11 packages at 0.1.1 on nuget.org, tag `pollenrobotics-v0.1.1`. 0.1.0 came from `b2ec200` |
+| Published | 11 packages at 0.2.0 on nuget.org, tag `pollenrobotics-v0.2.0`. 0.2.0 is a breaking release: the MicroDuck joint names, order and count all changed |
 | 0.1.1 verified live | Installed from nuget.org with no local feed: a generated project runs on a bare `dotnet run`, and a .csproj written by Jack's plugin restores |
 
 ---

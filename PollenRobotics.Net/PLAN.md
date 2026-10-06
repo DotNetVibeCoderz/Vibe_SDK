@@ -55,8 +55,10 @@ The SDK can move all three robots and see nothing. That is the largest gap.
 ## 0.6 — Ship it
 
 - [x] Move the tree into the `Vibe_SDK` repository, alongside `DepthAI.Net` and `Unitree.Net`.
-- [x] Publish 0.1.0, then 0.1.1, to NuGet — 11 packages each, tags `pollenrobotics-v0.1.0` and
-      `pollenrobotics-v0.1.1`.
+- [x] Publish 0.1.0, 0.1.1 and 0.2.0 to NuGet — 11 packages each. 0.2.0 is breaking: the MicroDuck
+      joint table was replaced with Pollen's own.
+- [x] Correct the MicroDuck joint table against upstream — done from `pollen-robotics/microduck`,
+      which turned out to publish its MuJoCo model under Apache 2.0.
       Procedure: [docs/publishing.md](docs/publishing.md).
 - [ ] Reserve the `Gravicode.*` ID prefix on nuget.org. Done after the first push rather than
       before it, so it is still outstanding: until it lands, the prefix is a convention and not a
