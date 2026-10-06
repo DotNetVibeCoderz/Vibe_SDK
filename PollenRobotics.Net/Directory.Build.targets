@@ -20,8 +20,15 @@
     <Description>$(Description) Unofficial and not affiliated with Pollen Robotics; version 0.x has not been validated against physical hardware.</Description>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <!-- Embedded, not iconUrl. iconUrl is deprecated and NuGet's prefix-reservation guidance asks
+         for the embedded form; a package carrying only iconUrl shows no icon in newer clients. -->
+    <PackageIcon>package-icon.png</PackageIcon>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)assets/package-icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>

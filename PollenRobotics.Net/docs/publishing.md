@@ -70,7 +70,7 @@ naming convention and anyone can publish under it.
 
 ## Version
 
-`VersionPrefix` in `Directory.Build.props`, currently `0.2.0`. All eleven packages ship in lockstep —
+`VersionPrefix` in `Directory.Build.props`, currently `0.2.1`. All eleven packages ship in lockstep —
 they reference each other by exact version, so a partial push leaves a version of one package that
 cannot restore.
 
@@ -88,6 +88,18 @@ For a prerelease, append a suffix rather than editing the prefix:
 ```bash
 dotnet pack -c Release -p:VersionSuffix=preview.1
 ```
+
+## The icon
+
+`assets/package-icon.png` is embedded in every package, and is generated:
+
+```bash
+python tools/package-icon.py
+```
+
+Embedded via `PackageIcon`, never `iconUrl` - the latter is deprecated, newer clients ignore it, and
+NuGet's prefix-reservation guidance asks for the embedded form. Regenerate rather than editing the
+PNG, for the same reason the robot models are generated.
 
 ## Pack
 
