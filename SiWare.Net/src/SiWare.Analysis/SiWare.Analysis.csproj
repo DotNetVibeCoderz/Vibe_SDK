@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Gravicode.SiWare.Analysis</PackageId>
+    <Title>SiWare.NET Analysis</Title>
+    <Description>Chemometrics for SiWare.NET built on GravicodeScience: Savitzky-Golay smoothing and derivatives, multiplicative scatter correction, PCA, PLS regression with cross-validated calibration, and DataFrame export. Created by Gravicode Studios, led by Kang Fadhil.</Description>
+    <PackageTags>siware;nir;spectroscopy;chemometrics;pca;pls;savitzky-golay</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Gravicode.Science.GraviNum" Version="1.4.0" />
+    <PackageReference Include="Gravicode.Science.GraviLearn" Version="1.4.0" />
+    <PackageReference Include="Gravicode.Science.GraviFrame" Version="1.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SiWare.Sdk\SiWare.Sdk.csproj" />
+  </ItemGroup>
+
+</Project>

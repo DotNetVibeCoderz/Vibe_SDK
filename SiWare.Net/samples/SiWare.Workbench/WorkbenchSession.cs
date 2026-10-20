@@ -2,7 +2,7 @@ using SiWare.Sdk;
 
 namespace SiWare.Workbench;
 
-public sealed class WorkbenchSession(ISpectrometer device) : IAsyncDisposable
+public sealed class WorkbenchSession(ISpectrometer device, InsightService insight) : IAsyncDisposable
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly object sync = new();
@@ -13,8 +13,18 @@ public sealed class WorkbenchSession(ISpectrometer device) : IAsyncDisposable
     private Spectrum? reference;
     public object Status()
     {
-        lock (sync) return new { connected = device.IsConnected, busy = active != null, device = device.Device,
-            calibration = new { dark = dark != null, reference = reference != null }, historyCount = history.Count, nativeAvailable = NativeDsp.IsAvailable, supportsDark = device.Device.IsSimulated };
+        lock (sync) return new
+        {
+            connected = device.IsConnected,
+            busy = active != null,
+            device = device.Device,
+            calibration = new { dark = dark != null, reference = reference != null },
+            historyCount = history.Count,
+            nativeAvailable = NativeDsp.IsAvailable,
+            supportsDark = device.Device.IsSimulated,
+            insightAvailable = insight.IsAvailable,
+            insightModel = insight.Model
+        };
     }
     public async Task<object> ConnectAsync(CancellationToken token)
     {
@@ -59,7 +69,7 @@ public sealed class WorkbenchSession(ISpectrometer device) : IAsyncDisposable
     public object[] History()
     {
         lock (sync) return order.Reverse().Select(id => history[id]).Select(s => (object)new
-            { s.Id, s.Kind, s.CapturedAt, points = s.Count, s.IsSimulated }).ToArray();
+        { s.Id, s.Kind, s.CapturedAt, points = s.Count, s.IsSimulated }).ToArray();
     }
     public Spectrum Process(Guid id, ProcessRequest request)
     {

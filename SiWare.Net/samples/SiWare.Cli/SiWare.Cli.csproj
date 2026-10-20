@@ -2,6 +2,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SiWare.Sdk\SiWare.Sdk.csproj" />
+    <ProjectReference Include="..\..\src\SiWare.Analysis\SiWare.Analysis.csproj" />
+    <ProjectReference Include="..\..\src\SiWare.Visualization\SiWare.Visualization.csproj" />
+    <ProjectReference Include="..\..\src\SiWare.Ai\SiWare.Ai.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -7,7 +7,7 @@
 | Perangkat | Versi | Dibutuhkan untuk |
 |---|---|---|
 | .NET SDK | 10.0.100 atau lebih baru (`global.json` mengikuti feature band terbaru) | Semua komponen |
-| Toolchain Rust | 1.85 atau lebih baru (edition 2024) | Kernel DSP native (opsional) |
+| Toolchain Rust | 1.87 atau lebih baru (edition 2024) | Kernel DSP native (opsional) |
 | Windows x64 | n/a | Hanya jembatan vendor; SDK, simulator, dan aplikasi bersifat lintas platform |
 | CPython 3.10 x64 | 3.10.x | Hanya jembatan vendor (modul vendor dibuat untuk `cp310-win_amd64`) |
 | Node.js + Playwright | Node 20+ | Hanya smoke test UI dan skrip tangkapan layar |
@@ -29,7 +29,7 @@ dotnet test SiWare.Net.slnx
 dotnet test tests/SiWare.Sdk.Tests --filter "FullyQualifiedName~ProcessingTests"
 ```
 
-Tanpa langkah 1 semuanya tetap berjalan: `NativeDsp.IsAvailable` bernilai `false`, dan aplikasi memakai implementasi managed. Build ulang proyek .NET setelah membangun library Rust agar library tersebut tersalin ke samping assembly.
+Rust opsional untuk menjalankan aplikasi, tetapi wajib untuk seluruh suite pengujian. Pengujian managed saja dapat dijalankan dengan `dotnet test --filter "FullyQualifiedName!~NativeDspTests"`. Tanpa langkah 1, `NativeDsp.IsAvailable` bernilai `false`, dan aplikasi memakai implementasi managed. Build ulang proyek .NET setelah membangun library Rust agar library tersebut tersalin ke samping assembly.
 
 ## Menjalankan Workbench
 

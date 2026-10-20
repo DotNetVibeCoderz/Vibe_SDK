@@ -85,7 +85,8 @@ CSV memakai kultur invarian dan format angka round-trip, dan wajib memiliki head
 | `IOException` | Galat worker atau perangkat vendor, respons tidak terduga |
 | `OperationCanceledException` | Dibatalkan oleh token, atau batas waktu vendor terlampaui |
 | `PlatformNotSupportedException` | DSP native tidak tersedia, atau jembatan vendor dipakai di luar Windows x64 |
-| `FormatException` | CSV atau JSON rusak |
+| `FormatException` | CSV rusak |
+| `System.Text.Json.JsonException` | JSON rusak |
 
 ## HTTP API Workbench
 
@@ -93,7 +94,7 @@ URL dasar bawaan: `http://localhost:5069`. Body JSON memakai camelCase, dan enum
 
 | Metode | Path | Body / query | Hasil |
 |---|---|---|---|
-| GET | `/api/status` | | `connected`, `busy`, `device`, `calibration {dark, reference}`, `historyCount`, `nativeAvailable`, `supportsDark` |
+| GET | `/api/status` | | `connected`, `busy`, `device`, `calibration {dark, reference}`, `historyCount`, `nativeAvailable`, `supportsDark`, `insightAvailable`, `insightModel` |
 | POST | `/api/connect` | | Status |
 | POST | `/api/disconnect` | | Status; kalibrasi dihapus |
 | POST | `/api/acquire` | `{ "kind": "Sample", "points": 257, "integrationMilliseconds": 100, "averages": 1 }` | `Spectrum` |
@@ -101,11 +102,14 @@ URL dasar bawaan: `http://localhost:5069`. Body JSON memakai camelCase, dan enum
 | GET | `/api/history` | | Terbaru lebih dulu: `id`, `kind`, `capturedAt`, `points`, `isSimulated` |
 | GET | `/api/spectra/{id}` | | `Spectrum` |
 | POST | `/api/process/{id}` | `{ "operation": "absorbance" \| "snv" \| "smooth", "window": 5 }` | `Spectrum` baru (masuk riwayat) |
+| POST | `/api/insight/{id}` | `{ "language": "en" \| "id" }` | `text`, `provider`, `model`, `disclaimer`, `isAiGenerated`, `facts`, `spectrumId`. Memerlukan LLM yang dikonfigurasi di server (lihat [Analisis, grafik, dan AI](analysis.md#workbench)) |
 | GET | `/api/export/{id}` | `?format=csv\|json` | Unduhan berkas |
 
-Galat dikembalikan sebagai `{ "error": "pesan" }` dengan kode `400` (validasi), `403` (POST lintas origin), `404` (spektrum tidak ada atau sudah kedaluwarsa), `409` (sibuk, belum terhubung, atau dibatalkan), atau `502` (galat perangkat atau worker). Hanya POST dari origin yang sama yang diterima, jadi panggil API dari halaman yang disajikan Workbench, dari klien non-browser, atau dari reverse proxy di host yang sama.
+Galat dikembalikan sebagai `{ "error": "pesan" }` dengan kode `400` (validasi), `403` (POST lintas origin), `404` (spektrum tidak ada atau sudah kedaluwarsa), `409` (sibuk, belum terhubung, atau dibatalkan), atau `502` (galat perangkat, worker, atau penyedia LLM). Hanya POST dari origin yang sama yang diterima, jadi panggil API dari halaman yang disajikan Workbench, dari klien non-browser, atau dari reverse proxy di host yang sama.
 
 ```sh
 curl -X POST http://localhost:5069/api/connect
 curl -X POST http://localhost:5069/api/acquire -H "Content-Type: application/json" -d '{"kind":"Sample"}'
 ```
+
+Akuisisi baru menyimpan metadata opsional `acquisition` (`points`, `integrationMilliseconds`, `averages`). JSON dan pemrosesan mempertahankannya. Kalibrasi menolak pengaturan berbeda, termasuk metadata yang hanya hilang pada satu sisi. Untuk berkas lama/CSV tanpa metadata, pemanggil harus memastikan kondisi akuisisinya sesuai.

@@ -1,4 +1,4 @@
-# Gravicode.SiWare.Sdk
+# SiWare.NET (Gravicode.SiWare.*)
 
 .NET 10 SDK for Si-Ware spectral sensors. Created by Gravicode Studios, led by Kang Fadhil.
 SDK .NET 10 untuk sensor spektral Si-Ware. Dibuat oleh Gravicode Studios dipimpin oleh Kang Fadhil.
@@ -27,7 +27,21 @@ var normalized = NativeDsp.IsAvailable
 File.WriteAllText("absorbance.csv", SpectrumFile.ToCsv(absorbance));
 ```
 
-## Contents / Isi paket
+## Packages / Paket
+
+| Package | Contents |
+|---|---|
+| `Gravicode.SiWare.Sdk` | Core SDK, simulator, vendor bridge, processing, optional Rust kernels. No third-party dependencies. |
+| `Gravicode.SiWare.Analysis` | Savitzky-Golay, MSC, PCA, PLS calibration with cross-validation (GravicodeScience). |
+| `Gravicode.SiWare.Visualization` | PNG/SVG/PDF charts of spectra, PCA, and calibration (Visual.Net / Matplotlib.Net). |
+| `Gravicode.SiWare.Ai` | Advisory LLM interpretation: Hugging Face router, OpenAI-compatible APIs, or local HF.Net models. |
+
+```csharp
+var calibration = CalibrationResult.Fit(new SpectralDataset(spectra, moisture, "moisture"));
+SpectrumCharts.PredictedVsMeasured(calibration).Save("pls.png");
+```
+
+## Core contents / Isi paket inti
 
 - `SiWare.Sdk.dll`: `Spectrum`, `ISpectrometer`, `SimulatedSpectrometer`, `VendorSpectrometer`, `SpectralProcessing`, `NativeDsp`, `SpectrumFile`.
 - `runtimes/win-x64/native/siware_dsp.dll`: optional Rust DSP kernels (C ABI v1). / Kernel DSP Rust opsional.
@@ -36,4 +50,4 @@ File.WriteAllText("absorbance.csv", SpectrumFile.ToCsv(absorbance));
 The Si-Ware vendor driver is proprietary and is **not** included. This package is not affiliated with Si-Ware Systems.
 Driver vendor Si-Ware bersifat proprietary dan **tidak** disertakan. Paket ini tidak berafiliasi dengan Si-Ware Systems.
 
-Full documentation / Dokumentasi lengkap: see the `docs/` folder of the SiWare.Net repository (`docs/en`, `docs/id`).
+Full documentation / Dokumentasi lengkap: https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/SiWare.Net (`docs/en`, `docs/id`).

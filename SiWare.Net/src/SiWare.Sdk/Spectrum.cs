@@ -15,18 +15,22 @@ public sealed class Spectrum
     public DateTimeOffset CapturedAt { get; }
     public MeasurementKind Kind { get; }
     public bool IsSimulated { get; }
+    public ScanOptions? Acquisition { get; }
     public IReadOnlyList<double> Wavelengths { get; }
     public IReadOnlyList<double> Values { get; }
     public int Count => Values.Count;
 
     [JsonConstructor]
     public Spectrum(Guid id, string deviceId, DateTimeOffset capturedAt, MeasurementKind kind,
-        bool isSimulated, IReadOnlyList<double> wavelengths, IReadOnlyList<double> values)
+        bool isSimulated, IReadOnlyList<double> wavelengths, IReadOnlyList<double> values, ScanOptions? acquisition = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deviceId);
         ArgumentNullException.ThrowIfNull(wavelengths);
         ArgumentNullException.ThrowIfNull(values);
         if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
+        acquisition?.Validate();
+        if (acquisition != null && acquisition.Points != wavelengths.Count)
+            throw new ArgumentException("Acquisition point count does not match the spectrum.");
         if (wavelengths.Count < 2 || wavelengths.Count > 1_000_000 || wavelengths.Count != values.Count)
             throw new ArgumentException("Spectrum requires 2–1,000,000 matching wavelength/value pairs.");
         var x = wavelengths.ToArray();
@@ -39,12 +43,13 @@ public sealed class Spectrum
         CapturedAt = capturedAt;
         Kind = kind;
         IsSimulated = isSimulated;
+        Acquisition = acquisition;
         Wavelengths = Array.AsReadOnly(x);
         Values = Array.AsReadOnly(y);
     }
 
     public Spectrum WithValues(double[] values, MeasurementKind kind) =>
-        new(Guid.NewGuid(), DeviceId, CapturedAt, kind, IsSimulated, Wavelengths, values);
+        new(Guid.NewGuid(), DeviceId, CapturedAt, kind, IsSimulated, Wavelengths, values, Acquisition);
 }
 
 public static class SpectrumFile

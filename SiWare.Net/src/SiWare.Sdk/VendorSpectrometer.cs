@@ -19,7 +19,16 @@ public sealed class VendorSpectrometer(VendorBridgeOptions options) : ISpectrome
     private long? selectedId;
     private bool disposed;
     public DeviceInfo Device { get; private set; } = new("vendor", "Si-Ware vendor driver", "Vendor / network", false);
-    public bool IsConnected => process is { HasExited: false } && selectedId.HasValue;
+    public bool IsConnected
+    {
+        get
+        {
+            // Status polling may overlap process cleanup after a cancellation.
+            var worker = process;
+            try { return worker != null && selectedId.HasValue && !worker.HasExited; }
+            catch (InvalidOperationException) { return false; }
+        }
+    }
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
@@ -32,9 +41,13 @@ public sealed class VendorSpectrometer(VendorBridgeOptions options) : ISpectrome
             ValidateOptions();
             var start = new ProcessStartInfo(options.PythonExecutable)
             {
-                UseShellExecute = false, CreateNoWindow = true,
-                RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
-                StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
             };
             foreach (var value in new[] { "-u", options.WorkerScript, "--driver", options.DriverModule,
                 "--wavenumber-unit", "cm-1", "--scan-time-unit", options.ScanTimeUnit, "--mode", options.Mode.ToString(System.Globalization.CultureInfo.InvariantCulture) })
@@ -69,16 +82,25 @@ public sealed class VendorSpectrometer(VendorBridgeOptions options) : ISpectrome
         {
             ObjectDisposedException.ThrowIf(disposed, this);
             if (!IsConnected) throw new InvalidOperationException("Connect to a vendor device first.");
-            var result = await RequestAsync(new { id = ++sequence, op = "acquire", kind = kind.ToString(),
-                points = scan.Points, integrationMilliseconds = scan.IntegrationMilliseconds, averages = scan.Averages, deviceId = selectedId }, cancellationToken).ConfigureAwait(false);
+            var result = await RequestAsync(new
+            {
+                id = ++sequence,
+                op = "acquire",
+                kind = kind.ToString(),
+                points = scan.Points,
+                integrationMilliseconds = scan.IntegrationMilliseconds,
+                averages = scan.Averages,
+                deviceId = selectedId
+            }, cancellationToken).ConfigureAwait(false);
             if (result.GetProperty("wavenumberUnit").GetString() != "cm-1") throw new IOException("Unexpected spectral axis unit.");
             if (result.GetProperty("deviceId").GetString() != Device.Id) throw new IOException("Worker returned a different sensor identity.");
+            if (result.GetProperty("kind").GetString() != kind.ToString()) throw new IOException("Worker returned a different measurement kind.");
             var wavenumbers = result.GetProperty("wavenumbers").Deserialize<double[]>() ?? throw new IOException("Missing spectral axis.");
             var values = result.GetProperty("values").Deserialize<double[]>() ?? throw new IOException("Missing spectrum values.");
             if (wavenumbers.Length != scan.Points || values.Length != scan.Points) throw new IOException("Unexpected spectrum length.");
             var pairs = wavenumbers.Select((w, i) => (nm: 10_000_000 / w, value: values[i])).OrderBy(p => p.nm).ToArray();
             return new(Guid.NewGuid(), Device.Id, DateTimeOffset.UtcNow, kind, false,
-                pairs.Select(p => p.nm).ToArray(), pairs.Select(p => p.value).ToArray());
+                pairs.Select(p => p.nm).ToArray(), pairs.Select(p => p.value).ToArray(), scan);
         }
         catch { await StopAsync().ConfigureAwait(false); throw; }
         finally { gate.Release(); }

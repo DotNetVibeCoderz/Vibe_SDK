@@ -13,7 +13,9 @@ public class DeviceTests
     }
 
     [Theory]
-    [InlineData(MeasurementKind.Sample)] [InlineData(MeasurementKind.Dark)] [InlineData(MeasurementKind.Reference)]
+    [InlineData(MeasurementKind.Sample)]
+    [InlineData(MeasurementKind.Dark)]
+    [InlineData(MeasurementKind.Reference)]
     public async Task Acquire_Connected_ReturnsRequestedGridAndProvenance(MeasurementKind kind)
     {
         await using var device = new SimulatedSpectrometer();
@@ -77,9 +79,12 @@ public class DeviceTests
     }
 
     [Theory]
-    [InlineData(1, 100, 1)] [InlineData(4097, 100, 1)]
-    [InlineData(257, 0, 1)] [InlineData(257, 60001, 1)]
-    [InlineData(257, 100, 0)] [InlineData(257, 100, 101)]
+    [InlineData(1, 100, 1)]
+    [InlineData(4097, 100, 1)]
+    [InlineData(257, 0, 1)]
+    [InlineData(257, 60001, 1)]
+    [InlineData(257, 100, 0)]
+    [InlineData(257, 100, 101)]
     public async Task Acquire_InvalidOptions_Throws(int points, int integration, int averages)
     {
         await using var device = new SimulatedSpectrometer();

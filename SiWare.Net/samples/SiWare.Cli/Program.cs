@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SiWare.Sdk;
 
+Console.OutputEncoding = System.Text.Encoding.UTF8; // R², ×, and Indonesian AI answers on Windows consoles
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
 try
@@ -13,6 +14,7 @@ try
         if (index + 1 >= args.Length) throw new ArgumentException($"Missing value for {name}.");
         return args[index + 1];
     }
+    bool Flag(string name) => args.Contains(name);
     if (command == "help")
     {
         Console.WriteLine("SiWare.NET | Gravicode Studios dipimpin oleh Kang Fadhil\n" +
@@ -21,6 +23,7 @@ try
             "  discover --vendor-config config.json\n" +
             "  process --input spectrum.json --operation snv|smooth [--output result.json]\n" +
             "  info                         Report .NET and Rust availability\n" +
+            AnalysisCommands.Help + "\n" +
             "Default acquisition uses explicitly labelled simulation. Ctrl+C cancels.");
         return 0;
     }
@@ -30,11 +33,14 @@ try
         var input = SpectrumFile.FromJson(await File.ReadAllTextAsync(Option("--input") ?? throw new ArgumentException("--input is required."), cancellation.Token));
         var result = Option("--operation") switch
         {
-            "snv" => SpectralProcessing.StandardNormalVariate(input), "smooth" => SpectralProcessing.Smooth(input),
+            "snv" => SpectralProcessing.StandardNormalVariate(input),
+            "smooth" => SpectralProcessing.Smooth(input),
             _ => throw new ArgumentException("--operation must be snv or smooth.")
         };
         await Save(result, Option("--output") ?? "processed.json", cancellation.Token); return 0;
     }
+    var analysisResult = await AnalysisCommands.RunAsync(command, Option, Flag, cancellation.Token);
+    if (analysisResult >= 0) return analysisResult;
     if (command is not ("demo" or "scan" or "discover")) throw new ArgumentException("Unknown command. Use help.");
     var vendor = Option("--vendor-config");
     if (command == "demo" && vendor != null) throw new ArgumentException("Demo is simulation-only. Use scan for hardware.");
@@ -62,7 +68,8 @@ try
     Console.WriteLine($"Exported {absorbance.Count} points to {directory}"); return 0;
 }
 catch (OperationCanceledException) { Console.Error.WriteLine("Operation cancelled or timed out."); return 2; }
-catch (Exception ex) when (ex is ArgumentException or IOException or InvalidOperationException or NotSupportedException or JsonException)
+catch (Exception ex) when (ex is ArgumentException or IOException or InvalidOperationException or NotSupportedException or JsonException
+    or FormatException or ArithmeticException or HttpRequestException)
 { Console.Error.WriteLine(ex.Message); return 1; }
 
 static async Task Save(Spectrum spectrum, string path, CancellationToken token)

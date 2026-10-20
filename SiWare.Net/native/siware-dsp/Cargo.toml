@@ -2,6 +2,7 @@
 name = "siware-dsp"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.87"
 description = "Dependency-free spectral processing kernels for SiWare.Net"
 license = "MIT"
 

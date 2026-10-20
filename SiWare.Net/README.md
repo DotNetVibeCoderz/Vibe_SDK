@@ -21,18 +21,21 @@ SDK .NET 10, jembatan driver, DSP Rust, dan aplikasi contoh untuk sensor spektra
 | Component | Path | Purpose |
 |---|---|---|
 | SDK | `src/SiWare.Sdk` | `Spectrum` model, `ISpectrometer` with simulator and vendor bridge, calibration and processing, JSON/CSV exchange |
+| Analysis | `src/SiWare.Analysis` | Chemometrics on GravicodeScience: Savitzky-Golay, MSC, PCA, PLS with cross-validation, DataFrame export |
+| Visualization | `src/SiWare.Visualization` | Headless PNG/SVG/PDF charts with Visual.Net (Matplotlib.Net) |
+| AI | `src/SiWare.Ai` | Advisory interpretation via the Hugging Face router, any OpenAI-compatible API, or a local HF.Net model |
 | Rust DSP | `native/siware-dsp` | Dependency-free SNV, smoothing, and absorbance kernels behind a versioned C ABI |
 | Workbench | `samples/SiWare.Workbench` | Web app: connect, calibrate, capture, plot, process, history, export (EN/ID) |
-| CLI | `samples/SiWare.Cli` | Scriptable acquisition, demo pipeline, and file processing |
+| CLI | `samples/SiWare.Cli` | Scriptable acquisition, demo pipeline, PCA/PLS analysis, charts, and AI explanations |
 | Vendor bridge | `scripts/vendor_bridge.py` | JSON-lines worker that hosts the proprietary `pyDriver.pyd` in CPython 3.10 |
-| Tests | `tests/SiWare.Sdk.Tests`, `native/siware-dsp/tests` | 86 xUnit tests, 9 Rust tests, Playwright UI smoke test |
+| Tests | `tests/SiWare.Sdk.Tests`, `tests/SiWare.Analysis.Tests`, `native/siware-dsp/tests` | 114 xUnit tests, 9 Rust tests, Playwright UI smoke test |
 
 ### Quick start
 
-Requirements: .NET SDK 10.0.100+, Rust 1.85+ (optional, for native kernels), Windows x64 for the vendor bridge.
+Requirements: .NET SDK 10.0.100+, Rust 1.87+ (optional, for native kernels), Windows x64 for the vendor bridge.
 
 ```sh
-cargo build --release --manifest-path native/siware-dsp/Cargo.toml   # optional native DSP
+cargo build --release --manifest-path native/siware-dsp/Cargo.toml   # required for the full test suite
 dotnet build SiWare.Net.slnx
 dotnet test SiWare.Net.slnx
 dotnet run --project samples/SiWare.Workbench                       # http://localhost:5069
@@ -54,6 +57,7 @@ var absorbance = SpectralProcessing.Absorbance(sample, dark, reference);
 - [Getting started](docs/en/getting-started.md): install, build, run the apps, build the NuGet package
 - [Architecture](docs/en/architecture.md): components, data flow, design decisions
 - [API guide](docs/en/api.md): SDK types, processing, file formats, Workbench HTTP API
+- [Analysis, charts, and AI](docs/en/analysis.md): PCA, PLS calibration, preprocessing, plots, LLM interpretation
 - [Vendor integration](docs/en/vendor-integration.md): connecting a real Si-Ware sensor through the vendor driver
 - [Hardware validation](docs/en/hardware-validation.md): what is verified, what is not, and the release checklist
 - Research evidence: [vendor API](docs/research/vendor-api.md), [driver static inspection](docs/research/driver-static.md)
@@ -65,21 +69,25 @@ var absorbance = SpectralProcessing.Absorbance(sample, dark, reference);
 | Komponen | Lokasi | Fungsi |
 |---|---|---|
 | SDK | `src/SiWare.Sdk` | Model `Spectrum`, `ISpectrometer` dengan simulator dan jembatan vendor, kalibrasi dan pemrosesan, ekspor/impor JSON/CSV |
+| Analisis | `src/SiWare.Analysis` | Kemometrik dengan GravicodeScience: Savitzky-Golay, MSC, PCA, PLS dengan validasi silang, ekspor DataFrame |
+| Visualisasi | `src/SiWare.Visualization` | Grafik PNG/SVG/PDF tanpa jendela dengan Visual.Net (Matplotlib.Net) |
+| AI | `src/SiWare.Ai` | Interpretasi bersifat saran lewat router Hugging Face, API kompatibel OpenAI, atau model lokal HF.Net |
 | DSP Rust | `native/siware-dsp` | Kernel SNV, penghalusan, dan absorbansi tanpa dependensi, melalui C ABI berversi |
 | Workbench | `samples/SiWare.Workbench` | Aplikasi web: hubungkan, kalibrasi, rekam, grafik, proses, riwayat, ekspor (EN/ID) |
-| CLI | `samples/SiWare.Cli` | Akuisisi lewat skrip, pipeline demo, dan pemrosesan berkas |
+| CLI | `samples/SiWare.Cli` | Akuisisi lewat skrip, pipeline demo, analisis PCA/PLS, grafik, dan penjelasan AI |
 | Jembatan vendor | `scripts/vendor_bridge.py` | Worker JSON-lines yang menjalankan `pyDriver.pyd` proprietary di CPython 3.10 |
-| Pengujian | `tests/SiWare.Sdk.Tests`, `native/siware-dsp/tests` | 86 tes xUnit, 9 tes Rust, smoke test UI Playwright |
+| Pengujian | `tests/SiWare.Sdk.Tests`, `tests/SiWare.Analysis.Tests`, `native/siware-dsp/tests` | 114 tes xUnit, 9 tes Rust, smoke test UI Playwright |
 
 ### Mulai cepat
 
-Kebutuhan: .NET SDK 10.0.100+, Rust 1.85+ (opsional, untuk kernel native), Windows x64 untuk jembatan vendor. Perintah build dan contoh kode sama seperti bagian English di atas.
+Kebutuhan: .NET SDK 10.0.100+, Rust 1.87+ (opsional, untuk kernel native), Windows x64 untuk jembatan vendor. Perintah build dan contoh kode sama seperti bagian English di atas.
 
 ### Dokumentasi
 
 - [Memulai](docs/id/getting-started.md): instalasi, build, menjalankan aplikasi, membuat paket NuGet
 - [Arsitektur](docs/id/architecture.md): komponen, alur data, keputusan desain
 - [Panduan API](docs/id/api.md): tipe SDK, pemrosesan, format berkas, HTTP API Workbench
+- [Analisis, grafik, dan AI](docs/id/analysis.md): PCA, kalibrasi PLS, prapemrosesan, grafik, interpretasi LLM
 - [Integrasi vendor](docs/id/vendor-integration.md): menghubungkan sensor Si-Ware nyata melalui driver vendor
 - [Validasi perangkat keras](docs/id/hardware-validation.md): apa yang sudah dan belum terverifikasi, serta daftar periksa rilis
 
@@ -88,6 +96,10 @@ Kebutuhan: .NET SDK 10.0.100+, Rust 1.85+ (opsional, untuk kernel native), Windo
 | Workbench (Bahasa Indonesia) | Mobile | CLI |
 |---|---|---|
 | ![Workbench ID](docs/screenshots/workbench-desktop-id.png) | ![Mobile](docs/screenshots/workbench-mobile-id.png) | ![CLI](docs/screenshots/cli.png) |
+
+| PCA scores / Skor PCA | PLS calibration / Kalibrasi PLS | Spectra / Spektrum |
+|---|---|---|
+| ![PCA](docs/screenshots/analysis-pca-scores.png) | ![PLS](docs/screenshots/analysis-pls.png) | ![Overlay](docs/screenshots/analysis-overlay.png) |
 
 ## License / Lisensi
 

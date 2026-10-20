@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Gravicode.SiWare.Visualization</PackageId>
+    <Title>SiWare.NET Visualization</Title>
+    <Description>Publication-quality spectrum, PCA, and calibration charts for SiWare.NET, rendered headlessly to PNG, SVG, or PDF with Visual.Net (Matplotlib.Net). Created by Gravicode Studios, led by Kang Fadhil.</Description>
+    <PackageTags>siware;nir;spectroscopy;chart;plot;matplotlib;visualization</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Gravicode.Matplotlib.Net" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SiWare.Analysis\SiWare.Analysis.csproj" />
+  </ItemGroup>
+
+</Project>

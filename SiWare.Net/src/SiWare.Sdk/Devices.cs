@@ -70,7 +70,7 @@ public sealed class SimulatedSpectrometer(int seed = 42) : ISpectrometer
                     y[i] += (intensity + (random.NextDouble() - 0.5) * 4) / options.Averages;
                 }
             }
-            return new(Guid.NewGuid(), Device.Id, DateTimeOffset.UtcNow, kind, true, x, y);
+            return new(Guid.NewGuid(), Device.Id, DateTimeOffset.UtcNow, kind, true, x, y, options);
         }
         finally { gate.Release(); }
     }

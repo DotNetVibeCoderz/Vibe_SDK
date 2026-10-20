@@ -20,7 +20,10 @@ public class ProcessingTests
     }
 
     [Theory]
-    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
     public void Absorbance_MismatchedCalibration_Throws(int mismatch)
     {
         var reference = mismatch switch
@@ -41,8 +44,10 @@ public class ProcessingTests
         Assert.Throws<ArgumentException>(() => SpectralProcessing.Absorbance(Create(kind: sample), Create(kind: dark), Create(kind: reference)));
 
     [Theory]
-    [InlineData(10, 10, 20)] [InlineData(9, 10, 20)]
-    [InlineData(20, 10, 10)] [InlineData(20, 10, 9)]
+    [InlineData(10, 10, 20)]
+    [InlineData(9, 10, 20)]
+    [InlineData(20, 10, 10)]
+    [InlineData(20, 10, 9)]
     public void Absorbance_NonpositiveCorrectedIntensity_Throws(double sample, double dark, double reference) =>
         Assert.Throws<ArgumentException>(() => SpectralProcessing.Absorbance(Create([sample, sample, sample]),
             Create([dark, dark, dark], MeasurementKind.Dark), Create([reference, reference, reference], MeasurementKind.Reference)));
@@ -100,7 +105,10 @@ public class ProcessingTests
     }
 
     [Theory]
-    [InlineData(0)] [InlineData(-1)] [InlineData(2)] [InlineData(5)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(2)]
+    [InlineData(5)]
     public void Smooth_InvalidWindow_Throws(int window) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => SpectralProcessing.Smooth(Create(), window));
 }

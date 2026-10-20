@@ -51,6 +51,11 @@ try {
   await page.keyboard.press('ArrowRight');
   assert.notEqual(await page.locator('#cursorX').textContent(), '— nm');
   await clickRequest('absorbance', '/api/process/');
+  // Without an LLM configured the insight button must stay disabled and explain why.
+  if (!(await (await page.request.get(`${base}/api/status`)).json()).insightAvailable) {
+    assert.equal(await page.locator('#insightButton').isDisabled(), true);
+    assert.match(await page.locator('#insightButton').getAttribute('title'), /HF_TOKEN/);
+  }
   await shoot('workbench-desktop.png', 1440);
   await clickRequest('snv', '/api/process/');
   assert.match(await page.locator('#yLabel').textContent(), /SNV/);

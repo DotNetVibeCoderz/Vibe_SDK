@@ -4,9 +4,13 @@
     <Project Path="samples/SiWare.Workbench/SiWare.Workbench.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/SiWare.Ai/SiWare.Ai.csproj" />
+    <Project Path="src/SiWare.Analysis/SiWare.Analysis.csproj" />
     <Project Path="src/SiWare.Sdk/SiWare.Sdk.csproj" />
+    <Project Path="src/SiWare.Visualization/SiWare.Visualization.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SiWare.Analysis.Tests/SiWare.Analysis.Tests.csproj" />
     <Project Path="tests/SiWare.Sdk.Tests/SiWare.Sdk.Tests.csproj" />
   </Folder>
 </Solution>

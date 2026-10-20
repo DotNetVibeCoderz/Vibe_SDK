@@ -44,7 +44,7 @@ if (NativeDsp.IsAvailable)
     snv = NativeDsp.StandardNormalVariate(NativeDsp.Smooth(absorbance, 5));
 ```
 
-- `Absorbance` requires the kinds `Sample`, `Dark`, and `Reference` in that order, from the same device and provenance and on the same wavelength grid (checked by `SpectralProcessing.Match`). Every corrected signal must be positive; otherwise an `ArgumentException` names the failing point.
+- `Absorbance` requires the kinds `Sample`, `Dark`, and `Reference` in that order, from the same device, provenance, acquisition settings (when present), and wavelength grid (checked by `SpectralProcessing.Match`). Every corrected signal must be positive; otherwise an `ArgumentException` names the failing point.
 - Every operation returns a new `Spectrum` with a new `Id`. Inputs are never modified.
 - `NativeDsp` throws `PlatformNotSupportedException` when the library is missing. It never falls back to managed code.
 
@@ -85,7 +85,8 @@ CSV uses invariant culture and round-trip number formatting, and must have exact
 | `IOException` | Vendor worker or device failure, unexpected response |
 | `OperationCanceledException` | Cancelled by the token, or the vendor timeout elapsed |
 | `PlatformNotSupportedException` | Native DSP missing, or vendor bridge used outside Windows x64 |
-| `FormatException` | Malformed CSV or JSON |
+| `FormatException` | Malformed CSV |
+| `System.Text.Json.JsonException` | Malformed JSON |
 
 ## Workbench HTTP API
 
@@ -93,7 +94,7 @@ Base URL: `http://localhost:5069` by default. JSON bodies use camelCase, and enu
 
 | Method | Path | Body / query | Result |
 |---|---|---|---|
-| GET | `/api/status` | | `connected`, `busy`, `device`, `calibration {dark, reference}`, `historyCount`, `nativeAvailable`, `supportsDark` |
+| GET | `/api/status` | | `connected`, `busy`, `device`, `calibration {dark, reference}`, `historyCount`, `nativeAvailable`, `supportsDark`, `insightAvailable`, `insightModel` |
 | POST | `/api/connect` | | Status |
 | POST | `/api/disconnect` | | Status; clears calibration |
 | POST | `/api/acquire` | `{ "kind": "Sample", "points": 257, "integrationMilliseconds": 100, "averages": 1 }` | `Spectrum` |
@@ -101,11 +102,14 @@ Base URL: `http://localhost:5069` by default. JSON bodies use camelCase, and enu
 | GET | `/api/history` | | Newest first: `id`, `kind`, `capturedAt`, `points`, `isSimulated` |
 | GET | `/api/spectra/{id}` | | `Spectrum` |
 | POST | `/api/process/{id}` | `{ "operation": "absorbance" \| "snv" \| "smooth", "window": 5 }` | New `Spectrum` (added to history) |
+| POST | `/api/insight/{id}` | `{ "language": "en" \| "id" }` | `text`, `provider`, `model`, `disclaimer`, `isAiGenerated`, `facts`, `spectrumId`. Requires an LLM configured on the server (see [Analysis, charts, and AI](analysis.md#workbench)) |
 | GET | `/api/export/{id}` | `?format=csv\|json` | File download |
 
-Errors return `{ "error": "message" }` with `400` (validation), `403` (cross-origin POST), `404` (unknown or expired spectrum), `409` (busy, not connected, or cancelled), or `502` (device or worker failure). Only same-origin POSTs are accepted, so call the API from the served page, a non-browser client, or a reverse proxy on the same host.
+Errors return `{ "error": "message" }` with `400` (validation), `403` (cross-origin POST), `404` (unknown or expired spectrum), `409` (busy, not connected, or cancelled), or `502` (device, worker, or LLM provider failure). Only same-origin POSTs are accepted, so call the API from the served page, a non-browser client, or a reverse proxy on the same host.
 
 ```sh
 curl -X POST http://localhost:5069/api/connect
 curl -X POST http://localhost:5069/api/acquire -H "Content-Type: application/json" -d '{"kind":"Sample"}'
 ```
+
+New acquisitions include optional `acquisition` metadata (`points`, `integrationMilliseconds`, `averages`). JSON and processing preserve it. Calibration rejects differing settings, including a missing value on only one side. Legacy/CSV inputs without metadata require the caller to verify matching acquisition conditions.

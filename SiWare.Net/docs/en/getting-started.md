@@ -7,7 +7,7 @@
 | Tool | Version | Needed for |
 |---|---|---|
 | .NET SDK | 10.0.100 or later (`global.json` rolls forward to the latest feature band) | Everything |
-| Rust toolchain | 1.85 or later (edition 2024) | Optional native DSP kernels |
+| Rust toolchain | 1.87 or later (edition 2024) | Optional native DSP kernels |
 | Windows x64 | n/a | Only the vendor bridge; the SDK, simulator, and apps are cross-platform |
 | CPython 3.10 x64 | 3.10.x | Only the vendor bridge (the vendor module is built for `cp310-win_amd64`) |
 | Node.js + Playwright | Node 20+ | Only UI smoke tests and screenshot scripts |
@@ -29,7 +29,7 @@ dotnet test SiWare.Net.slnx
 dotnet test tests/SiWare.Sdk.Tests --filter "FullyQualifiedName~ProcessingTests"
 ```
 
-If you skip step 1, everything still works: `NativeDsp.IsAvailable` returns `false`, and the apps use the managed implementations. Rebuild the .NET projects after building the Rust library so that it is copied next to the assemblies.
+Rust is optional for running the apps, but required for the full test suite. For managed-only tests, use `dotnet test --filter "FullyQualifiedName!~NativeDspTests"`. If you skip step 1, `NativeDsp.IsAvailable` returns `false`, and the apps use the managed implementations. Rebuild the .NET projects after building the Rust library so that it is copied next to the assemblies.
 
 ## Run the Workbench
 

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Gravicode.SiWare.Ai</PackageId>
+    <Title>SiWare.NET AI</Title>
+    <Description>Advisory natural-language interpretation of SiWare.NET spectra and chemometric results: Hugging Face router (or any OpenAI-compatible endpoint) and local models through HF.Net. Facts are computed deterministically; model output is labelled AI-generated. Created by Gravicode Studios, led by Kang Fadhil.</Description>
+    <PackageTags>siware;nir;spectroscopy;llm;huggingface;ai</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Gravicode.HFNet.GraviTransformers" Version="0.11.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SiWare.Analysis\SiWare.Analysis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SiWare.Analysis.Tests" />
+  </ItemGroup>
+
+</Project>

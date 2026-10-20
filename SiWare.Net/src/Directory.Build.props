@@ -1,0 +1,22 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Shared NuGet metadata for every Gravicode.SiWare.* package. -->
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Public members are documented where behavior is non-obvious; missing summaries are not build errors. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2026 Gravicode Studios</Copyright>
+    <RepositoryUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/SiWare.Net</PackageProjectUrl>
+    <PackageReleaseNotes>Preview. Simulator, processing, and analysis are tested; vendor hardware compatibility is not yet validated on a physical device.</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)SiWare.Sdk/icon.png" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)../docs/nuget/README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+</Project>

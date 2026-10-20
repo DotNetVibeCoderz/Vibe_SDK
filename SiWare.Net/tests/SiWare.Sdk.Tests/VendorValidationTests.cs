@@ -61,7 +61,10 @@ public class VendorValidationTests
     }
 
     [Theory]
-    [InlineData(1)] [InlineData(2)] [InlineData(256)] [InlineData(4097)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(256)]
+    [InlineData(4097)]
     public async Task Acquire_UnsupportedGrid_FailsBeforeWorkerLaunch(int points)
     {
         await using var device = new VendorSpectrometer(InvalidPaths);

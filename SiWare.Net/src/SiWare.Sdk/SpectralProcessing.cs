@@ -65,6 +65,8 @@ public static class SpectralProcessing
 
     public static void Match(Spectrum a, Spectrum b)
     {
+        if (a.Acquisition != b.Acquisition)
+            throw new ArgumentException("Calibration acquisition settings differ or are missing from one spectrum.");
         if (a.DeviceId != b.DeviceId || a.IsSimulated != b.IsSimulated || a.Count != b.Count)
             throw new ArgumentException("Calibration must use the same device, provenance, and wavelength grid.");
         for (var i = 0; i < a.Count; i++)

@@ -1,0 +1,5 @@
+# Keep LF in the working tree to match .editorconfig and dotnet format, regardless of core.autocrlf.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.dll binary

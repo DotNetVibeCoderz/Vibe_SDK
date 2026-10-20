@@ -8,6 +8,7 @@ builder.Services.AddSingleton<ISpectrometer>(_ => vendorConfig == null ? new Sim
     new VendorSpectrometer(System.Text.Json.JsonSerializer.Deserialize<VendorBridgeOptions>(File.ReadAllText(vendorConfig), SpectrumFile.JsonOptions)
         ?? throw new ArgumentException("Invalid vendor configuration.")));
 builder.Services.AddSingleton<WorkbenchSession>();
+builder.Services.AddSingleton(new InsightService(new HttpClient()));
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 64 * 1024);
 var app = builder.Build();
@@ -23,11 +24,11 @@ app.Use(async (context, next) =>
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'";
     try { await next(context); }
-    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException or OperationCanceledException or BadHttpRequestException or IOException or NotSupportedException)
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException or OperationCanceledException or BadHttpRequestException or IOException or NotSupportedException or HttpRequestException)
     {
         if (context.Response.HasStarted) throw;
         // Not 408: browsers transparently resend a request answered with 408, which would rerun a cancelled acquisition.
-        context.Response.StatusCode = ex switch { KeyNotFoundException => 404, InvalidOperationException or OperationCanceledException => 409, IOException => 502, _ => 400 };
+        context.Response.StatusCode = ex switch { KeyNotFoundException => 404, InvalidOperationException or OperationCanceledException => 409, IOException or HttpRequestException => 502, _ => 400 };
         await context.Response.WriteAsJsonAsync(new { error = ex is OperationCanceledException ? "Acquisition cancelled or timed out." : ex.Message }, CancellationToken.None);
     }
 });
@@ -39,6 +40,7 @@ app.MapPost("/api/acquire", (AcquireRequest r, WorkbenchSession s, CancellationT
 app.MapPost("/api/cancel", (WorkbenchSession s) => { s.Cancel(); return Results.Ok(); });
 app.MapGet("/api/history", (WorkbenchSession s) => s.History());
 app.MapGet("/api/spectra/{id:guid}", (Guid id, WorkbenchSession s) => s.Get(id));
+app.MapPost("/api/insight/{id:guid}", (Guid id, InsightRequest r, WorkbenchSession s, InsightService i, CancellationToken ct) => i.ExplainAsync(s.Get(id), r.Language, ct));
 app.MapPost("/api/process/{id:guid}", (Guid id, ProcessRequest r, WorkbenchSession s) => s.Process(id, r));
 app.MapGet("/api/export/{id:guid}", (Guid id, string? format, WorkbenchSession s) =>
 {
