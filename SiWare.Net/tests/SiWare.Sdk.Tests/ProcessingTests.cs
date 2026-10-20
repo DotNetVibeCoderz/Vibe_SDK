@@ -19,6 +19,18 @@ public class ProcessingTests
         Assert.True(result.IsSimulated);
     }
 
+    [Fact]
+    public void AbsorbanceWithoutDark_UsesReferenceOnly()
+    {
+        var sample = Create([100, 10, 1]);
+        var result = SpectralProcessing.Absorbance(sample, Create([100, 100, 100], MeasurementKind.Reference));
+        Assert.Equal(new double[] { 0, 1, 2 }, result.Values);
+        Assert.Equal(MeasurementKind.Absorbance, result.Kind);
+        Assert.Throws<ArgumentException>(() => SpectralProcessing.Absorbance(sample, Create([1, 2, 3])));
+        Assert.Throws<ArgumentException>(() => SpectralProcessing.Absorbance(sample, Create([100, -1, 100], MeasurementKind.Reference)));
+        Assert.Throws<ArgumentException>(() => SpectralProcessing.Absorbance(sample, Create(kind: MeasurementKind.Reference, device: "another-device")));
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(1)]

@@ -13,11 +13,13 @@ Halaman ini mencatat apa yang sudah dibuktikan, apa yang belum, dan apa yang har
 | `Error.value() == 0` berarti sukses | **Terverifikasi** | Objek `Error()` berisi data saja |
 | Protokol jembatan, validasi, batas waktu, pembersihan proses | **Diuji** | `vendor_bridge.py --self-test`, `VendorValidationTests` |
 | Simulator, model, pemrosesan, format berkas, ABI Rust | **Diuji** | 86 tes xUnit, 9 tes Rust, smoke test UI |
-| Satuan `scan_time` dan arti `mode` | **Belum diketahui** | Harus berasal dari dokumentasi Si-Ware |
-| Satuan sumbu `wvn` adalah cm⁻¹ | **Diasumsikan, dikonfirmasi pengguna** | Flag konfigurasi wajib |
+| `scan_time` dalam detik | **Inferensi kuat** | UI vendor memberi label "sec"; semua pemindaian contoh vendor memakai 2 ([driver-ghidra.md](../research/driver-ghidra.md)) |
+| Arti `mode` | **Belum diketahui** | Hanya terkait dengan format permintaan "default" dan "compatibility" pada driver |
+| Transport: penemuan lewat UDP, lalu TCP melalui USB RNDIS/NCM atau Wi-Fi | **Teramati** | String driver dan berkas INF yang disertakan |
+| Satuan sumbu `wvn` adalah cm⁻¹ | **Teramati pada data vendor** | 138 spektrum contoh vendor mencakup 3921,57–7407,41 cm⁻¹ (= 2550–1350 nm) |
 | Penemuan, akuisisi, dan penutupan pada sensor nyata | **Belum divalidasi** | Tidak ada perangkat selama pengembangan |
 | Akurasi pengukuran dibanding instrumen acuan | **Belum divalidasi** | |
-| Akuisisi dark melalui API vendor | **Tidak didukung** | Tidak ditemukan operasinya |
+| Akuisisi dark melalui API vendor | **Tidak ada** | Binding tidak memiliki operasi dark; absorbansi memakai referensi saja |
 
 Nilai enum adalah nilai enum Python, bukan opcode kabel yang terverifikasi. Impor yang berhasil membuktikan kompatibilitas biner, bukan kompatibilitas sensor.
 
@@ -25,7 +27,7 @@ Nilai enum adalah nilai enum Python, bukan opcode kabel yang terverifikasi. Impo
 
 Jalankan langkah-langkah berikut dengan sensor yang didukung, lalu catat hasilnya di `Progress.md` (model perangkat, firmware dari `read_fw_version`, SHA-256 driver, dan tanggal):
 
-1. Konfirmasikan `scanTimeUnit` dan `mode` ke dokumentasi atau dukungan Si-Ware.
+1. Konfirmasikan `mode` ke dokumentasi atau dukungan Si-Ware, dan periksa bahwa `scan_time` 2 benar-benar berlaku sebagai 2 detik.
 2. `siware discover --vendor-config …` menampilkan ID perangkat yang diharapkan. Mencabut lalu memasang ulang sensor tercermin di hasilnya.
 3. Rekam **Reference** dan **Sample** untuk setiap jumlah titik (65 sampai 4096). Cocokkan rentang sumbu dengan datasheet sensor, dan pastikan sumbu tetap monoton setelah dikonversi ke nm.
 4. Bandingkan dengan pengukuran yang sama di Si-Spect: pengaturan sama, serta nilai PSD dan sumbunya cocok dalam batas derau yang wajar.

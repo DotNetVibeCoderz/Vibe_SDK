@@ -26,7 +26,7 @@ sequenceDiagram
 
 Penemuan perangkat menunggu hingga 5 detik untuk callback koneksi dari driver. `Sample` memakai `run_psd`. `Reference` memakai `run_background` lalu `read_background`. Pemindaian berulang hanya dirata-ratakan jika sumbu bilangan gelombangnya identik. Bilangan gelombang dalam cm⁻¹ dikonversi ke nanometer (`10^7 / ν`) lalu diurutkan naik.
 
-Adaptor memilih gain optik internal, apodisasi boxcar, dan tanpa zero padding. Ini pilihan eksplisit, bukan nilai bawaan vendor. Akuisisi dark **tidak** didukung karena tidak ditemukan operasi dark pada binding. Akibatnya, Workbench menonaktifkan perekaman Dark, dan dengan demikian juga Absorbansi, pada sesi vendor.
+Adaptor memilih gain optik internal, apodisasi boxcar, dan tanpa zero padding. Ini pilihan eksplisit, bukan nilai bawaan vendor. Binding **tidak memiliki operasi dark** (dikonfirmasi lewat analisis Ghidra, lihat [driver-ghidra.md](../research/driver-ghidra.md)). Sensor Si-Ware adalah instrumen Fourier-transform, sehingga spektrumnya tidak membawa offset dark. Karena itu sesi vendor menghitung absorbansi dari referensi saja dengan `SpectralProcessing.Absorbance(sample, reference)`, dan Workbench tidak menampilkan langkah dark untuk sesi tersebut.
 
 ## Prasyarat
 
@@ -51,7 +51,7 @@ Salin `scripts/vendor-config.example.json` lalu isi dengan path **absolut**:
   "pythonExecutable": "C:\\tools\\python310\\python.exe",
   "workerScript": "C:\\src\\SiWare.Net\\scripts\\vendor_bridge.py",
   "driverModule": "C:\\Program Files (x86)\\Si-Spect Platform\\Analyze\\pyDriver.pyd",
-  "scanTimeUnit": "milliseconds",
+  "scanTimeUnit": "seconds",
   "mode": 0,
   "confirmWavenumbersInInverseCentimeters": true,
   "deviceId": null,
@@ -61,13 +61,23 @@ Salin `scripts/vendor-config.example.json` lalu isi dengan path **absolut**:
 
 | Field | Arti |
 |---|---|
-| `scanTimeUnit` | `milliseconds` atau `seconds`: satuan `scan_time` yang diharapkan driver. Binding tidak mendokumentasikannya, jadi **konfirmasikan ke dokumentasi Si-Ware**. Berkas contoh sengaja berisi nilai placeholder yang tidak valid. |
-| `mode` | Bilangan bulat yang dikirim ke setiap panggilan `run_*`. Artinya tidak terdokumentasi; konfirmasikan ke Si-Ware. |
+| `scanTimeUnit` | Gunakan `seconds`. Aplikasi vendor memberi label detik pada `scan_time`, dan semua pemindaian contohnya memakai 2 detik (bukti di [driver-ghidra.md](../research/driver-ghidra.md)). Pengaturan ini tetap eksplisit sampai diverifikasi pada sensor fisik. Dengan detik, `ScanOptions.IntegrationMilliseconds = 2000` sama dengan pemindaian 2 detik yang umum dipakai vendor. |
+| `mode` | Bilangan bulat yang dikirim ke setiap panggilan `run_*`. Artinya masih **belum diketahui**: analisis statis mengaitkannya dengan format permintaan "default" dan "compatibility" pada driver, tetapi belum dengan nilai konkret. Konfirmasikan ke Si-Ware; nilai `0` belum terverifikasi. |
 | `confirmWavenumbersInInverseCentimeters` | Wajib `true`, sebagai konfirmasi bahwa `wvn` dalam cm⁻¹ sebelum dikonversi ke nm. |
 | `deviceId` | ID perangkat hasil penemuan (opsional). Jika `null`, perangkat pertama yang ditemukan dipakai. |
 | `timeoutSeconds` | 6–600. Batas waktu per permintaan. Saat batas waktu habis, worker dihentikan. |
 
 Jika memakai paket NuGet, `vendor_bridge.py` disalin ke `<output>/SiWare/vendor_bridge.py`. Arahkan `workerScript` ke sana.
+
+## Menghubungkan sensor
+
+Driver berkomunikasi lewat TCP/IP: driver menemukan sensor dengan broadcast UDP di setiap antarmuka jaringan, lalu membuka koneksi TCP. Sensor USB muncul sebagai adaptor jaringan:
+
+- **Si-NIR (USB RNDIS, VID 2D15 / PID F317):** pasang `driver\x64\Si-NIR.inf` dari folder Si-Spect. `install.bat`-nya mengatur adaptor host ke alamat statis `192.168.137.1/24`.
+- **P10 / berbasis ESP (USB NCM, VID 303A / PID 4000):** pasang `driver\p10_x64\siwarenirusbdriver.inf`.
+- Sensor yang terhubung lewat Wi-Fi cukup berada di jaringan yang bisa dijangkau. Izinkan broadcast UDP dan lalu lintas TCP driver di firewall Windows.
+
+Binding vendor juga menyediakan operasi yang menulis kalibrasi (`burn_wln`, `burn_gain`, `burn_self`, `write_*`, `restore_default_correction`). **Jembatan tidak pernah memanggilnya**; jembatan hanya memakai penemuan perangkat, `run_psd`, `run_background`, dan `read_background`.
 
 ## Penggunaan
 

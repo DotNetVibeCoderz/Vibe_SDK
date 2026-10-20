@@ -11,7 +11,7 @@
 - [x] Moved into the `Vibe_SDK` monorepo as `SiWare.Net/` (2026-10-20).
 - [x] Code review: acquisition-settings validation, numerical parity, vendor response checks (see `docs/review.md`).
 - [x] Chemometrics (GravicodeScience), visualization (Visual.Net), and AI interpretation (HF.Net) — PLAN steps 7–10: three opt-in packages, CLI commands, Workbench AI insight, 24 tests, bilingual docs.
-- [ ] Deeper vendor driver analysis with REA + Ghidra (now available).
+- [x] Vendor driver analysis with REA + Ghidra: `scan_time` in seconds, cm⁻¹ axis, no dark operation (reference-only absorbance added), UDP/TCP over USB RNDIS/NCM transport; `mode` still unknown (`docs/research/driver-ghidra.md`).
 - [ ] Physical sensor compatibility validation (requires supported device and verified protocol). See `docs/en/hardware-validation.md`.
 - [ ] Public NuGet publication via GitHub Actions (`NUGET_API_KEY` secret is set) — only after physical validation.
 
@@ -26,6 +26,6 @@
 
 ## Status ringkas (Bahasa Indonesia)
 
-SDK, DSP Rust, CLI, Workbench, pengujian, paket NuGet lokal, dan dokumentasi dwibahasa sudah selesai dan sudah ditinjau. Integrasi GravicodeScience, Visual.Net, dan HF.Net juga selesai (analisis PCA/PLS, grafik, insight AI). Yang tersisa: analisis driver dengan Ghidra, validasi dengan sensor Si-Ware fisik, lalu workflow CI publikasi NuGet.
+SDK, DSP Rust, CLI, Workbench, pengujian, paket NuGet lokal, dan dokumentasi dwibahasa sudah selesai dan sudah ditinjau. Integrasi GravicodeScience, Visual.Net, dan HF.Net juga selesai (analisis PCA/PLS, grafik, insight AI). Analisis driver dengan Ghidra juga selesai (satuan scan time = detik, tanpa dark, transport jaringan USB; arti `mode` belum diketahui). Yang tersisa: validasi dengan sensor Si-Ware fisik, lalu workflow CI publikasi NuGet.
 
-Research: Si-Spect uses native Python extensions; its driver is not a managed .NET DLL. REA's managed snapshot budget rejects the 422 MB executable. Focused PE resource inspection of the 4.6 MB driver succeeds. Ghidra is now configured for REA; native analysis of the driver is a pending task. No vendor binaries or credentials will be redistributed.
+Research: Si-Spect uses native Python extensions; its driver is not a managed .NET DLL. REA's managed snapshot budget rejects the 422 MB executable. Focused PE resource inspection of the 4.6 MB driver succeeds. Ghidra 12.1.4 analysis (2026-10-20) plus the vendor's own UI, sample data, database schema, and driver INF files resolved the scan-time unit, axis unit, dark question, and transport; see `docs/research/driver-ghidra.md`. No vendor binaries or credentials will be redistributed.

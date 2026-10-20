@@ -26,7 +26,7 @@ sequenceDiagram
 
 Discovery waits up to 5 seconds for the driver's connection callback. `Sample` uses `run_psd`. `Reference` uses `run_background` followed by `read_background`. Repeated scans are averaged only when their wavenumber axes are identical. Wavenumbers in cm⁻¹ are converted to nanometres (`10^7 / ν`) and sorted ascending.
 
-The adapter selects internal optical gain, boxcar apodization, and no zero padding. These are explicit choices, not vendor defaults. Dark acquisition is **not** supported because no dark operation was identified in the binding. As a result, the Workbench disables Dark capture and therefore Absorbance in vendor sessions.
+The adapter selects internal optical gain, boxcar apodization, and no zero padding. These are explicit choices, not vendor defaults. The binding has **no dark operation** (confirmed by Ghidra analysis, see [driver-ghidra.md](../research/driver-ghidra.md)). Si-Ware sensors are Fourier-transform instruments, so their spectra carry no dark offset. Vendor sessions therefore compute absorbance from the reference only with `SpectralProcessing.Absorbance(sample, reference)`, and the Workbench hides the dark step for them.
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ Copy `scripts/vendor-config.example.json` and fill in **absolute** paths:
   "pythonExecutable": "C:\\tools\\python310\\python.exe",
   "workerScript": "C:\\src\\SiWare.Net\\scripts\\vendor_bridge.py",
   "driverModule": "C:\\Program Files (x86)\\Si-Spect Platform\\Analyze\\pyDriver.pyd",
-  "scanTimeUnit": "milliseconds",
+  "scanTimeUnit": "seconds",
   "mode": 0,
   "confirmWavenumbersInInverseCentimeters": true,
   "deviceId": null,
@@ -61,13 +61,23 @@ Copy `scripts/vendor-config.example.json` and fill in **absolute** paths:
 
 | Field | Meaning |
 |---|---|
-| `scanTimeUnit` | `milliseconds` or `seconds`: the unit the driver expects for `scan_time`. The binding does not document it, so **confirm it with Si-Ware documentation**. The example file deliberately contains an invalid placeholder. |
-| `mode` | Integer passed to every `run_*` call. Its meaning is undocumented; confirm it with Si-Ware. |
+| `scanTimeUnit` | Use `seconds`. The vendor app labels `scan_time` in seconds, and all of its sample scans use 2 s (evidence in [driver-ghidra.md](../research/driver-ghidra.md)). The setting stays explicit until it is verified on a physical sensor. With seconds, `ScanOptions.IntegrationMilliseconds = 2000` matches the vendor's typical 2 s scan. |
+| `mode` | Integer passed to every `run_*` call. Its meaning is still **unknown**: static analysis links it to the driver's "default" and "compatibility" request formats, but not to concrete values. Confirm it with Si-Ware; `0` is unverified. |
 | `confirmWavenumbersInInverseCentimeters` | Must be `true`. It confirms that `wvn` is in cm⁻¹ before conversion to nm. |
 | `deviceId` | Optional discovered device ID. When `null`, the first discovered device is used. |
 | `timeoutSeconds` | 6–600. Per-request timeout. On timeout the worker is killed. |
 
 With the NuGet package, `vendor_bridge.py` is copied to `<output>/SiWare/vendor_bridge.py`. Point `workerScript` there.
+
+## Connecting the sensor
+
+The driver talks TCP/IP: it discovers sensors by UDP broadcast on every network interface, then opens TCP connections. USB sensors appear as network adapters:
+
+- **Si-NIR (USB RNDIS, VID 2D15 / PID F317):** install `driver\x64\Si-NIR.inf` from the Si-Spect folder. Its `install.bat` sets the host adapter to the static address `192.168.137.1/24`.
+- **P10 / ESP-based (USB NCM, VID 303A / PID 4000):** install `driver\p10_x64\siwarenirusbdriver.inf`.
+- Wi-Fi-connected sensors only need to be on a reachable network. Allow UDP broadcast and the driver's TCP traffic through the Windows firewall.
+
+The vendor binding also exposes calibration-writing operations (`burn_wln`, `burn_gain`, `burn_self`, `write_*`, `restore_default_correction`). **The bridge never calls them**; it only uses discovery, `run_psd`, `run_background`, and `read_background`.
 
 ## Use it
 

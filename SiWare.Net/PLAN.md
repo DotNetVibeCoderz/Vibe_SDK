@@ -14,7 +14,7 @@ Build a .NET 10 SDK with Rust signal processing, usable samples, and bilingual d
 8. **Visualization** with Visual.Net (the matplotlib/plotly/seaborn counterpart): headless spectrum overlays and PCA score plots for the CLI, reports, and docs. ✅
 9. **AI interpretation** with HF.Net: optional natural-language explanation of an analysis summary through a real Hugging Face model. The token is supplied only at runtime; outputs are labelled as AI-generated and advisory. ✅
 10. Integrate 7–9 into the CLI and Workbench, add tests (offline by default, live LLM test opt-in via environment variable), screenshots, and bilingual docs. ✅
-11. Resolve vendor-driver unknowns (scan-time unit, mode, dark acquisition, discovery transport) with REA + Ghidra static analysis.
+11. Resolve vendor-driver unknowns (scan-time unit, mode, dark acquisition, discovery transport) with REA + Ghidra static analysis. ✅ except `mode` (see `docs/research/driver-ghidra.md`).
 
 Core `SiWare.Sdk` stays dependency-free; chemometrics, visualization, and AI ship as separate opt-in packages.
 

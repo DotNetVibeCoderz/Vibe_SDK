@@ -7,11 +7,29 @@ public static class SpectralProcessing
         if (sample.Kind != MeasurementKind.Sample || dark.Kind != MeasurementKind.Dark || reference.Kind != MeasurementKind.Reference)
             throw new ArgumentException("Expected sample, dark, and reference spectra respectively.");
         Match(sample, dark); Match(sample, reference);
+        return ComputeAbsorbance(sample, dark, reference);
+    }
+
+    /// <summary>
+    /// Absorbance without a dark scan, <c>-log10(sample / reference)</c>, for instruments whose spectra carry no dark offset.
+    /// Si-Ware Fourier-transform sensors expose no dark acquisition (see docs/research/driver-ghidra.md).
+    /// </summary>
+    public static Spectrum Absorbance(Spectrum sample, Spectrum reference)
+    {
+        if (sample.Kind != MeasurementKind.Sample || reference.Kind != MeasurementKind.Reference)
+            throw new ArgumentException("Expected sample and reference spectra respectively.");
+        Match(sample, reference);
+        return ComputeAbsorbance(sample, null, reference);
+    }
+
+    private static Spectrum ComputeAbsorbance(Spectrum sample, Spectrum? dark, Spectrum reference)
+    {
         var result = new double[sample.Count];
         for (var i = 0; i < result.Length; i++)
         {
-            var numerator = sample.Values[i] - dark.Values[i];
-            var denominator = reference.Values[i] - dark.Values[i];
+            var offset = dark?.Values[i] ?? 0;
+            var numerator = sample.Values[i] - offset;
+            var denominator = reference.Values[i] - offset;
             if (numerator <= 0 || denominator <= 0 || !double.IsFinite(numerator) || !double.IsFinite(denominator))
                 throw new ArgumentException($"Invalid optical calibration at point {i}.");
             // Avoid overflow/underflow of the intensity ratio itself.

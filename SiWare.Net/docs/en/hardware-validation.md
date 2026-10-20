@@ -13,11 +13,13 @@ This page records what is established, what is not, and what must happen before 
 | `Error.value() == 0` means success | **Verified** | Data-only `Error()` object |
 | Bridge protocol, validation, timeout, process cleanup | **Tested** | `vendor_bridge.py --self-test`, `VendorValidationTests` |
 | Simulator, model, processing, file formats, Rust ABI | **Tested** | 86 xUnit tests, 9 Rust tests, UI smoke test |
-| `scan_time` unit and `mode` meaning | **Unknown** | Must come from Si-Ware documentation |
-| `wvn` axis unit is cm⁻¹ | **Assumed, user-confirmed** | Required config flag |
+| `scan_time` is in seconds | **Strong inference** | The vendor UI labels it "sec"; all vendor sample scans use 2 ([driver-ghidra.md](../research/driver-ghidra.md)) |
+| `mode` meaning | **Unknown** | Linked to the driver's "default" and "compatibility" request formats only |
+| Transport: UDP discovery, then TCP over USB RNDIS/NCM or Wi-Fi | **Observed** | Driver strings and the shipped INF files |
+| `wvn` axis unit is cm⁻¹ | **Observed in vendor data** | 138 vendor sample spectra span 3921.57–7407.41 cm⁻¹ (= 2550–1350 nm) |
 | Discovery, acquisition, and shutdown on a real sensor | **Not validated** | No device available during development |
 | Measurement accuracy against a reference instrument | **Not validated** | |
-| Dark acquisition through the vendor API | **Not supported** | No operation identified |
+| Dark acquisition through the vendor API | **Does not exist** | No dark operation in the binding; absorbance uses the reference only |
 
 Enum values are Python enum values, not verified wire opcodes. A successful import shows binary compatibility, not sensor compatibility.
 
@@ -25,7 +27,7 @@ Enum values are Python enum values, not verified wire opcodes. A successful impo
 
 Run these steps with a supported sensor and record the results (device model, firmware via `read_fw_version`, driver SHA-256, and dates) in `Progress.md`:
 
-1. Confirm `scanTimeUnit` and `mode` against Si-Ware documentation or support.
+1. Confirm `mode` with Si-Ware documentation or support, and check that a 2 s `scan_time` behaves as 2 seconds.
 2. `siware discover --vendor-config …` lists the expected device ID. Unplugging and replugging the sensor is reflected.
 3. Acquire a **Reference** and a **Sample** at each point count (65 to 4096). Check the axis range against the sensor datasheet and confirm that it is monotonic after nm conversion.
 4. Compare with the same measurement in Si-Spect: same settings, and the PSD values and axis agree within the expected noise.

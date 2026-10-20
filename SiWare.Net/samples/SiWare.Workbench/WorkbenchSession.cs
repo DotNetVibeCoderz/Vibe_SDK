@@ -78,9 +78,12 @@ public sealed class WorkbenchSession(ISpectrometer device, InsightService insigh
             var source = Get(id);
             var result = request.Operation switch
             {
-                "absorbance" => SpectralProcessing.Absorbance(source,
-                    dark ?? throw new InvalidOperationException("Acquire a dark scan first."),
-                    reference ?? throw new InvalidOperationException("Acquire a reference scan first.")),
+                // Devices without a dark scan (Si-Ware FT sensors) use reference-only absorbance.
+                "absorbance" => device.Device.IsSimulated
+                    ? SpectralProcessing.Absorbance(source,
+                        dark ?? throw new InvalidOperationException("Acquire a dark scan first."),
+                        reference ?? throw new InvalidOperationException("Acquire a reference scan first."))
+                    : SpectralProcessing.Absorbance(source, reference ?? throw new InvalidOperationException("Acquire a reference scan first.")),
                 "snv" => NativeDsp.IsAvailable ? NativeDsp.StandardNormalVariate(source) : SpectralProcessing.StandardNormalVariate(source),
                 "smooth" => NativeDsp.IsAvailable ? NativeDsp.Smooth(source, request.Window) : SpectralProcessing.Smooth(source, request.Window),
                 _ => throw new ArgumentException("Unknown processing operation.")
