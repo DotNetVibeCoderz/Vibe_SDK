@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f3a63"/>
+      <stop offset="1" stop-color="#0f1d33"/>
+    </linearGradient>
+    <linearGradient id="spectrum" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset=".35" stop-color="#365fea"/>
+      <stop offset=".65" stop-color="#22b8a6"/>
+      <stop offset="1" stop-color="#f5b13d"/>
+    </linearGradient>
+    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4f7bff" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#4f7bff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <g stroke="#ffffff" stroke-opacity=".08" stroke-width="2">
+    <line x1="40" y1="76" x2="216" y2="76"/>
+    <line x1="40" y1="120" x2="216" y2="120"/>
+    <line x1="40" y1="164" x2="216" y2="164"/>
+  </g>
+  <path d="M36 186 C62 186 66 132 84 132 C102 132 104 186 120 186 C138 186 144 58 164 58 C184 58 186 186 200 186 C210 186 214 160 222 160 L222 202 L36 202 Z" fill="url(#fill)"/>
+  <path d="M36 186 C62 186 66 132 84 132 C102 132 104 186 120 186 C138 186 144 58 164 58 C184 58 186 186 200 186 C210 186 214 160 222 160" fill="none" stroke="url(#spectrum)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="164" cy="58" r="13" fill="#ffffff"/>
+  <circle cx="164" cy="58" r="6" fill="#365fea"/>
+  <text x="38" y="92" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="46" font-weight="700" fill="#ffffff" letter-spacing="-2">.NET</text>
+</svg>

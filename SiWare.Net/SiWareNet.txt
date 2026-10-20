@@ -1,0 +1,19 @@
+name: SiWare SDK for .NET
+description: driver, sdk, docs and sample apps to connect to SiWare sensor (https://www.si-ware.com/all-products) with .NET platform.
+Task: create complete driver and SDK for .NET platform to interact with SiWare sensors, use Rea MCP to understand the Si-Spect Platform in folder 'C:\Program Files (x86)\Si-Spect Platform', use it as reference to build the solution.
+For library support in .NET:
+- NumPy, Pandas, Scikit, Scipy, etc we can use 'https://github.com/DotNetVibeCoderz/Vibe_ML/tree/main/GravicodeScience'
+- Visulization like matplotlib, plotly, seaborn, etc we can use 'https://github.com/DotNetVibeCoderz/Vibe_Charting/tree/main/Visual.Net'
+- Hugging Face support we can use 'https://github.com/DotNetVibeCoderz/Vibe_ML/tree/main/HF.Net'
+
+Notes:
+- Dibangun dengan .NET 10 dan Rust
+- Optimasi kode dengan best practice, best performance dan efisiensi memory
+- Dokumentasi yang lengkap, jelas, mudah dengan dua Bahasa (English dan Bahasa Indonesia)
+- Tambahkan screenshot-nya ke readme dan docs
+- Tambahkan info pada dokumentasi dan aplikasi: Dibuat oleh Gravicode Studios dipimpin oleh Kang Fadhil
+- PLAN.md untuk roadmap pengembangan, dan Progress.md untuk tracking development
+- aplikasi-aplikasi pendukung dan sample apps dibuat UI UX-nya yang keren dan professional dibantu dengan skill 'frontend-design' 
+- untuk publish nuget api key ada di 'C:\Users\mifma\Documents\CodeSandbox\PackageCredentials.txt'
+- nuget-nya buatkan icon yang keren
+- ujicoba dengan LLM real bisa dengan api key di 'C:\Users\mifma\Documents\CodeSandbox\testkey.txt' atau hugging face token di 'C:\Users\mifma\Documents\CodeSandbox\HFToken.txt'

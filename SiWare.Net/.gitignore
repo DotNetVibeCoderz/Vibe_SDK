@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+**/target/
+artifacts/
+.tools/
+.research/
+node_modules/
+TestResults/
+*.user
+*.suo
+.vs/
+.env
+*.key
+*.nupkg
+*.snupkg
+data/
+logs/

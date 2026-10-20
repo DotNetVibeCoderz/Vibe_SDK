@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Public members are documented where behavior is non-obvious; missing summaries are not build errors. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Gravicode.SiWare.Sdk</PackageId>
+    <Title>SiWare.NET SDK</Title>
+    <Description>.NET 10 SDK for Si-Ware spectral sensors: validated spectrum model, deterministic simulator, vendor-driver bridge, calibration (dark/reference/absorbance), SNV and smoothing, JSON/CSV exchange, and optional Rust DSP kernels. Created by Gravicode Studios, led by Kang Fadhil. Not affiliated with Si-Ware Systems.</Description>
+    <PackageTags>siware;spectrometer;nir;spectroscopy;sensor;driver;dsp;rust</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2026 Gravicode Studios</Copyright>
+    <PackageReleaseNotes>Preview. Simulator and processing are tested; vendor hardware compatibility is not yet validated on a physical device.</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\docs\nuget\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\scripts\vendor_bridge.py" Pack="true" PackagePath="contentFiles/any/any/SiWare/vendor_bridge.py" PackageCopyToOutput="true" BuildAction="None" />
+  </ItemGroup>
+
+  <!-- Ships the Rust kernels only when a release build exists; NativeDsp reports unavailability otherwise. -->
+  <ItemGroup Condition="Exists('..\..\native\siware-dsp\target\release\siware_dsp.dll')">
+    <None Include="..\..\native\siware-dsp\target\release\siware_dsp.dll" Pack="true" PackagePath="runtimes/win-x64/native/" Visible="false" />
+  </ItemGroup>
+
+</Project>

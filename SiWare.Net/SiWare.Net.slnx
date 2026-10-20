@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/SiWare.Cli/SiWare.Cli.csproj" />
+    <Project Path="samples/SiWare.Workbench/SiWare.Workbench.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/SiWare.Sdk/SiWare.Sdk.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SiWare.Sdk.Tests/SiWare.Sdk.Tests.csproj" />
+  </Folder>
+</Solution>

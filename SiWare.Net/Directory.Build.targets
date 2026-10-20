@@ -1,0 +1,11 @@
+<Project>
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native/siware-dsp/target/release/siware_dsp.dll') AND '$(OS)' == 'Windows_NT'">
+    <None Include="$(MSBuildThisFileDirectory)native/siware-dsp/target/release/siware_dsp.dll" Link="siware_dsp.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native/siware-dsp/target/release/libsiware_dsp.so') AND '$(OS)' != 'Windows_NT'">
+    <None Include="$(MSBuildThisFileDirectory)native/siware-dsp/target/release/libsiware_dsp.so" Link="libsiware_dsp.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native/siware-dsp/target/release/libsiware_dsp.dylib') AND '$(OS)' != 'Windows_NT'">
+    <None Include="$(MSBuildThisFileDirectory)native/siware-dsp/target/release/libsiware_dsp.dylib" Link="libsiware_dsp.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

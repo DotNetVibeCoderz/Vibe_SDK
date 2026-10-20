@@ -1,0 +1,20 @@
+[package]
+name = "siware-dsp"
+version = "0.1.0"
+edition = "2024"
+description = "Dependency-free spectral processing kernels for SiWare.Net"
+license = "MIT"
+
+[lib]
+name = "siware_dsp"
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
