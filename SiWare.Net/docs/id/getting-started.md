@@ -44,6 +44,9 @@ Buka `http://localhost:5069`, lalu:
 3. Klik **Rekam sampel**, pilih hasilnya, lalu tekan **Absorbansi**. **SNV** dan **Perhalus** berlaku untuk spektrum apa pun yang dipilih.
 4. Arahkan kursor ke grafik, atau fokuskan grafik lalu tekan ←/→/Home/End untuk membaca nilai.
 5. Ekspor spektrum terpilih sebagai **CSV** atau **JSON**. Sesi menyimpan 100 spektrum terakhir di memori.
+6. **Mode jalan → Kontinu** bekerja seperti mode continuous di Si-Spect: isi **Jumlah pengukuran** dan **Interval** (detik, dihitung dari awal ke awal), lalu tekan **Mulai pengukuran kontinu**. Setiap spektrum langsung masuk riwayat, grafik mengikuti spektrum terbaru, dan **Hentikan pengukuran** mengakhiri proses lebih awal tanpa membuang hasil yang sudah terekam.
+
+![Pengukuran kontinu](../screenshots/workbench-continuous.png)
 
 Tombol **EN / ID** mengganti bahasa, dan pilihan itu diingat oleh browser. Akuisisi dapat dibatalkan saat berjalan dan otomatis berhenti setelah 3 menit.
 
@@ -58,9 +61,10 @@ dotnet run --project samples/SiWare.Cli -- demo --output artifacts/demo
 dotnet run --project samples/SiWare.Cli -- scan --output spectrum.json
 dotnet run --project samples/SiWare.Cli -- process --input spectrum.json --operation snv --output snv.json
 dotnet run --project samples/SiWare.Cli -- discover --vendor-config vendor.json
+dotnet run --project samples/SiWare.Cli -- series --count 10 --interval 5 --output artifacts/series
 ```
 
-`demo` hanya memakai simulasi dan menulis `dark.json`, `reference.json`, `sample.json`, `absorbance.json`, serta `absorbance.csv`. `scan` dan `discover` memakai driver vendor bila `--vendor-config` diberikan. Kode keluar: `0` sukses, `1` input tidak valid atau galat perangkat, `2` dibatalkan (Ctrl+C) atau melewati batas waktu.
+`demo` hanya memakai simulasi dan menulis `dark.json`, `reference.json`, `sample.json`, `absorbance.json`, serta `absorbance.csv`. `scan`, `discover`, dan `series` memakai driver vendor bila `--vendor-config` diberikan. `series` adalah mode jalan kontinu: `--count` pengukuran yang dimulai setiap `--interval` detik (opsional `--kind reference`, `--integration`, `--points`, `--averages`). Setiap spektrum langsung disimpan (`sample-001.json`, …), ditambah grafik tumpuk `series.png`. Ctrl+C menghentikan proses dan tetap menyimpan spektrum yang sudah terekam. Kode keluar: `0` sukses, `1` input tidak valid atau galat perangkat, `2` dibatalkan (Ctrl+C) atau melewati batas waktu.
 
 ![CLI](../screenshots/cli.png)
 

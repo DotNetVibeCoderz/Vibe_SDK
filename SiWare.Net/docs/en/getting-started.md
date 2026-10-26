@@ -44,6 +44,9 @@ Open `http://localhost:5069`, then:
 3. **Capture sample**, then select it and press **Absorbance**. **SNV** and **Smooth** work on any selected spectrum.
 4. Hover the chart, or focus it and use ←/→/Home/End to read values.
 5. Export the selected spectrum as **CSV** or **JSON**. The session keeps the latest 100 spectra in memory.
+6. **Run mode → Continuous** works like Si-Spect's continuous mode: set **Measurements** and **Interval** (seconds, start to start), then press **Start continuous run**. Each spectrum joins the history as it arrives, the chart follows the newest one, and **Stop run** ends the run early while keeping what was already captured.
+
+![Continuous run](../screenshots/workbench-continuous.png)
 
 The **EN / ID** button switches the language, and the choice is remembered in the browser. Acquisitions can be cancelled while running and time out after 3 minutes.
 
@@ -58,9 +61,10 @@ dotnet run --project samples/SiWare.Cli -- demo --output artifacts/demo
 dotnet run --project samples/SiWare.Cli -- scan --output spectrum.json
 dotnet run --project samples/SiWare.Cli -- process --input spectrum.json --operation snv --output snv.json
 dotnet run --project samples/SiWare.Cli -- discover --vendor-config vendor.json
+dotnet run --project samples/SiWare.Cli -- series --count 10 --interval 5 --output artifacts/series
 ```
 
-`demo` is simulation-only. It writes `dark.json`, `reference.json`, `sample.json`, `absorbance.json`, and `absorbance.csv`. `scan` and `discover` use the vendor driver when `--vendor-config` is given. Exit codes: `0` success, `1` invalid input or device error, `2` cancelled (Ctrl+C) or timed out.
+`demo` is simulation-only. It writes `dark.json`, `reference.json`, `sample.json`, `absorbance.json`, and `absorbance.csv`. `scan`, `discover`, and `series` use the vendor driver when `--vendor-config` is given. `series` is the continuous run mode: `--count` measurements started every `--interval` seconds (optionally `--kind reference`, `--integration`, `--points`, `--averages`). Each spectrum is saved as it arrives (`sample-001.json`, …), plus an overlay plot `series.png`. Ctrl+C stops the run and keeps the spectra already saved. Exit codes: `0` success, `1` invalid input or device error, `2` cancelled (Ctrl+C) or timed out.
 
 ![CLI](../screenshots/cli.png)
 

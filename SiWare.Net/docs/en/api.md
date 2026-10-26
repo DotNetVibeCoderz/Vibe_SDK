@@ -28,6 +28,16 @@ await device.DisconnectAsync();
 
 `ScanOptions` validates `Points` (2–4096), `IntegrationMilliseconds` (1–60,000), and `Averages` (1–100). The vendor bridge additionally limits `Points` to 65, 129, 257, 513, 1024, 2048, or 4096, and supports only `Sample` and `Reference`.
 
+### Continuous runs
+
+```csharp
+var continuous = new ContinuousOptions(Measurements: 10, Interval: TimeSpan.FromSeconds(5));
+await foreach (var spectrum in device.AcquireSeriesAsync(MeasurementKind.Sample, options, continuous, cancellationToken: ct))
+    Console.WriteLine($"{spectrum.CapturedAt:T} mean {spectrum.Values.Average():G4}");
+```
+
+`AcquireSeriesAsync` is the equivalent of Si-Spect's continuous run mode. The interval is measured start to start; if an acquisition takes longer than the interval, the next one starts immediately with no catch-up burst. `ContinuousOptions` allows 1–10,000 measurements and an interval of 0 s to 1 h. Cancelling the token ends the series; spectra already yielded stay valid. Pass a `TimeProvider` to control waiting in tests.
+
 ## Calibrate and process
 
 ```csharp
@@ -98,7 +108,8 @@ Base URL: `http://localhost:5069` by default. JSON bodies use camelCase, and enu
 | POST | `/api/connect` | | Status |
 | POST | `/api/disconnect` | | Status; clears calibration |
 | POST | `/api/acquire` | `{ "kind": "Sample", "points": 257, "integrationMilliseconds": 100, "averages": 1 }` | `Spectrum` |
-| POST | `/api/cancel` | | `200`; the running acquisition then returns `409` |
+| POST | `/api/series` | `{ "measurements": 10, "intervalSeconds": 5, "points": 257, "integrationMilliseconds": 100, "averages": 1 }` | Status. Starts a background continuous run of `Sample` scans; `status.series` reports `running`, `completed`, `total`, `intervalSeconds`, and `error` |
+| POST | `/api/cancel` | | `200`; the running acquisition then returns `409`, and a continuous run stops |
 | GET | `/api/history` | | Newest first: `id`, `kind`, `capturedAt`, `points`, `isSimulated` |
 | GET | `/api/spectra/{id}` | | `Spectrum` |
 | POST | `/api/process/{id}` | `{ "operation": "absorbance" \| "snv" \| "smooth", "window": 5 }` | New `Spectrum` (added to history) |

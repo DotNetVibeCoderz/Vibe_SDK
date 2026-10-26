@@ -28,6 +28,9 @@
 
 - Si-Spect Platform update (driver `be10d2e3…`, version `260818b00460e`): rechecked with `vendor_probe.py --inspect`, REA/Ghidra string diff, and the installation files. The API the bridge uses is unchanged, so no code changes were needed. Details: `docs/research/vendor-api.md`, `docs/research/driver-ghidra.md`.
 
+- Continuous run mode (like Si-Spect's Single/Continuous): `ContinuousOptions` + `AcquireSeriesAsync` in the core SDK, CLI `series`, and Workbench Run mode → Continuous (background run, live chart, progress, stop). 5 SDK tests plus a browser smoke step.
+- Physical sensor (Si-NIR Matrix DVK, USB NCM `303A:4000`): USB enumerates, but on Windows 11 build 26200 neither the built-in `usbncm.inf` (`STATUS_DEVICE_HARDWARE_ERROR`) nor the vendor `siwarenirusbdriver.inf` 1.0.0.2 (not Microsoft-signed; with enforcement off, `DriverEntry` returns `STATUS_NOT_SUPPORTED`) brings up the network link. Reported back to the user; the Si-Spect app's Single/Continuous is a scan-loop setting (`user_scan_settings.run_mode`), separate from the driver's `mode` argument.
+
 ## Status ringkas (Bahasa Indonesia)
 
 SDK, DSP Rust, CLI, Workbench, pengujian, paket NuGet lokal, dan dokumentasi dwibahasa sudah selesai dan sudah ditinjau. Integrasi GravicodeScience, Visual.Net, dan HF.Net juga selesai (analisis PCA/PLS, grafik, insight AI). Analisis driver dengan Ghidra juga selesai (satuan scan time = detik, tanpa dark, transport jaringan USB; arti `mode` belum diketahui). Yang tersisa: validasi dengan sensor Si-Ware fisik, lalu workflow CI publikasi NuGet.

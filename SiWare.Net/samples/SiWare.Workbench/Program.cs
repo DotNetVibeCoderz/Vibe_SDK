@@ -37,6 +37,7 @@ app.MapGet("/api/status", (WorkbenchSession s) => s.Status());
 app.MapPost("/api/connect", (WorkbenchSession s, CancellationToken ct) => s.ConnectAsync(ct));
 app.MapPost("/api/disconnect", (WorkbenchSession s, CancellationToken ct) => s.DisconnectAsync(ct));
 app.MapPost("/api/acquire", (AcquireRequest r, WorkbenchSession s, CancellationToken ct) => s.AcquireAsync(r, ct));
+app.MapPost("/api/series", (SeriesRequest r, WorkbenchSession s) => s.StartSeries(r));
 app.MapPost("/api/cancel", (WorkbenchSession s) => { s.Cancel(); return Results.Ok(); });
 app.MapGet("/api/history", (WorkbenchSession s) => s.History());
 app.MapGet("/api/spectra/{id:guid}", (Guid id, WorkbenchSession s) => s.Get(id));

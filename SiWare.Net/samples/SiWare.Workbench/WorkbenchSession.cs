@@ -11,6 +11,7 @@ public sealed class WorkbenchSession(ISpectrometer device, InsightService insigh
     private CancellationTokenSource? active;
     private Spectrum? dark;
     private Spectrum? reference;
+    private SeriesProgress? series;
     public object Status()
     {
         lock (sync) return new
@@ -23,7 +24,8 @@ public sealed class WorkbenchSession(ISpectrometer device, InsightService insigh
             nativeAvailable = NativeDsp.IsAvailable,
             supportsDark = device.Device.IsSimulated,
             insightAvailable = insight.IsAvailable,
-            insightModel = insight.Model
+            insightModel = insight.Model,
+            series
         };
     }
     public async Task<object> ConnectAsync(CancellationToken token)
@@ -64,6 +66,55 @@ public sealed class WorkbenchSession(ISpectrometer device, InsightService insigh
         }
         finally { lock (sync) active = null; gate.Release(); }
     }
+    /// <summary>
+    /// Starts a continuous run in the background and returns immediately. Each spectrum joins the history as it arrives;
+    /// progress is reported by <see cref="Status"/>, and <see cref="Cancel"/> stops the run.
+    /// </summary>
+    public object StartSeries(SeriesRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var scan = new ScanOptions(request.Points, request.IntegrationMilliseconds, request.Averages);
+        scan.Validate();
+        var continuous = new ContinuousOptions(request.Measurements, TimeSpan.FromSeconds(request.IntervalSeconds));
+        continuous.Validate();
+        if (!device.IsConnected) throw new InvalidOperationException("Connect the instrument first.");
+        if (!gate.Wait(0)) throw new InvalidOperationException("An acquisition is already running.");
+        var cancellation = new CancellationTokenSource();
+        lock (sync)
+        {
+            active = cancellation;
+            series = new(true, 0, continuous.Measurements, request.IntervalSeconds, null);
+        }
+        _ = Task.Run(() => RunSeriesAsync(scan, continuous, cancellation));
+        return Status();
+    }
+
+    private async Task RunSeriesAsync(ScanOptions scan, ContinuousOptions continuous, CancellationTokenSource cancellation)
+    {
+        string? error = null;
+        try
+        {
+            await foreach (var spectrum in device.AcquireSeriesAsync(MeasurementKind.Sample, scan, continuous, cancellationToken: cancellation.Token))
+                lock (sync)
+                {
+                    Add(spectrum);
+                    series = series! with { Completed = series.Completed + 1 };
+                }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException or NotSupportedException) { error = ex.Message; }
+        finally
+        {
+            lock (sync)
+            {
+                series = series! with { Running = false, Error = error };
+                active = null;
+            }
+            cancellation.Dispose();
+            gate.Release();
+        }
+    }
+
     public void Cancel() { lock (sync) active?.Cancel(); }
     public Spectrum Get(Guid id) { lock (sync) return history.TryGetValue(id, out var s) ? s : throw new KeyNotFoundException("Spectrum not found or expired from the 100-scan session."); }
     public object[] History()
@@ -100,3 +151,5 @@ public sealed class WorkbenchSession(ISpectrometer device, InsightService insigh
 }
 public sealed record AcquireRequest(MeasurementKind Kind = MeasurementKind.Sample, int Points = 257, int IntegrationMilliseconds = 100, int Averages = 1);
 public sealed record ProcessRequest(string Operation, int Window = 5);
+public sealed record SeriesRequest(int Measurements = 10, double IntervalSeconds = 5, int Points = 257, int IntegrationMilliseconds = 100, int Averages = 1);
+public sealed record SeriesProgress(bool Running, int Completed, int Total, double IntervalSeconds, string? Error);

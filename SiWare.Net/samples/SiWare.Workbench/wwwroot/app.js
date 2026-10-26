@@ -1,12 +1,13 @@
 const $ = id => document.getElementById(id);
 const english = Object.fromEntries([...document.querySelectorAll('[data-i18n]')].map(e => [e.dataset.i18n, e.innerHTML]));
 const indonesian = {
-  workbench:'WORKBENCH SPEKTRUM',local:'RUANG KERJA LOKAL',lab:'AKUISISI / ANALISIS',title:'Kenali spektrum Anda lebih dekat.',subtitle:'Hubungkan instrumen. Rekam sinyal. Telusuri perubahannya.',notConnected:'BELUM TERHUBUNG',instrument:'Instrumen',noDevice:'Belum ada instrumen',connectHint:'Hubungkan untuk memulai sesi.',connect:'Hubungkan instrumen',acquisition:'Akuisisi',integration:'Waktu integrasi',points:'Titik',averages:'Rata-rata',capture:'Rekam sampel',cancel:'Batalkan akuisisi',readyHint:'Hubungkan instrumen untuk merekam.',calibration:'Kalibrasi',calibrationHint:'Rekam sinyal dark dan referensi sebelum menghitung absorbansi.',dark:'Sinyal dark',reference:'Referensi',captureShort:'Rekam',signalView:'TAMPILAN SINYAL',spectrum:'Spektrum',noTrace:'Belum ada kurva',intensity:'INTENSITAS · A.U.',emptyTitle:'Penemuan Anda dimulai di sini.',emptyHint:'Hubungkan instrumen, lalu rekam sampel<br>untuk melihat sidik jari spektralnya.',wavelength:'PANJANG GELOMBANG · NM',cursor:'KURSOR',chartHint:'Arahkan kursor atau tekan ← → untuk melihat nilai',processing:'Pemrosesan sinyal',absorbance:'Absorbansi',smooth:'Perhalus',window:'Jendela penghalusan',session:'SESI INI',history:'Riwayat rekaman',measurement:'Pengukuran',time:'Waktu',source:'Sumber',emptyHistory:'Spektrum yang direkam muncul di sini. Pilih untuk melihat atau mengekspor.',offline:'Instrumen tidak terhubung',verification:'Transport perangkat keras memerlukan validasi perangkat.',footer:'Eksplorasi spektral yang dirancang dengan cermat.',insight:'Insight AI',insightTitle:'Interpretasi AI',insightFacts:'Fakta yang dikirim ke model'
+  workbench:'WORKBENCH SPEKTRUM',local:'RUANG KERJA LOKAL',lab:'AKUISISI / ANALISIS',title:'Kenali spektrum Anda lebih dekat.',subtitle:'Hubungkan instrumen. Rekam sinyal. Telusuri perubahannya.',notConnected:'BELUM TERHUBUNG',instrument:'Instrumen',noDevice:'Belum ada instrumen',connectHint:'Hubungkan untuk memulai sesi.',connect:'Hubungkan instrumen',acquisition:'Akuisisi',integration:'Waktu integrasi',points:'Titik',averages:'Rata-rata',capture:'Rekam sampel',cancel:'Batalkan akuisisi',readyHint:'Hubungkan instrumen untuk merekam.',calibration:'Kalibrasi',calibrationHint:'Rekam sinyal dark dan referensi sebelum menghitung absorbansi.',dark:'Sinyal dark',reference:'Referensi',captureShort:'Rekam',signalView:'TAMPILAN SINYAL',spectrum:'Spektrum',noTrace:'Belum ada kurva',intensity:'INTENSITAS · A.U.',emptyTitle:'Penemuan Anda dimulai di sini.',emptyHint:'Hubungkan instrumen, lalu rekam sampel<br>untuk melihat sidik jari spektralnya.',wavelength:'PANJANG GELOMBANG · NM',cursor:'KURSOR',chartHint:'Arahkan kursor atau tekan ← → untuk melihat nilai',processing:'Pemrosesan sinyal',absorbance:'Absorbansi',smooth:'Perhalus',window:'Jendela penghalusan',session:'SESI INI',history:'Riwayat rekaman',measurement:'Pengukuran',time:'Waktu',source:'Sumber',emptyHistory:'Spektrum yang direkam muncul di sini. Pilih untuk melihat atau mengekspor.',offline:'Instrumen tidak terhubung',verification:'Transport perangkat keras memerlukan validasi perangkat.',footer:'Eksplorasi spektral yang dirancang dengan cermat.',insight:'Insight AI',insightTitle:'Interpretasi AI',insightFacts:'Fakta yang dikirim ke model',runMode:'Mode jalan',single:'Tunggal',continuous:'Kontinu',measurements:'Jumlah pengukuran',interval:'Interval'
 };
 let language = 'en';
 try { language = localStorage.getItem('siware-language') === 'id' ? 'id' : 'en'; } catch { /* Storage can be disabled. */ }
 let status = {connected:false,busy:false,calibration:{dark:false,reference:false}}, selected = null, history = [], pending = false, cursorIndex = 0;
-let historySignature = '';
+let historySignature = '', following = null, followedCount = -1;
+const runMode = () => document.querySelector('input[name="runMode"]:checked')?.value === 'continuous' ? 'continuous' : 'single';
 const tr = (en,id) => language === 'id' ? id : en;
 const kindName = kind => language === 'id' ? ({Sample:'Sampel',Dark:'Dark',Reference:'Referensi',Absorbance:'Absorbansi',Normalized:'Ternormalisasi'}[kind] || kind) : kind;
 function notify(message, error = false) { $('notice').hidden = !message; $('notice').textContent = message; $('notice').classList.toggle('error',error); }
@@ -40,8 +41,23 @@ function renderStatus() {
   $('captureDark').disabled ||= !darkSupported;
   const unsupported = tr('Si-Ware sensors have no dark scan; absorbance uses the reference only.','Sensor Si-Ware tidak memiliki pemindaian dark; absorbansi hanya memakai referensi.');
   $('captureDark').title = darkSupported ? '' : unsupported;
-  for (const id of ['integration','points','averages']) $(id).disabled = locked;
+  const continuous = runMode() === 'continuous', series = status.series, running = !!series?.running;
+  for (const id of ['integration','points','averages','measurements','interval']) $(id).disabled = locked;
+  for (const radio of document.querySelectorAll('input[name="runMode"]')) radio.disabled = locked;
+  $('seriesFields').hidden = !continuous;
+  $('captureLabel').textContent = continuous ? tr('Start continuous run','Mulai pengukuran kontinu') : tr('Capture sample','Rekam sampel');
   $('cancel').hidden = !status.busy;
+  $('cancel').textContent = running ? tr('Stop run','Hentikan pengukuran') : tr('Cancel acquisition','Batalkan akuisisi');
+  $('seriesProgress').hidden = !series;
+  if (series) {
+    $('seriesBar').max = series.total; $('seriesBar').value = series.completed;
+    $('seriesText').textContent = running
+      ? tr(`Measurement ${series.completed} of ${series.total} · every ${series.intervalSeconds} s`,`Pengukuran ${series.completed} dari ${series.total} · setiap ${series.intervalSeconds} dtk`)
+      : series.error ? tr(`Run stopped after ${series.completed} of ${series.total}: ${series.error}`,`Pengukuran berhenti setelah ${series.completed} dari ${series.total}: ${series.error}`)
+      : series.completed < series.total ? tr(`Run stopped after ${series.completed} of ${series.total} measurements.`,`Pengukuran dihentikan setelah ${series.completed} dari ${series.total}.`)
+      : tr(`Run complete: ${series.completed} measurements.`,`Pengukuran selesai: ${series.completed} kali.`);
+  }
+  if (running) $('acquisitionState').textContent = tr('Continuous run in progress — the chart follows the newest spectrum.','Pengukuran kontinu berjalan — grafik mengikuti spektrum terbaru.');
   $('darkDot').classList.toggle('done',!!status.calibration?.dark); $('referenceDot').classList.toggle('done',!!status.calibration?.reference);
   $('darkDot').title = status.calibration?.dark ? tr('Captured','Direkam') : tr('Not captured','Belum direkam');
   $('referenceDot').title = status.calibration?.reference ? tr('Captured','Direkam') : tr('Not captured','Belum direkam');
@@ -102,10 +118,29 @@ $('chart').addEventListener('focus',()=>inspect(cursorIndex));
 $('language').addEventListener('click',()=>{language=language==='en'?'id':'en';try{localStorage.setItem('siware-language',language);}catch{}setLanguage();});
 $('connect').addEventListener('click',()=>action(async()=>{status=await api(`/api/${status.connected?'disconnect':'connect'}`,undefined,'POST');}));
 async function acquire(kind) { if(!$('acquireForm').reportValidity())return; await action(async()=>{status.busy=true;renderStatus();try{selectSpectrum(await api('/api/acquire',{kind,points:Number($('points').value),integrationMilliseconds:Number($('integration').value),averages:Number($('averages').value)}));}finally{status.busy=false;}}); }
-$('acquireForm').addEventListener('submit',event=>{event.preventDefault();acquire('Sample');});
+$('acquireForm').addEventListener('submit',event=>{event.preventDefault();if(runMode()==='continuous')startSeries();else acquire('Sample');});
+for (const radio of document.querySelectorAll('input[name="runMode"]')) radio.addEventListener('change',renderStatus);
+async function startSeries() {
+  if(!$('acquireForm').reportValidity()) return;
+  await action(async()=>{status=await api('/api/series',{measurements:Number($('measurements').value),intervalSeconds:Number($('interval').value),points:Number($('points').value),integrationMilliseconds:Number($('integration').value),averages:Number($('averages').value)});});
+  if(status.series?.running) followSeries();
+}
+// While a run is active, poll quickly and show each new spectrum as it arrives.
+function followSeries() {
+  if(following) return;
+  followedCount = -1;
+  following = setInterval(async()=>{
+    try {
+      await refresh();
+      const series = status.series;
+      if(series && series.completed !== followedCount && history.length) { followedCount = series.completed; const newest = history.find(item => item.kind === 'Sample'); if(newest && newest.id !== selected?.id) selectSpectrum(await api(`/api/spectra/${encodeURIComponent(newest.id)}`)); }
+      if(!series?.running) { clearInterval(following); following = null; if(series?.error) notify(series.error,true); }
+    } catch(error) { notify(error.message,true); }
+  },700);
+}
 $('captureDark').addEventListener('click',()=>acquire('Dark')); $('captureReference').addEventListener('click',()=>acquire('Reference'));
 $('cancel').addEventListener('click',async()=>{try{await api('/api/cancel',undefined,'POST');notify(tr('Cancellation requested.','Pembatalan diminta.'));}catch(error){notify(error.message,true);}});
 $('insightButton').addEventListener('click',()=>action(async()=>{if(!selected)return;showInsight(await api(`/api/insight/${encodeURIComponent(selected.id)}`,{language}));}));
 for(const operation of ['absorbance','snv','smooth']) $(operation).addEventListener('click',()=>action(async()=>{if(!selected)return;selectSpectrum(await api(`/api/process/${encodeURIComponent(selected.id)}`,{operation,window:Number($('window').value)}));}));
-setLanguage(); refresh().catch(error=>notify(error.message,true));
+setLanguage(); refresh().then(()=>{ if(status.series?.running) followSeries(); }).catch(error=>notify(error.message,true));
 setInterval(()=>{if(!pending) refresh().catch(()=>{});},5000);

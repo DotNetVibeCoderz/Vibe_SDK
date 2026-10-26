@@ -28,6 +28,16 @@ await device.DisconnectAsync();
 
 `ScanOptions` memvalidasi `Points` (2–4096), `IntegrationMilliseconds` (1–60.000), dan `Averages` (1–100). Jembatan vendor juga membatasi `Points` pada 65, 129, 257, 513, 1024, 2048, atau 4096, dan hanya mendukung `Sample` serta `Reference`.
 
+### Pengukuran kontinu
+
+```csharp
+var continuous = new ContinuousOptions(Measurements: 10, Interval: TimeSpan.FromSeconds(5));
+await foreach (var spectrum in device.AcquireSeriesAsync(MeasurementKind.Sample, options, continuous, cancellationToken: ct))
+    Console.WriteLine($"{spectrum.CapturedAt:T} rata-rata {spectrum.Values.Average():G4}");
+```
+
+`AcquireSeriesAsync` setara dengan mode jalan kontinu di Si-Spect. Interval dihitung dari awal satu pengukuran ke awal pengukuran berikutnya; jika satu akuisisi lebih lama dari interval, akuisisi berikutnya langsung dimulai tanpa mengejar ketertinggalan. `ContinuousOptions` menerima 1–10.000 pengukuran dan interval 0 detik hingga 1 jam. Membatalkan token menghentikan seri; spektrum yang sudah dihasilkan tetap valid. Berikan `TimeProvider` untuk mengendalikan waktu tunggu dalam pengujian.
+
 ## Kalibrasi dan pemrosesan
 
 ```csharp
@@ -98,7 +108,8 @@ URL dasar bawaan: `http://localhost:5069`. Body JSON memakai camelCase, dan enum
 | POST | `/api/connect` | | Status |
 | POST | `/api/disconnect` | | Status; kalibrasi dihapus |
 | POST | `/api/acquire` | `{ "kind": "Sample", "points": 257, "integrationMilliseconds": 100, "averages": 1 }` | `Spectrum` |
-| POST | `/api/cancel` | | `200`; akuisisi yang sedang berjalan lalu mengembalikan `409` |
+| POST | `/api/series` | `{ "measurements": 10, "intervalSeconds": 5, "points": 257, "integrationMilliseconds": 100, "averages": 1 }` | Status. Memulai pengukuran kontinu `Sample` di latar belakang; `status.series` melaporkan `running`, `completed`, `total`, `intervalSeconds`, dan `error` |
+| POST | `/api/cancel` | | `200`; akuisisi yang sedang berjalan lalu mengembalikan `409`, dan pengukuran kontinu berhenti |
 | GET | `/api/history` | | Terbaru lebih dulu: `id`, `kind`, `capturedAt`, `points`, `isSimulated` |
 | GET | `/api/spectra/{id}` | | `Spectrum` |
 | POST | `/api/process/{id}` | `{ "operation": "absorbance" \| "snv" \| "smooth", "window": 5 }` | `Spectrum` baru (masuk riwayat) |

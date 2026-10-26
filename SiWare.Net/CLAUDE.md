@@ -57,6 +57,8 @@ node scripts/insight-screenshot.mjs  # live AI insight check; needs a Workbench 
 - `src/SiWare.Ai` — `SpectrumFacts` builds invariant-culture facts; only facts are sent. `ChatCompletionsInterpreter` (HF router preset via `HF_TOKEN`, or any OpenAI-compatible URL), `LocalModelInterpreter` (HF.Net, ChatML). Keys come from env vars only.
 - Shared package metadata lives in `src/Directory.Build.props`; all packages share `docs/nuget/README.md` and the icon.
 
+**Continuous runs** — `ContinuousOptions` + `ISpectrometer.AcquireSeriesAsync` (`src/SiWare.Sdk/ContinuousAcquisition.cs`, start-to-start interval, no catch-up) back the CLI `series` command (`samples/SiWare.Cli/SeriesCommand.cs`) and the Workbench `/api/series` background job (`status.series` progress; `/api/cancel` stops it).
+
 **`samples/SiWare.Cli`** — hand-rolled argument parsing; `AnalysisCommands.cs` adds `dataset`, `analyze`, `calibrate`, `plot`, `explain`. The Workbench `InsightService` enables `/api/insight/{id}` when `HF_TOKEN` or `SIWARE_LLM_BASE_URL`/`_API_KEY`/`_MODEL` are set.
 
 **`docs/research/`** — evidence about the vendor driver (`vendor-api.md` has verified method signatures and enum values). Respect its stated limits: enum values are Python-level, not verified wire opcodes; units/mode semantics still need physical-device validation. Do not redistribute vendor binaries.

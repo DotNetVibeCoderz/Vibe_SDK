@@ -21,6 +21,7 @@ try
             "  demo [--output directory]     Acquire dark/reference/sample and export absorbance\n" +
             "  scan [--output spectrum.json] [--vendor-config config.json]\n" +
             "  discover --vendor-config config.json\n" +
+            SeriesCommand.Help + "\n" +
             "  process --input spectrum.json --operation snv|smooth [--output result.json]\n" +
             "  info                         Report .NET and Rust availability\n" +
             AnalysisCommands.Help + "\n" +
@@ -41,7 +42,7 @@ try
     }
     var analysisResult = await AnalysisCommands.RunAsync(command, Option, Flag, cancellation.Token);
     if (analysisResult >= 0) return analysisResult;
-    if (command is not ("demo" or "scan" or "discover")) throw new ArgumentException("Unknown command. Use help.");
+    if (command is not ("demo" or "scan" or "discover" or "series")) throw new ArgumentException("Unknown command. Use help.");
     var vendor = Option("--vendor-config");
     if (command == "demo" && vendor != null) throw new ArgumentException("Demo is simulation-only. Use scan for hardware.");
     await using ISpectrometer device = vendor == null ? new SimulatedSpectrometer() : new VendorSpectrometer(
@@ -50,6 +51,7 @@ try
     await device.ConnectAsync(cancellation.Token);
     Console.WriteLine($"{device.Device.Name} | {(device.Device.IsSimulated ? "SIMULATED DATA" : "VENDOR DEVICE — hardware validation required")}");
     if (command == "discover") { Console.WriteLine(device.Device.Id); return 0; }
+    if (command == "series") return await SeriesCommand.RunAsync(device, Option, cancellation.Token);
     if (command == "scan")
     {
         var spectrum = await device.AcquireAsync(MeasurementKind.Sample, new(), cancellation.Token);

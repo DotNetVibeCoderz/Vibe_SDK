@@ -80,6 +80,30 @@ try {
   assert.equal((await canceledResponse).status(),409);
   assert.equal((await (await page.request.get(`${base}/api/status`)).json()).busy,false,'Cancelled acquisition was resent');
   await ready('connect');
+  // Continuous run mode: a short run completes and the chart follows each new spectrum.
+  await page.locator('#integration').fill('10');
+  const historyBefore = (await (await page.request.get(`${base}/api/history`)).json()).length;
+  await page.locator('label:has(input[value="continuous"])').click();
+  assert.equal(await page.locator('#seriesFields').isVisible(), true);
+  await page.locator('#measurements').fill('3');
+  await page.locator('#interval').fill('0.3');
+  await page.locator('#acquire').click();
+  await page.waitForFunction(() => /complete/.test(document.getElementById('seriesText').textContent), null, { timeout: 30000 });
+  assert.equal((await (await page.request.get(`${base}/api/history`)).json()).length, historyBefore + 3);
+  assert.equal(await page.locator('#seriesBar').getAttribute('value'), '3');
+  await ready('connect');
+  // A long run can be stopped; spectra captured so far stay in the history.
+  await page.locator('#measurements').fill('50');
+  await page.locator('#interval').fill('1');
+  await page.locator('#acquire').click();
+  await page.waitForFunction(() => /Measurement [1-9]/.test(document.getElementById('seriesText').textContent), null, { timeout: 30000 });
+  await shoot('workbench-continuous.png', 1440);
+  await page.locator('#cancel').click();
+  await page.waitForFunction(() => /stopped/.test(document.getElementById('seriesText').textContent), null, { timeout: 30000 });
+  assert.equal((await (await page.request.get(`${base}/api/status`)).json()).busy, false);
+  await ready('connect');
+  await page.locator('label:has(input[value="single"])').click();
+  assert.equal(await page.locator('#seriesFields').isVisible(), false);
   await page.locator('#language').click();
   assert.equal(await page.locator('html').getAttribute('lang'), 'id');
   assert.match(await page.locator('#modeBadge').textContent(), /DATA SIMULASI/);
@@ -91,5 +115,5 @@ try {
   await page.locator('#language').click();
   await clickRequest('connect','/api/disconnect');
   assert.deepEqual(errors,[]);
-  console.log('UI smoke passed: connect, calibration, acquisition, absorbance, SNV, smoothing, chart keyboard, history, exports, cancel, EN/ID, mobile layout.');
+  console.log('UI smoke passed: connect, calibration, acquisition, absorbance, SNV, smoothing, chart keyboard, history, exports, cancel, EN/ID, mobile layout, continuous run and stop.');
 } finally { await browser.close(); }
