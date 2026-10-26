@@ -12,8 +12,8 @@
 - [x] Code review: acquisition-settings validation, numerical parity, vendor response checks (see `docs/review.md`).
 - [x] Chemometrics (GravicodeScience), visualization (Visual.Net), and AI interpretation (HF.Net) — PLAN steps 7–10: three opt-in packages, CLI commands, Workbench AI insight, 24 tests, bilingual docs.
 - [x] Vendor driver analysis with REA + Ghidra: `scan_time` in seconds, cm⁻¹ axis, no dark operation (reference-only absorbance added), UDP/TCP over USB RNDIS/NCM transport; `mode` still unknown (`docs/research/driver-ghidra.md`).
-- [ ] Physical sensor compatibility validation (requires supported device and verified protocol). See `docs/en/hardware-validation.md`.
-- [ ] Public NuGet publication via GitHub Actions (`NUGET_API_KEY` secret is set) — only after physical validation.
+- [x] Physical sensor validation: discovery and acquisition on a Si-NIR Matrix DVK over USB on Windows 10 (2026-10-26). Accuracy against a reference instrument is still open. See `docs/en/hardware-validation.md`.
+- [x] Public NuGet publication of 0.1.0 via GitHub Actions (`siware-net-publish.yml`, `NUGET_API_KEY` secret).
 
 ## 2026-10-20
 
@@ -32,6 +32,11 @@
 - Physical sensor (Si-NIR Matrix DVK, USB NCM `303A:4000`): USB enumerates, but on Windows 11 build 26200 neither the built-in `usbncm.inf` (`STATUS_DEVICE_HARDWARE_ERROR`) nor the vendor `siwarenirusbdriver.inf` 1.0.0.2 (not Microsoft-signed; with enforcement off, `DriverEntry` returns `STATUS_NOT_SUPPORTED`) brings up the network link. Reported back to the user; the Si-Spect app's Single/Continuous is a scan-loop setting (`user_scan_settings.run_mode`), separate from the driver's `mode` argument.
 
 - GitHub pre-release `siware-net-v0.1.0-preview.1` for hardware testing on Windows 10: self-contained CLI and Workbench (win-x64), vendor kit (bridge, probe, config, embeddable CPython 3.10.11), and the four .nupkg files. nuget.org publication stays on hold until the real-hardware test passes. The published Workbench now uses its own folder as content root.
+
+## 2026-10-27
+
+- Real-device test (Windows 10, Si-NIR Matrix DVK): the USB sensor fires `on_connected` about 6 s after `py_driver()` starts, past the old 5 s discovery window, so the bridge now waits up to 20 s (commit 453ef4d). The `VendorBridgeOptions.TimeoutSeconds` minimum was raised from 6 to 30 s to cover it.
+- Release 0.1.0: version off `-preview`, release notes and docs updated, `siware-net-publish.yml` added, and the four packages published to nuget.org.
 
 ## Status ringkas (Bahasa Indonesia)
 

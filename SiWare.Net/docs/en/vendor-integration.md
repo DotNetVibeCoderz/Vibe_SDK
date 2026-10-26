@@ -2,7 +2,7 @@
 
 *SiWare.NET, created by Gravicode Studios, led by Kang Fadhil.* · [Bahasa Indonesia](../id/vendor-integration.md)
 
-> The bridge calls the **real** installed Si-Ware driver, but it has not yet been validated against a physical sensor. Treat readings as unverified until the checklist in [Hardware validation](hardware-validation.md) is complete. The Workbench labels such sessions *HARDWARE · UNVERIFIED*.
+> The bridge calls the **real** installed Si-Ware driver. Discovery and acquisition are validated on a Si-NIR Matrix DVK over USB on Windows 10; measurement accuracy and the meaning of `mode` are still open (see [Hardware validation](hardware-validation.md)). The Workbench labels hardware sessions *HARDWARE · UNVERIFIED* until your own accuracy check is done.
 
 ## How it works
 
@@ -24,7 +24,7 @@ sequenceDiagram
     VS-->>App: Spectrum (nm, ascending, IsSimulated=false)
 ```
 
-Discovery waits up to 5 seconds for the driver's connection callback. `Sample` uses `run_psd`. `Reference` uses `run_background` followed by `read_background`. Repeated scans are averaged only when their wavenumber axes are identical. Wavenumbers in cm⁻¹ are converted to nanometres (`10^7 / ν`) and sorted ascending.
+Discovery waits up to 20 seconds for the driver's connection callback and returns as soon as a sensor announces itself. A USB sensor typically takes about 6 seconds. `Sample` uses `run_psd`. `Reference` uses `run_background` followed by `read_background`. Repeated scans are averaged only when their wavenumber axes are identical. Wavenumbers in cm⁻¹ are converted to nanometres (`10^7 / ν`) and sorted ascending.
 
 The adapter selects internal optical gain, boxcar apodization, and no zero padding. These are explicit choices, not vendor defaults. The binding has **no dark operation** (confirmed by Ghidra analysis, see [driver-ghidra.md](../research/driver-ghidra.md)). Si-Ware sensors are Fourier-transform instruments, so their spectra carry no dark offset. Vendor sessions therefore compute absorbance from the reference only with `SpectralProcessing.Absorbance(sample, reference)`, and the Workbench hides the dark step for them.
 
@@ -65,7 +65,7 @@ Copy `scripts/vendor-config.example.json` and fill in **absolute** paths:
 | `mode` | Integer passed to every `run_*` call. Its meaning is still **unknown**: static analysis links it to the driver's "default" and "compatibility" request formats, but not to concrete values. Confirm it with Si-Ware; `0` is unverified. |
 | `confirmWavenumbersInInverseCentimeters` | Must be `true`. It confirms that `wvn` is in cm⁻¹ before conversion to nm. |
 | `deviceId` | Optional discovered device ID. When `null`, the first discovered device is used. |
-| `timeoutSeconds` | 6–600. Per-request timeout. On timeout the worker is killed. |
+| `timeoutSeconds` | 30–600. Per-request timeout; discovery alone can take up to 20 s. On timeout the worker is killed. |
 
 With the NuGet package, `vendor_bridge.py` is copied to `<output>/SiWare/vendor_bridge.py`. Point `workerScript` there.
 

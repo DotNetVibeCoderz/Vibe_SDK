@@ -3,8 +3,8 @@
 .NET 10 SDK for Si-Ware spectral sensors. Created by Gravicode Studios, led by Kang Fadhil.
 SDK .NET 10 untuk sensor spektral Si-Ware. Dibuat oleh Gravicode Studios dipimpin oleh Kang Fadhil.
 
-> **Preview.** The simulator and processing are tested. Vendor hardware support is not yet validated on a physical device, and simulated data is always labelled `IsSimulated = true`.
-> **Pratinjau.** Simulator dan pemrosesan sudah diuji. Dukungan perangkat vendor belum divalidasi pada perangkat fisik; data simulasi selalu bertanda `IsSimulated = true`.
+> **0.1.0.** Discovery and acquisition are validated on a Si-NIR Matrix DVK over USB (Windows 10). Simulated data is always labelled `IsSimulated = true`.
+> **0.1.0.** Penemuan perangkat dan akuisisi sudah divalidasi pada Si-NIR Matrix DVK lewat USB (Windows 10). Data simulasi selalu bertanda `IsSimulated = true`.
 
 ## Quick start / Mulai cepat
 

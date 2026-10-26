@@ -2,7 +2,7 @@
 
 *SiWare.NET, dibuat oleh Gravicode Studios dipimpin oleh Kang Fadhil.* · [English](../en/vendor-integration.md)
 
-> Jembatan ini memanggil driver Si-Ware **asli** yang terpasang, tetapi belum divalidasi dengan sensor fisik. Anggap hasil pembacaan belum terverifikasi sampai daftar periksa di [Validasi perangkat keras](hardware-validation.md) selesai. Workbench memberi label *PERANGKAT · BELUM DIVERIFIKASI* untuk sesi seperti ini.
+> Jembatan ini memanggil driver Si-Ware **asli** yang terpasang. Penemuan perangkat dan akuisisi sudah divalidasi pada Si-NIR Matrix DVK lewat USB di Windows 10; akurasi pengukuran dan arti `mode` masih terbuka (lihat [Validasi perangkat keras](hardware-validation.md)). Workbench tetap memberi label *PERANGKAT · BELUM DIVERIFIKASI* sampai Anda melakukan uji akurasi sendiri.
 
 ## Cara kerja
 
@@ -24,7 +24,7 @@ sequenceDiagram
     VS-->>App: Spectrum (nm, naik, IsSimulated=false)
 ```
 
-Penemuan perangkat menunggu hingga 5 detik untuk callback koneksi dari driver. `Sample` memakai `run_psd`. `Reference` memakai `run_background` lalu `read_background`. Pemindaian berulang hanya dirata-ratakan jika sumbu bilangan gelombangnya identik. Bilangan gelombang dalam cm⁻¹ dikonversi ke nanometer (`10^7 / ν`) lalu diurutkan naik.
+Penemuan perangkat menunggu hingga 20 detik untuk callback koneksi dari driver, dan langsung selesai begitu sensor muncul. Sensor USB biasanya butuh sekitar 6 detik. `Sample` memakai `run_psd`. `Reference` memakai `run_background` lalu `read_background`. Pemindaian berulang hanya dirata-ratakan jika sumbu bilangan gelombangnya identik. Bilangan gelombang dalam cm⁻¹ dikonversi ke nanometer (`10^7 / ν`) lalu diurutkan naik.
 
 Adaptor memilih gain optik internal, apodisasi boxcar, dan tanpa zero padding. Ini pilihan eksplisit, bukan nilai bawaan vendor. Binding **tidak memiliki operasi dark** (dikonfirmasi lewat analisis Ghidra, lihat [driver-ghidra.md](../research/driver-ghidra.md)). Sensor Si-Ware adalah instrumen Fourier-transform, sehingga spektrumnya tidak membawa offset dark. Karena itu sesi vendor menghitung absorbansi dari referensi saja dengan `SpectralProcessing.Absorbance(sample, reference)`, dan Workbench tidak menampilkan langkah dark untuk sesi tersebut.
 
@@ -65,7 +65,7 @@ Salin `scripts/vendor-config.example.json` lalu isi dengan path **absolut**:
 | `mode` | Bilangan bulat yang dikirim ke setiap panggilan `run_*`. Artinya masih **belum diketahui**: analisis statis mengaitkannya dengan format permintaan "default" dan "compatibility" pada driver, tetapi belum dengan nilai konkret. Konfirmasikan ke Si-Ware; nilai `0` belum terverifikasi. |
 | `confirmWavenumbersInInverseCentimeters` | Wajib `true`, sebagai konfirmasi bahwa `wvn` dalam cm⁻¹ sebelum dikonversi ke nm. |
 | `deviceId` | ID perangkat hasil penemuan (opsional). Jika `null`, perangkat pertama yang ditemukan dipakai. |
-| `timeoutSeconds` | 6–600. Batas waktu per permintaan. Saat batas waktu habis, worker dihentikan. |
+| `timeoutSeconds` | 30–600. Batas waktu per permintaan; penemuan perangkat saja bisa memakan hingga 20 detik. Saat batas waktu habis, worker dihentikan. |
 
 Jika memakai paket NuGet, `vendor_bridge.py` disalin ke `<output>/SiWare/vendor_bridge.py`. Arahkan `workerScript` ke sana.
 

@@ -67,7 +67,7 @@ Implementasi `ISpectrometer` menjaga setiap operasi dengan `SemaphoreSlim`, sehi
 Inspeksi statis dan saat impor terhadap Si-Spect Platform (lihat `docs/research/`) menunjukkan bahwa driver vendor adalah **ekstensi native CPython 3.10** (`pyDriver.cp310-win_amd64.pyd`), bukan assembly .NET atau SDK C yang terdokumentasi. Protokol kabel dan tata letak paketnya tidak dipublikasikan, sehingga mengimplementasikannya ulang berarti menebak. Karena itu SDK memanggil binding vendor yang asli, yang dijalankan di proses terpisah:
 
 - **Isolasi**: crash atau hang di kode native vendor tidak menjatuhkan proses .NET. Saat batas waktu habis atau terjadi galat, seluruh pohon proses worker dihentikan.
-- **IPC terbatas**: satu objek JSON per baris, ID permintaan dicocokkan, batas baris 1 MiB, dan batas waktu yang dapat diatur (6–600 detik).
+- **IPC terbatas**: satu objek JSON per baris, ID permintaan dicocokkan, batas baris 1 MiB, dan batas waktu yang dapat diatur (30–600 detik).
 - **stdout bersih**: diagnostik vendor dialihkan ke stderr, lalu dibuang oleh .NET (log vendor dapat berisi konfigurasi lokal).
 - **Tanpa tebakan**: satuan waktu pemindaian, nilai mode, dan satuan sumbu bilangan gelombang wajib dikonfirmasi pengguna di konfigurasi.
 

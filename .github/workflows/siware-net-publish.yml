@@ -1,0 +1,115 @@
+# Rilis SiWare.Net ke nuget.org.
+#
+# Pemicu:
+#   - tag  siware-net-v0.1.0  (awalan dibuang, sisanya jadi versi paket)
+#   - jalankan manual lewat tab Actions dengan mengisi input `version`
+#
+# Tag diberi awalan nama SDK agar rilis SDK lain di Vibe_SDK tidak ikut mempublish paket SiWare.
+# Gerbang rilis: docs/en/hardware-validation.md. Butuh secret repository: NUGET_API_KEY.
+name: SiWare.Net Publish NuGet
+
+on:
+  push:
+    tags:
+      - 'siware-net-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versi paket, mis. 0.1.0 atau 0.2.0-beta.1'
+        required: true
+        type: string
+      dry_run:
+        description: 'Pack saja, jangan push ke nuget.org'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    name: Pack & push
+    # Windows: paket Sdk membawa siware_dsp.dll (win-x64) dan jembatan vendor hanya berjalan di Windows.
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: SiWare.Net
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tentukan versi
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#siware-net-v}"
+          fi
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Versi tidak valid: '$version'"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Merilis versi $version"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: SiWare.Net/global.json
+
+      # Kernel DSP Rust harus dibangun lebih dulu: Directory.Build.targets dan paket Sdk hanya menyertakan
+      # siware_dsp.dll bila build release-nya ada, dan NativeDspTests membutuhkannya.
+      - name: Build Rust DSP
+        shell: bash
+        run: |
+          rustup update stable --no-self-update
+          cargo build --release --manifest-path native/siware-dsp/Cargo.toml
+          cargo test --manifest-path native/siware-dsp/Cargo.toml
+
+      - name: Restore
+        run: dotnet restore SiWare.Net.slnx
+
+      - name: Build
+        run: dotnet build SiWare.Net.slnx -c Release --no-restore -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Test
+        run: dotnet test SiWare.Net.slnx -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack SiWare.Net.slnx -c Release --no-build -p:Version=${{ steps.ver.outputs.version }} -o artifacts/nuget
+
+      - name: Periksa isi paket
+        shell: bash
+        run: |
+          ls artifacts/nuget
+          count=$(ls artifacts/nuget/*.nupkg | wc -l)
+          if [ "$count" -ne 4 ]; then echo "Diharapkan 4 paket, ditemukan $count"; exit 1; fi
+          unzip -l "artifacts/nuget/Gravicode.SiWare.Sdk.${{ steps.ver.outputs.version }}.nupkg" | grep -q 'runtimes/win-x64/native/siware_dsp.dll' \
+            || { echo "siware_dsp.dll tidak ada di paket Sdk"; exit 1; }
+
+      - name: Unggah paket sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: siware-nuget-${{ steps.ver.outputs.version }}
+          path: SiWare.Net/artifacts/nuget/*.nupkg
+          if-no-files-found: error
+
+      # --skip-duplicate: rilis ulang setelah kegagalan sebagian tidak berhenti
+      # hanya karena satu paket sudah terlanjur masuk ke nuget.org.
+      - name: Push ke nuget.org
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "Secret NUGET_API_KEY belum diset di repository ini."; exit 1
+          fi
+          dotnet nuget push "artifacts/nuget/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "$NUGET_API_KEY" \
+            --skip-duplicate

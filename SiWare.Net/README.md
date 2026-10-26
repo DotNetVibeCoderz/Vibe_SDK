@@ -10,9 +10,9 @@ SDK .NET 10, jembatan driver, DSP Rust, dan aplikasi contoh untuk sensor spektra
 
 ![Spectrum Workbench — absorbance view](docs/screenshots/workbench-desktop.png)
 
-> **Status: preview.** The SDK, simulator, processing, and apps are tested. The vendor-driver bridge calls the real installed Si-Ware Python binding, but it has **not yet been validated against a physical sensor**. Simulated spectra are always marked `IsSimulated = true` and labelled *SIMULATED DATA* in every app.
+> **Status: 0.1.0.** The SDK, simulator, processing, and apps are tested, and discovery and acquisition through the vendor bridge are **validated on a physical Si-NIR Matrix DVK over USB on Windows 10**. Measurement accuracy against a reference instrument is not yet validated ([hardware validation](docs/en/hardware-validation.md)). Simulated spectra are always marked `IsSimulated = true` and labelled *SIMULATED DATA* in every app.
 >
-> **Status: pratinjau.** SDK, simulator, pemrosesan, dan aplikasi sudah diuji. Jembatan driver vendor memanggil binding Python Si-Ware yang terpasang, tetapi **belum divalidasi dengan sensor fisik**. Spektrum simulasi selalu bertanda `IsSimulated = true` dan berlabel *DATA SIMULASI*.
+> **Status: 0.1.0.** SDK, simulator, pemrosesan, dan aplikasi sudah diuji, dan penemuan perangkat serta akuisisi melalui jembatan vendor **sudah divalidasi pada sensor fisik Si-NIR Matrix DVK lewat USB di Windows 10**. Akurasi pengukuran dibanding instrumen acuan belum divalidasi ([validasi perangkat keras](docs/id/hardware-validation.md)). Spektrum simulasi selalu bertanda `IsSimulated = true` dan berlabel *DATA SIMULASI*.
 
 ## English
 

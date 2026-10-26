@@ -12,7 +12,7 @@
     <Copyright>Copyright (c) 2026 Gravicode Studios</Copyright>
     <RepositoryUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK</RepositoryUrl>
     <PackageProjectUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/SiWare.Net</PackageProjectUrl>
-    <PackageReleaseNotes>Preview. Simulator, processing, and analysis are tested; vendor hardware compatibility is not yet validated on a physical device.</PackageReleaseNotes>
+    <PackageReleaseNotes>0.1.0: first release. Discovery and acquisition validated on a Si-NIR Matrix DVK over USB (Windows 10). Continuous run mode, chemometrics, charts, and advisory AI interpretation. See https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/SiWare.Net</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

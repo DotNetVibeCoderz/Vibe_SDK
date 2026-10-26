@@ -138,7 +138,8 @@ public sealed class VendorSpectrometer(VendorBridgeOptions options) : ISpectrome
             if (!Path.IsPathFullyQualified(path) || !File.Exists(path)) throw new FileNotFoundException("Configure an existing absolute vendor bridge path.", path);
         if (options.ScanTimeUnit is not ("seconds" or "milliseconds") || !options.ConfirmWavenumbersInInverseCentimeters)
             throw new ArgumentException("Explicitly confirm vendor scan-time units, mode, and cm^-1 wavenumber units.");
-        if (options.TimeoutSeconds is < 6 or > 600) throw new ArgumentOutOfRangeException(nameof(options), "Timeout must be 6–600 seconds.");
+        // Discovery alone may wait 20 s for a USB sensor to announce itself (vendor_bridge.py), plus driver start-up.
+        if (options.TimeoutSeconds is < 30 or > 600) throw new ArgumentOutOfRangeException(nameof(options), "Timeout must be 30–600 seconds.");
     }
     private static async Task DrainAsync(StreamReader reader)
     {

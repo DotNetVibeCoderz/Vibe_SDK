@@ -67,7 +67,7 @@ Because every `Spectrum` is valid by construction, processing code never re-chec
 Static and import-time inspection of the Si-Spect Platform (see `docs/research/`) showed that the vendor driver is a **CPython 3.10 native extension** (`pyDriver.cp310-win_amd64.pyd`), not a .NET assembly or a documented C SDK. Its wire protocol and packet layouts are not public, so reimplementing them would mean guessing. The SDK therefore calls the real vendor binding, hosted in a separate process:
 
 - **Isolation**: a crash or hang in native vendor code cannot take down the .NET process. On timeout or error, the worker process tree is killed.
-- **Bounded IPC**: one JSON object per line, with request IDs correlated, a 1 MiB line limit, and a configurable timeout (6–600 s).
+- **Bounded IPC**: one JSON object per line, with request IDs correlated, a 1 MiB line limit, and a configurable timeout (30–600 s).
 - **Clean stdout**: the worker redirects vendor diagnostics to stderr, which .NET drains and discards (vendor logs may contain local configuration).
 - **No guessing**: scan-time units, the mode value, and the wavenumber axis unit must be confirmed by the user in configuration.
 

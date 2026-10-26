@@ -17,7 +17,8 @@ Halaman ini mencatat apa yang sudah dibuktikan, apa yang belum, dan apa yang har
 | Arti `mode` | **Belum diketahui** | Hanya terkait dengan format permintaan "default" dan "compatibility" pada driver |
 | Transport: penemuan lewat UDP, lalu TCP melalui USB RNDIS/NCM atau Wi-Fi | **Teramati** | String driver dan berkas INF yang disertakan |
 | Satuan sumbu `wvn` adalah cm⁻¹ | **Teramati pada data vendor** | 138 spektrum contoh vendor mencakup 3921,57–7407,41 cm⁻¹ (= 2550–1350 nm) |
-| Penemuan, akuisisi, dan penutupan pada sensor nyata | **Belum divalidasi** | Tidak ada perangkat selama pengembangan |
+| Penemuan perangkat dan akuisisi pada sensor nyata | **Tervalidasi** | Si-NIR Matrix DVK (USB NCM `303A:4000`) di Windows 10, 2026-10-26, dengan konfigurasi vendor kit. Sensor USB baru muncul sekitar 6 detik setelah driver mulai, sehingga jendela penemuan dinaikkan menjadi 20 detik |
+| Driver USB di Windows 11 build 26200 | **Gagal** | `siwarenirusbdriver.inf` 1.0.0.2 dari vendor tidak bertanda tangan Microsoft dan mengembalikan `STATUS_NOT_SUPPORTED`; driver NCM bawaan melaporkan galat perangkat keras. Gunakan Windows 10 |
 | Akurasi pengukuran dibanding instrumen acuan | **Belum divalidasi** | |
 | Akuisisi dark melalui API vendor | **Tidak ada** | Binding tidak memiliki operasi dark; absorbansi memakai referensi saja |
 
@@ -39,9 +40,11 @@ Jalankan langkah-langkah berikut dengan sensor yang didukung, lalu catat hasilny
 
 Publikasi publik `Gravicode.SiWare.Sdk` di NuGet mensyaratkan:
 
-- [ ] Daftar periksa perangkat keras selesai pada minimal satu sensor yang didukung
-- [ ] Identitas paket ditinjau (nama dan hubungannya dengan merek dagang Si-Ware), dan lisensi dikonfirmasi
-- [ ] Versi baru keluar dari `-preview` setelah validasi perangkat keras
-- [ ] Dokumentasi diperbarui dengan model perangkat dan pengaturan yang sudah divalidasi
+- [x] Penemuan perangkat dan akuisisi tervalidasi pada satu sensor yang didukung (Si-NIR Matrix DVK, Windows 10). Butir 3–7 daftar periksa tetap disarankan sebagai tindak lanjut.
+- [x] Identitas paket (`Gravicode.SiWare.*`) dan lisensi MIT disetujui pemilik
+- [x] Versi keluar dari `-preview`: 0.1.0
+- [x] Dokumentasi diperbarui dengan perangkat dan pengaturan yang sudah divalidasi
+
+Publikasi berjalan lewat `.github/workflows/siware-net-publish.yml`: push tag `siware-net-v<versi>` (atau jalankan manual dari tab Actions). Workflow ini membangun DSP Rust, menjalankan semua tes, membuat empat paket, lalu mendorongnya dengan secret repository `NUGET_API_KEY`.
 
 Sampai saat itu, buat paket secara lokal (`dotnet pack`, lihat [Memulai](getting-started.md)). Kredensial publikasi wajib berada di luar repositori.

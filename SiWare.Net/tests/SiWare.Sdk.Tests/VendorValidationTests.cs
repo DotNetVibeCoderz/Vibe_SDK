@@ -31,7 +31,7 @@ public class VendorValidationTests
     [Theory]
     [InlineData("unknown", true, 60)]
     [InlineData("seconds", false, 60)]
-    [InlineData("seconds", true, 5)]
+    [InlineData("seconds", true, 29)]
     [InlineData("seconds", true, 601)]
     public async Task Connect_InvalidConfiguration_FailsBeforeProcessStart(string unit, bool confirmed, int timeout)
     {
@@ -41,7 +41,7 @@ public class VendorValidationTests
             await using var device = new VendorSpectrometer(new(path, path, path, unit, 0, confirmed, TimeoutSeconds: timeout));
             if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess)
                 await Assert.ThrowsAsync<PlatformNotSupportedException>(() => device.ConnectAsync());
-            else if (timeout is < 6 or > 600)
+            else if (timeout is < 30 or > 600)
                 await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => device.ConnectAsync());
             else
                 await Assert.ThrowsAsync<ArgumentException>(() => device.ConnectAsync());
