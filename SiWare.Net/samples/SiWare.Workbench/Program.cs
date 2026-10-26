@@ -2,7 +2,9 @@ using System.Text.Json.Serialization;
 using SiWare.Sdk;
 using SiWare.Workbench;
 
-var builder = WebApplication.CreateBuilder(args);
+// A published build carries wwwroot next to the executable; use it so the app works from any working directory.
+var publishedRoot = Directory.Exists(Path.Combine(AppContext.BaseDirectory, "wwwroot")) ? AppContext.BaseDirectory : null;
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = publishedRoot });
 var vendorConfig = Environment.GetEnvironmentVariable("SIWARE_VENDOR_CONFIG");
 builder.Services.AddSingleton<ISpectrometer>(_ => vendorConfig == null ? new SimulatedSpectrometer() :
     new VendorSpectrometer(System.Text.Json.JsonSerializer.Deserialize<VendorBridgeOptions>(File.ReadAllText(vendorConfig), SpectrumFile.JsonOptions)
