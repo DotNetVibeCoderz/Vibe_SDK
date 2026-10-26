@@ -1,0 +1,10 @@
+{
+  "pythonExecutable": "C:\\SiWare\\vendor-kit\\python310\\python.exe",
+  "workerScript": "C:\\SiWare\\vendor-kit\\vendor_bridge.py",
+  "driverModule": "C:\\Program Files (x86)\\Si-Spect Platform\\Analyze\\pyDriver.pyd",
+  "scanTimeUnit": "seconds",
+  "mode": 0,
+  "confirmWavenumbersInInverseCentimeters": true,
+  "deviceId": null,
+  "timeoutSeconds": 60
+}
