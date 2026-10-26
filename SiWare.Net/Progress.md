@@ -24,6 +24,10 @@
 - Analysis/Visualization/AI: `Gravicode.SiWare.Analysis` (Savitzky-Golay, MSC, PCA, PLS1/NIPALS with K-fold component selection; GravicodeScience lacks PLS and Savitzky-Golay, so both are implemented here), `Gravicode.SiWare.Visualization` (Matplotlib.Net charts marked SIMULATED DATA when applicable), `Gravicode.SiWare.Ai` (facts-only prompts; Hugging Face router, OpenAI-compatible, or local HF.Net). Simulated moisture set: PLS 4 LV, RMSECV 0.37, R² 0.996.
 - Live LLM tests: DeepSeek (OpenAI-compatible) good in EN/ID after fixing language-specific hedging and the token budget for reasoning models; HF router reachable but the account has no credit (402); local Qwen2.5-0.5B via HF.Net works offline but answers poorly.
 
+## 2026-10-26
+
+- Si-Spect Platform update (driver `be10d2e3…`, version `260818b00460e`): rechecked with `vendor_probe.py --inspect`, REA/Ghidra string diff, and the installation files. The API the bridge uses is unchanged, so no code changes were needed. Details: `docs/research/vendor-api.md`, `docs/research/driver-ghidra.md`.
+
 ## Status ringkas (Bahasa Indonesia)
 
 SDK, DSP Rust, CLI, Workbench, pengujian, paket NuGet lokal, dan dokumentasi dwibahasa sudah selesai dan sudah ditinjau. Integrasi GravicodeScience, Visual.Net, dan HF.Net juga selesai (analisis PCA/PLS, grafik, insight AI). Analisis driver dengan Ghidra juga selesai (satuan scan time = detik, tanpa dark, transport jaringan USB; arti `mode` belum diketahui). Yang tersisa: validasi dengan sensor Si-Ware fisik, lalu workflow CI publikasi NuGet.

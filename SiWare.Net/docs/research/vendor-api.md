@@ -55,3 +55,19 @@ Replies contain matching `id`, `ok`, and either `result` or `error`. Spectra con
 ## Bahasa Indonesia
 
 Impor modul asli berhasil menggunakan CPython 3.10 x64. Kontrak metode dan nilai enum sudah diperiksa langsung tanpa membuat driver atau mengirim perintah perangkat. Adapter dapat memakai modul vendor yang terpasang; satuan waktu pemindaian, arti mode, satuan sumbu, perilaku penemuan perangkat, dan hasil pengukuran masih perlu validasi perangkat nyata.
+
+## Re-verification: Si-Spect update of 2026-10-26
+
+Si-Spect Platform was updated on 2026-10-26. The new `Analyze/pyDriver.pyd` is 5,012,480 bytes, SHA-256 `be10d2e31d933c7f2f59fbdf1bfb78f4f52ca0e9659ab8432cce307aeb6b91ef`, and `pyDriver.version()` reports `260818b00460e`. The previous binary (`5ca6bd73…`, 4,645,376 bytes) was replaced. `scripts/vendor_probe.py --inspect` was rerun in CPython 3.10.11 x64; no driver was created and no device command was sent.
+
+**Result: compatible, no code changes needed.**
+
+- The signatures of `run_psd`, `run_absorbance`, `run_background`, `read_background`, `run_interferogram`, `set_on_connected`, `set_on_disconnected`, `get_sensor_id`, `read_fw_version`, and `read_temperature` are identical, including argument order and return shapes.
+- The `CommonWaveNumber`, `OpticalGainSelection`, `ApodizationSelection`, `ZeroPaddingSelection`, and `DeviceType` values are identical. `Error.value()` and the `RunPSdResponseElements.psd` / `wvn` lists are unchanged.
+- New members include `BoardType` (TouchSensorBoard, p10Dvk, Atyaf, Inline, Com4Inline, Scanner), `py_driver.FirmwareAvailableFeatures`, `RunPsdSettings` (`apodizationSel`, `mode`, `opticalGain`, `zeroPadding`), `get_board_type`, `get_device_type`, `read_module_id`, `run_raw`, temperature-compensation controls, and firmware update calls. The bridge uses none of them.
+- `material_peaks` is gone; SiWare.NET never used it.
+- Re-check after every Si-Spect update with `.tools/python310/python.exe scripts/vendor_probe.py --inspect`.
+
+### Bahasa Indonesia
+
+Si-Spect diperbarui pada 2026-10-26: `pyDriver.pyd` baru (SHA-256 `be10d2e3…`, versi `260818b00460e`). Tanda tangan metode dan nilai enum yang dipakai jembatan tidak berubah, sehingga **tetap kompatibel tanpa perubahan kode**. Ada anggota baru (antara lain `BoardType`, `get_board_type`, `run_raw`, dan kontrol kompensasi suhu) yang tidak dipakai SiWare.NET. `material_peaks` dihapus, tetapi memang tidak pernah dipakai. Ulangi `vendor_probe.py --inspect` setiap kali Si-Spect diperbarui.

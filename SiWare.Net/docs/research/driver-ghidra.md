@@ -54,3 +54,14 @@ The REA `search_strings`, `xrefs`, `resolve_containing_procedure`, and `read_byt
 - **Tidak ada operasi dark.** Absorbansi untuk sesi vendor memakai referensi saja.
 - **Penemuan perangkat:** broadcast UDP lalu koneksi TCP, melalui adaptor jaringan USB: RNDIS dengan IP host 192.168.137.1/24, atau NCM pada perangkat berbasis ESP.
 - **Operasi `burn_*`/`write_*` mengubah kalibrasi perangkat** dan tidak boleh dipanggil oleh SiWare.NET.
+
+## Update check: driver `be10d2e3…` (2026-10-26)
+
+The same REA/Ghidra string search was repeated on the updated driver and diffed against the 2026-10-20 results (170 vs 177 entries, compared in full).
+
+- **Connection sequence revised.** A third port group was added ("prod ports", next to the default and compatibility ports). New messages: "Module {} failed to connect because we there was no valid contracts…" and `SocketsLowerLayer::disconnect_impl_sync`.
+- **New types:** `CalibrationPSDResponseElements`, and the simdjson JSON parser was added.
+- **Unchanged:** UDP broadcast discovery, TCP connections, the `scan_time` argument, the default/compatibility request formats, and the absence of a dark operation.
+- **Installation evidence still holds:** the USB IDs (RNDIS `2D15:F317`, NCM `303A:4000`), the host IP `192.168.137.1/24`, the vendor UI's "sec" label for `scan_time`, and the sample templates (2 s, 257 points).
+
+`mode` remains unknown. **Bahasa Indonesia:** pembaruan driver hanya mengubah urutan koneksi (grup port "prod" baru) dan menambah tipe baru. Transport, argumen `scan_time`, dan ketiadaan operasi dark tidak berubah.
