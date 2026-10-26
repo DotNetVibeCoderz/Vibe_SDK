@@ -39,7 +39,8 @@ class Bridge:
             self.devices.discard(device_id)
 
     def discover(self):
-        deadline = time.monotonic() + 5
+        # A USB sensor announces itself ~6 s after the driver opens; returns as soon as one does.
+        deadline = time.monotonic() + 20
         with self.condition:
             while not self.devices and time.monotonic() < deadline:
                 self.condition.wait(max(0, deadline - time.monotonic()))
