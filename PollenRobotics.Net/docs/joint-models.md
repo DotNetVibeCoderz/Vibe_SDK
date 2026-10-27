@@ -66,7 +66,7 @@ mechanism for 40° of *total* tilt, which is the sensible reading. See
 
 ---
 
-## MicroDuck — 14 joints
+## MicroDuck — 15 joints
 
 ```
 [ 0] left_hip_yaw      -25 .. 30     Documented
@@ -78,60 +78,53 @@ mechanism for 40° of *total* tilt, which is the sensible reading. See
 [ 6] head_pitch        -90 .. 90     Documented
 [ 7] head_yaw         -170 .. 170    Documented
 [ 8] head_roll         -25 .. 25     Documented
-[ 9] right_hip_yaw     -30 .. 25     Documented   <- mirrored
-[10] right_hip_roll    -22 .. 22     Documented
-[11] right_hip_pitch   -90 .. 90     Documented
-[12] right_knee        -90 .. 90     Documented
-[13] right_ankle       -90 .. 90     Documented
+[ 9] mouth               0 .. 45     Conservative guess   <- the only one left
+[10] right_hip_yaw     -30 .. 25     Documented   <- mirrored
+[11] right_hip_roll    -22 .. 22     Documented
+[12] right_hip_pitch   -90 .. 90     Documented
+[13] right_knee        -90 .. 90     Documented
+[14] right_ankle       -90 .. 90     Documented
 ```
 
-Transcribed from Pollen's own MuJoCo model, vendored verbatim at
-[`src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml`](../src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml)
-under Apache 2.0 from [pollen-robotics/microduck](https://github.com/pollen-robotics/microduck),
-upstream commit `8904b65d3628`. Refresh it from there rather than editing it.
+**Two different files, two different contracts.** This table has been wrong twice, both times by
+trusting one of them and not looking for the other:
 
-**The head sits between the legs.** The order is the model's depth-first DOF order: left leg, then
-the neck and head, then the right leg. It is not leg-leg-head, and that is the single most
-dangerous thing on this page to get wrong - every index past the left ankle shifts, so code that
-thinks it is reading the right knee reads head yaw instead.
+| Source | What it is | What it says |
+|---|---|---|
+| [`robot_walk.xml`](../src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml) | MuJoCo **physics** model | 14 hinges, no mouth, and the limits |
+| [`duck.bin`](../src/PollenRobotics.Net.MicroDuck/Reference/duck.bin) + `scripts/bake-duck-mesh.py` | The **runtime wire** order | 15 names, mouth at 9 |
 
-**There is no beak joint.** The head carries a `mouth_tip` site but nothing actuates it, so the bill
-is fixed geometry. `DuckActionSlot.GroundPick` still picks things up; it does so by moving the whole
-head, which is what the robot does.
+Both are Pollen's, both Apache 2.0, both vendored. The physics model fixes the jaw as a geom
+because it does not affect locomotion, so **it is not a list of servos** — it is a list of things
+that move the robot's centre of mass. The wire contract is `duck_ipc_proto::JOINT_NAMES`, and
+Pollen's bake script carries a copy of it with the comment that says so.
 
-**Hip yaw is asymmetric and mirrors between the legs** - the left runs −25..30 and the right
-−30..25. The same commanded value on both legs therefore does not give a symmetric stance: one leg
-has travel left when the other has reached its stop.
+The consequence is sharp: **the right leg starts at index 10.** A 14-entry table reads the right
+leg one slot early, so `right_hip_yaw` returns the mouth angle and everything after it is shifted.
+
+**The head sits between the legs.** Left leg, neck and head, mouth, right leg. Not leg-leg-head.
+
+**Hip yaw is asymmetric and mirrors between the legs** — left −25..30, right −30..25. The same
+commanded value on both legs does not give a symmetric stance.
 
 **Head yaw reaches ±170°**, far beyond a neck's usual travel. It is the joint that lets the duck
-look behind itself without moving its feet, and a table that clamps it to ±90 silently refuses half
-of what the robot can do.
+look behind itself without moving its feet.
+
+**`mouth` is the one remaining guess.** It has no MuJoCo joint, so no published travel; 0..45° is
+deliberately conservative. Correct it against `robotctl monitor`.
 
 ### What this replaced
 
-Every row above used to be a conservative guess, and it was wrong in ways that would have failed
-silently on hardware:
+| | 0.1.x (guessed) | 0.2.0 (MJCF only) | 0.3.0 (wire contract) |
+|---|---|---|---|
+| Joint count | 15 | 14 | **15** |
+| Jaw | `beak`, index 14 | absent | `mouth`, index 9 |
+| `right_hip_yaw` | 5 | 9 | **10** |
+| Names | `left.ankle_pitch` | `left_ankle` | `left_ankle` |
 
-| | Guessed | Actual |
-|---|---|---|
-| Joint count | 15 | 14 |
-| `beak` | 0..45° | does not exist |
-| Order | leg, leg, neck, head, beak | leg, neck+head, leg |
-| Names | `left.ankle_pitch`, `neck.yaw` | `left_ankle`, `head_yaw` |
-| `left_hip_yaw` | ±45 | −25..30 |
-| `left_knee` | −10..130 | ±90 |
-| `head_yaw` | ±90 | ±170 |
-
-The lesson worth keeping: the tests agreed with the wrong table, because they took the catalogue as
-the definition of truth. `MicroDuckCatalogueTests` now restates what the vendored model says, so the
-catalogue is checked against Pollen's file rather than against itself.
-
-### Other things the model settles
-
-The sites in `robot_walk.xml` corroborate parts of the SDK that were also assumptions: there is a
-`tof` site on the head shell (so `ReadTimeOfFlightAsync` is pointed at something real), an `imu` on
-the trunk and a second `head_imu`, and a `head_camera`. Link lengths come from the same file -
-thigh 35.8 mm, shin 42.0 mm, trunk at 120 mm - and are what the simulator's 3D model is built to.
+The lesson worth keeping: 0.2.0 was a real improvement and still wrong, because one authoritative
+file is not the same as the authoritative file. `MicroDuckCatalogueTests` now pins the wire order
+specifically, including the mouth's index.
 
 ## Reachy 2 — 21 joints
 

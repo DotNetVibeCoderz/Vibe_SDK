@@ -66,7 +66,7 @@ from photographs.
 | Robot | What carries the likeness |
 |---|---|
 | Reachy Mini | An open bowl body with all six steel neck struts exposed on brass fittings, a rounded slab head with two large lenses joined by a bridge, and a spring at the base of each antenna |
-| MicroDuck | A helmet head carried well forward, one huge bezelled eye per side, a broad flat bill, pastel shells over a bare black servo spine, and feet far larger than the legs need |
+| MicroDuck | Pollen's own geometry, decoded from the baked mesh their on-board viewer draws - 29 meshes, 59 coloured parts, the real body hierarchy |
 | Reachy 2 | The navy Breton stripes - separate rings, not a texture - white limb shells over silver actuator barrels, raked ball-tipped antennas, and a round mobile base |
 
 Reachy Mini's neck struts are the detail worth pointing at: each one is stretched and aimed between

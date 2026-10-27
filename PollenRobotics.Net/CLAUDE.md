@@ -154,12 +154,18 @@ with `IClipboard.SetDataAsync`.
 
 ## Two upstream files are vendored, not written
 
-`src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml` is Pollen's own MuJoCo model, Apache 2.0
-from `pollen-robotics/microduck`. It defines the duck's joint names, order and limits, and
-`RobotCatalog.MicroDuck` is a transcription of it — **the head sits between the legs**, not after
-them, and there is no beak joint. `MicroDuckCatalogueTests` checks the catalogue against that file;
-without it the tests take the catalogue as the definition of truth and agree with whatever it says,
-which is exactly how a fifteen-joint table with an invented beak survived this long.
+Both come from `pollen-robotics/microduck` under Apache 2.0, and they say **different** things:
+
+- `Reference/robot_walk.xml` — the MuJoCo **physics** model. Joint *limits* come from here. It has
+  14 hinges because the jaw is a fixed geom: it is a list of things that move the centre of mass,
+  **not a list of servos**.
+- `Reference/duck.bin` — the baked visual mesh, and the **runtime wire order**. 15 names, `mouth`
+  at index 9, so the right leg starts at **10**. `tools/blender/microduck.py` decodes it to build
+  the simulator's model, and `RobotCatalog.MicroDuck` follows this order, not the MJCF's.
+
+The table has been wrong twice: an invented `beak` at 14, then 14 joints with no mouth at all after
+trusting the MJCF alone. `MicroDuckCatalogueTests` pins the wire order including the mouth's index.
+One authoritative file is not the same as the authoritative file.
 
 ## The Reachy 2 protos are vendored, not written
 
@@ -181,8 +187,8 @@ known. Each is documented at the point it is used and summarised in `docs/kinema
 - MicroDuck's gait — a scripted gait standing in for a learned policy. Its joint *table* is no
   longer a guess: it is transcribed from Pollen's own MuJoCo model, vendored at
   `src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml`
-- The 3D models — our own meshes, modelled from photographs in `images/`; silhouettes and
-  colours are close, panel detail and mechanism interiors are not modelled at all
+- The Reachy Mini and Reachy 2 3D models — our own meshes, modelled from photographs in `images/`.
+  The MicroDuck's is not approximate: it is Pollen's own geometry, decoded from `duck.bin`
 
 The solvers themselves are exact. On hardware, prefer the robot's own kinematics.
 

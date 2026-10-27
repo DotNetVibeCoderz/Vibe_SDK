@@ -1,254 +1,203 @@
-"""MicroDuck.
+"""MicroDuck, built from Pollen's own baked mesh.
 
-Shapes follow images/microduck.png, which shows four of them from four angles. What makes the
-duck recognisable is the contrast between its parts, not any single silhouette:
+Earlier versions of this file modelled the duck by eye from the photographs in images/. That is
+gone: `src/PollenRobotics.Net.MicroDuck/Reference/duck.bin` is Pollen's own visual geometry, Apache
+2.0 from pollen-robotics/microduck, and it carries 29 meshes, 59 coloured parts and the real body
+hierarchy. Shapes modelled by eye cannot compete with the shapes the robot actually has.
 
-  * pastel printed shells - a helmet-shaped head, a body, thigh plates, big feet - over
-  * a bare black servo spine, brackets and horns left completely exposed, and
-  * one oversized flat bill and one oversized round eye per side.
+The file is what `robotctl monitor` draws on the board. Its format is documented by the script that
+writes it, `scripts/bake-duck-mesh.py` in the same repository:
 
-Three proportions do most of the work, and the first version of this model got all three wrong:
+    header   "DUCK", u32 version, u16 meshes, u16 bodies, u16 parts
+    mesh     u16 vertex count, u16 face count, f32[3n] vertices, u16[3m] faces
+    body     i16 parent, i16 joint, f32[3] pos, f32[4] quat (w x y z), f32[3] axis
+    part     u16 body, u16 mesh, u8[4] rgb + pad, f32[3] pos, f32[4] quat
 
-  * **The head is a helmet, not a box.** It is tall and round at the back, slopes down toward the
-    front, and overhangs the bill. A rounded cube reads as a cartoon robot instead.
-  * **The eye is enormous** - close to half the height of the head - and sits well forward, just
-    behind the bill, with a bright bezel ring around it.
-  * **The bill is two broad flat slabs**, as wide as the head and projecting well past it. The duck
-    is front-heavy, and the whole silhouette leans forward because of it.
+Two nodes are emitted per body. The outer one carries the body's fixed pos/quat from the file; the
+inner one is the joint, named for its SDK joint, and starts unrotated. Baking both into a single
+node would mean the viewport's `rotation.z = angle` wiped out the frame the hinge is measured in.
 
-The feet are much bigger than a biped this size needs. That is not a modelling liberty: the
-photographs show flat slabs roughly a third of the leg length, and a duck drawn with proportionate
-feet stops reading as this robot.
-
-Link lengths match the rig the simulation was tuned against, so the existing gait still produces a
-sensible walk. Everything else is proportioned off the photographs.
-
-Every location in this file is relative to its parent. Joint names match RobotCatalog.MicroDuck so
-the viewport can resolve a joint by name rather than by index.
+Every joint is a hinge about its own local Z - that is what the `axis` column says for all fifteen -
+so the viewport drives them uniformly instead of carrying a per-joint axis convention.
 """
 
-import math
+import struct
+from pathlib import Path
+
+import bmesh
+import bpy
+from mathutils import Quaternion
 
 import common as c
 
-# Link lengths are Pollen's own, read off the body offsets in
-# src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml rather than measured off a photograph.
-# The trunk sits at z = 0.12 in that model, which is the standing hip height here.
-STANDING_HIP = 0.120
-THIGH = 0.0358              # left_upper_leg -> leg
-SHIN = 0.0420               # leg -> ankle_left
-HIP_SEPARATION = 0.035      # +/- 0.0175 from the trunk centre line
+# The wire order of duck_ipc_proto::JOINT_NAMES. `mouth` has no MuJoCo joint - the jaw is a fixed
+# geom - so no body in the file points at index 9, but the runtime still reports a value there and
+# RobotCatalog.MicroDuck must agree with this list, not with the MJCF.
+JOINT_NAMES = [
+    "left_hip_yaw", "left_hip_roll", "left_hip_pitch", "left_knee", "left_ankle",
+    "neck_pitch", "head_pitch", "head_yaw", "head_roll", "mouth",
+    "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle",
+]
 
-# Forward is -Y in Blender, which the Y-up export turns into +Z in three.js - the direction the
-# rest of the viewport already treats as the front of a robot.
-FORWARD = -1.0
+# The mouth is a fixed geom in the file, so the jaw has to be found by name and re-parented under a
+# joint of its own, or the duck's one expressive part cannot move.
+JAW_PART_HINT = "mouth"
 
-
-def palette():
-    """Colours from the cream-and-orange duck, which is the clearest of the four photographs."""
-    return {
-        "shell": c.material("shell", (0.88, 0.85, 0.78), roughness=0.55),
-        "accent": c.material("accent", (0.95, 0.52, 0.10), roughness=0.45),
-        "beak": c.material("beak", (0.97, 0.72, 0.08), roughness=0.42),
-        "servo": c.material("servo", (0.055, 0.055, 0.06), roughness=0.50, metallic=0.25),
-        "metal": c.material("metal", (0.62, 0.63, 0.66), roughness=0.32, metallic=0.85),
-        "lens": c.material("lens", (0.02, 0.02, 0.025), roughness=0.10, metallic=0.2),
-        "bezel": c.material("bezel", (0.97, 0.72, 0.08), roughness=0.35),
-        "wire": c.material("wire", (0.10, 0.10, 0.12), roughness=0.60),
-    }
+DUCK_BIN = (Path(__file__).resolve().parents[2]
+            / "src" / "PollenRobotics.Net.MicroDuck" / "Reference" / "duck.bin")
 
 
-def servo_block(name, mat, size=(0.022, 0.030, 0.034), parent=None):
-    """One servo: a black body with a metal horn on each side.
+def read(path):
+    """Decodes duck.bin into (meshes, bodies, parts)."""
+    data = path.read_bytes()
+    magic, version, n_mesh, n_body, n_part = struct.unpack_from("<4sIHHH", data, 0)
 
-    The horns are what make the leg read as built rather than moulded, and they are visible in every
-    one of the reference photographs.
-    """
-    block = c.rounded_box(name, size, 0.0035, mat["servo"], segments=3)
+    if magic != b"DUCK":
+        raise ValueError(f"{path.name} is not a baked duck mesh (magic {magic!r}).")
 
-    for sign in (-1, 1):
-        horn = c.cylinder(
-            f"{name}.horn.{'r' if sign < 0 else 'l'}",
-            0.0082, 0.0035, mat["metal"], segments=16,
-            location=(sign * (size[0] / 2 + 0.0012), 0, 0),
-            rotation=(0, math.pi / 2, 0),
-        )
-        c.attach(horn, block)
+    if version != 1:
+        raise ValueError(f"{path.name} is format version {version}; this reader handles 1.")
 
-    if parent is not None:
-        c.attach(block, parent)
+    off = struct.calcsize("<4sIHHH")
+    meshes = []
 
-    return block
+    for _ in range(n_mesh):
+        nv, nf = struct.unpack_from("<HH", data, off)
+        off += 4
+        verts = struct.unpack_from(f"<{nv * 3}f", data, off)
+        off += nv * 12
+        faces = struct.unpack_from(f"<{nf * 3}H", data, off)
+        off += nf * 6
+        meshes.append((
+            [verts[i:i + 3] for i in range(0, len(verts), 3)],
+            [faces[i:i + 3] for i in range(0, len(faces), 3)],
+        ))
+
+    bodies = []
+
+    for _ in range(n_body):
+        parent, joint = struct.unpack_from("<hh", data, off)
+        off += 4
+        pos = struct.unpack_from("<3f", data, off)
+        off += 12
+        quat = struct.unpack_from("<4f", data, off)
+        off += 16
+        off += 12   # axis: every joint is a hinge about local Z, so it is not needed here
+        bodies.append({"parent": parent, "joint": joint, "pos": pos, "quat": quat})
+
+    parts = []
+
+    for _ in range(n_part):
+        body, mesh, r, g, b, _pad = struct.unpack_from("<HHBBBB", data, off)
+        off += 8
+        pos = struct.unpack_from("<3f", data, off)
+        off += 12
+        quat = struct.unpack_from("<4f", data, off)
+        off += 16
+        parts.append({"body": body, "mesh": mesh, "rgb": (r, g, b), "pos": pos, "quat": quat})
+
+    return meshes, bodies, parts
+
+
+def material_for(rgb, cache):
+    """One material per distinct colour. 59 parts share far fewer than 59 colours."""
+    if rgb in cache:
+        return cache[rgb]
+
+    # sRGB bytes to linear, which is what Blender's Base Color wants.
+    def linear(v):
+        v /= 255.0
+        return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+
+    name = "duck_%02x%02x%02x" % rgb
+    # Pollen's palette is printed plastic: matte, no metal. The darker parts are the servo brackets
+    # and get a little more sheen than the shells.
+    rough = 0.42 if sum(rgb) < 200 else 0.58
+    cache[rgb] = c.material(name, tuple(linear(v) for v in rgb), roughness=rough)
+    return cache[rgb]
+
+
+def mesh_object(name, verts, faces, mat):
+    bm = bmesh.new()
+    bverts = [bm.verts.new(v) for v in verts]
+    bm.verts.ensure_lookup_table()
+
+    for a, b, d in faces:
+        try:
+            bm.faces.new((bverts[a], bverts[b], bverts[d]))
+        except ValueError:
+            # A duplicate face. The bake decimates, and decimation occasionally emits one.
+            pass
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+
+    mesh = bpy.data.meshes.new(name)
+    bm.to_mesh(mesh)
+    bm.free()
+
+    for polygon in mesh.polygons:
+        polygon.use_smooth = False   # printed plastic reads better faceted at this triangle count
+
+    mesh.materials.append(mat)
+    return c.link(bpy.data.objects.new(name, mesh))
 
 
 def build():
     c.reset_scene()
     c.forget_materials()
-    mat = palette()
+
+    if not DUCK_BIN.exists():
+        raise FileNotFoundError(
+            f"{DUCK_BIN} is missing. It is vendored from pollen-robotics/microduck under Apache 2.0."
+        )
+
+    meshes, bodies, parts = read(DUCK_BIN)
 
     root = c.joint("root")
 
-    # `body` carries the world pose the simulation computes: the duck walks, so unlike the other
-    # two robots its root moves.
-    body = c.joint("body", location=(0, 0, STANDING_HIP), parent=root)
+    # `body` carries the world pose the simulation computes: the duck walks, so unlike the other two
+    # robots its root moves. The file's first body is the trunk, already at its standing height.
+    world = c.joint("body", parent=root)
 
-    # ---------------------------------------------------------------- torso
+    frames = {}     # body index -> the node its children and parts hang from
+    colours = {}
 
-    # A rounded shell, long front-to-back and pitched nose-down. The lean is geometry, not a joint:
-    # every joint is zero at rest, and a duck standing bolt upright is not what the photographs
-    # show.
-    torso = c.rounded_box(
-        "body.shell", (0.078, 0.100, 0.068), 0.021, mat["shell"], segments=5,
-        location=(0, FORWARD * 0.008, 0.044), rotation=(math.radians(-14), 0, 0),
-    )
-    c.attach(torso, body)
+    for index, body in enumerate(bodies):
+        parent = frames[body["parent"]] if body["parent"] >= 0 else world
 
-    # A short tail, which is what stops the body reading as a plain box from behind.
-    tail = c.rounded_box(
-        "body.tail", (0.044, 0.038, 0.022), 0.009, mat["shell"], segments=4,
-        location=(0, -FORWARD * 0.054, 0.058), rotation=(math.radians(22), 0, 0),
-    )
-    c.attach(tail, body)
+        # The fixed frame: where this link sits relative to its parent.
+        frame = c.joint(f"frame.{index}", location=body["pos"], parent=parent)
+        frame.rotation_mode = "QUATERNION"
+        frame.rotation_quaternion = Quaternion(body["quat"])
 
-    # The hip bridge: exposed black structure between the two legs.
-    bridge = c.rounded_box(
-        "body.hips", (0.052, 0.036, 0.024), 0.004, mat["servo"], segments=3, location=(0, 0, 0.004)
-    )
-    c.attach(bridge, body)
+        if body["joint"] >= 0:
+            # The hinge itself, named so the viewport can find it. Left unrotated: the viewport
+            # writes rotation.z here every frame.
+            frames[index] = c.joint(JOINT_NAMES[body["joint"]], parent=frame)
+        else:
+            frames[index] = frame
 
-    # ---------------------------------------------------------------- legs
+    jaw = None
 
-    for side, sign in (("left", 1), ("right", -1)):
-        hip_yaw = c.joint(f"{side}_hip_yaw", location=(sign * HIP_SEPARATION / 2, 0, -0.004), parent=body)
-        hip_roll = c.joint(f"{side}_hip_roll", parent=hip_yaw)
-        hip_pitch = c.joint(f"{side}_hip_pitch", parent=hip_roll)
+    for index, part in enumerate(parts):
+        verts, faces = meshes[part["mesh"]]
+        obj = mesh_object(f"part.{index}", verts, faces, material_for(part["rgb"], colours))
+        obj.location = part["pos"]
+        obj.rotation_mode = "QUATERNION"
+        obj.rotation_quaternion = Quaternion(part["quat"])
+        c.attach(obj, frames[part["body"]])
 
-        servo_block(f"{side}.hip.servo", mat, (0.028, 0.034, 0.034), parent=hip_pitch)
-
-        thigh = c.rounded_box(
-            f"{side}.thigh", (0.026, 0.034, THIGH), 0.005, mat["servo"], segments=3,
-            location=(0, 0, -THIGH / 2 - 0.016),
-        )
-        c.attach(thigh, hip_pitch)
-
-        # The pastel plate on the outside of the thigh: a shield shape in the photographs, and the
-        # only colour on an otherwise black leg.
-        plate = c.rounded_box(
-            f"{side}.thigh.plate", (0.009, 0.040, THIGH * 0.80), 0.010, mat["shell"], segments=5,
-            location=(sign * 0.018, FORWARD * 0.002, -THIGH / 2 - 0.016),
-        )
-        c.attach(plate, hip_pitch)
-
-        knee = c.joint(f"{side}_knee", location=(0, 0, -THIGH - 0.016), parent=hip_pitch)
-        servo_block(f"{side}.knee.servo", mat, (0.028, 0.032, 0.032), parent=knee)
-
-        shin = c.rounded_box(
-            f"{side}.shin", (0.024, 0.032, SHIN), 0.005, mat["servo"], segments=3,
-            location=(0, 0, -SHIN / 2 - 0.015),
-        )
-        c.attach(shin, knee)
-
-        ankle = c.joint(f"{side}_ankle", location=(0, 0, -SHIN - 0.015), parent=knee)
-        servo_block(f"{side}.ankle.servo", mat, (0.026, 0.030, 0.028), parent=ankle)
-
-        # The shoe. Big, flat, rounded, and in the accent colour.
-        shoe = c.rounded_box(
-            f"{side}.foot", (0.040, 0.074, 0.013), 0.0055, mat["accent"], segments=5,
-            location=(0, FORWARD * 0.012, -0.021),
-        )
-        c.attach(shoe, ankle)
-
-        sole = c.rounded_box(
-            f"{side}.foot.sole", (0.037, 0.070, 0.004), 0.0018, mat["servo"], segments=3,
-            location=(0, FORWARD * 0.012, -0.028),
-        )
-        c.attach(sole, ankle)
-
-    # ---------------------------------------------------------------- neck
-
-    # Exposed servo column, raked forward. The duck has no neck shell at all; leaving it bare is
-    # what gives the silhouette its thin mechanical throat between two pastel masses.
-    neck_pitch = c.joint("neck_pitch", location=(0, FORWARD * 0.026, 0.062), parent=body)
-
-    spine = c.rounded_box(
-        "neck.spine", (0.025, 0.023, 0.036), 0.003, mat["servo"], segments=3, location=(0, 0, 0.018)
-    )
-    c.attach(spine, neck_pitch)
-
-    for i, z in enumerate((0.008, 0.021, 0.034)):
-        servo = servo_block(f"neck.servo.{i}", mat, (0.023, 0.026, 0.013), parent=neck_pitch)
-        servo.location = (0, 0, z)
-
-    cable = c.tube(
-        "neck.cable",
-        [(0.009, 0.014, 0.004), (0.013, 0.020, 0.020), (0.010, 0.021, 0.034), (0.005, 0.016, 0.046)],
-        0.0018, mat["wire"], segments=6,
-    )
-    c.attach(cable, neck_pitch)
-
-    # ---------------------------------------------------------------- head
-
-    head_pitch = c.joint("head_pitch", location=(0, 0, 0.040), parent=neck_pitch)
-    head_yaw = c.joint("head_yaw", parent=head_pitch)
-    head_roll = c.joint("head_roll", parent=head_yaw)
-
-    # The helmet, built as two overlapping rounded boxes rather than one: the back is tall and
-    # round, the front lower and shorter, and the step between them is the brow the eye sits under.
-    crown = c.rounded_box(
-        "head.crown", (0.070, 0.066, 0.058), 0.027, mat["shell"], segments=6,
-        location=(0, -FORWARD * 0.014, 0.022),
-    )
-    c.attach(crown, head_roll)
-
-    snout = c.rounded_box(
-        "head.snout", (0.063, 0.064, 0.046), 0.020, mat["shell"], segments=6,
-        location=(0, FORWARD * 0.030, 0.012), rotation=(math.radians(-6), 0, 0),
-    )
-    c.attach(snout, head_roll)
-
-    # One enormous eye per side, with a bright bezel. On the real duck these are the cameras, and
-    # they are close to half the height of the head.
-    for side, sign in (("right", -1), ("left", 1)):
-        bezel = c.cylinder(
-            f"head.eye.{side}.bezel", 0.0195, 0.011, mat["bezel"], segments=28,
-            location=(sign * 0.031, FORWARD * 0.016, 0.022), rotation=(0, math.pi / 2, 0),
-        )
-        lens = c.cylinder(
-            f"head.eye.{side}.lens", 0.0134, 0.013, mat["lens"], segments=28,
-            location=(sign * 0.034, FORWARD * 0.016, 0.022), rotation=(0, math.pi / 2, 0),
-        )
-        c.attach_all(head_roll, bezel, lens)
-
-    # ---------------------------------------------------------------- bill
-
-    # Two broad slabs, both fixed. Pollen's model carries a `mouth_tip` site on the head shell but
-    # no joint behind it, so the bill does not open - an earlier version of this model invented a
-    # beak joint, and the SDK invented a fifteenth servo to drive it.
-    upper = c.rounded_box(
-        "head.bill.upper", (0.064, 0.060, 0.014), 0.0055, mat["accent"], segments=4,
-        location=(0, FORWARD * 0.056, 0.000), rotation=(math.radians(-5), 0, 0),
-    )
-    c.attach(upper, head_roll)
-
-    lower = c.rounded_box(
-        "head.bill.lower", (0.058, 0.052, 0.011), 0.0045, mat["beak"], segments=4,
-        location=(0, FORWARD * 0.055, -0.010),
-    )
-    c.attach(lower, head_roll)
-
-    return root
-
-
-def preview_pose(objects):
-    """A small head tilt for the render, nothing more.
-
-    An earlier version posed the legs into the simulation's standing crouch to make the preview
-    comparable with the photographs. It made things worse: the leg chain's sign conventions belong
-    to the viewport, and reproducing them here meant maintaining the same convention in two places
-    with nothing to catch them drifting apart. The rest pose is what ships, so the rest pose is what
-    gets checked.
-    """
-    head = objects.get("head_pitch")
+    # The mouth. It is a fixed geom in the bake, so nothing moves it; give it a joint of its own
+    # under the head so the duck can still open its bill.
+    head = bpy.data.objects.get(c.node_name("head_roll"))
 
     if head is not None:
-        head.rotation_euler = (math.radians(8), 0, 0)
+        jaw = c.joint("mouth", parent=head)
+
+        # Re-parent the lowest-sitting parts of the head to the jaw. The bill is the part of the
+        # head shell that hangs below the camera line, and it is the only thing down there.
+        for child in list(head.children):
+            if child.type == "MESH" and child.location.z < -0.055:
+                c.attach(child, jaw)
+
+    return root

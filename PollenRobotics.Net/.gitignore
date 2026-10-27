@@ -12,3 +12,7 @@ appsettings.Local.json
 # Blender preview renders. Build output for checking a model against its reference photograph,
 # not an asset - the .glb files under wwwroot/models are what ships.
 tools/blender/preview/
+
+# The 32px proof the icon script writes. A check that the mark survives the size NuGet actually
+# lists it at - build output, not an asset. assets/package-icon.png is what ships.
+assets/package-icon-32.png

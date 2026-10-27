@@ -243,7 +243,7 @@ public sealed class SimulatedMicroDuck : ISimulatedRobot
             case DuckActionSlot.GroundPick:
                 double reach = Math.Sin(progress * Math.PI);
                 Set("neck_pitch", reach * 0.7);
-                Set("head_pitch", reach * 0.5);
+                Set("mouth", reach > 0.5 ? 0 : reach * 0.7);
                 Set("left_hip_pitch", -reach * 0.5);
                 Set("right_hip_pitch", -reach * 0.5);
                 break;

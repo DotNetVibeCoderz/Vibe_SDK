@@ -70,7 +70,7 @@ naming convention and anyone can publish under it.
 
 ## Version
 
-`VersionPrefix` in `Directory.Build.props`, currently `0.2.1`. All eleven packages ship in lockstep —
+`VersionPrefix` in `Directory.Build.props`, currently `0.3.0`. All eleven packages ship in lockstep —
 they reference each other by exact version, so a partial push leaves a version of one package that
 cannot restore.
 
@@ -121,7 +121,7 @@ first experience for whoever installs one.
 
 ```powershell
 dotnet nuget locals http-cache --clear
-Expand-Archive artifacts\packages\Gravicode.PollenRobotics.Net.Core.0.2.0.nupkg -DestinationPath artifacts\inspect -Force
+Expand-Archive artifacts\packages\Gravicode.PollenRobotics.Net.Core.0.3.0.nupkg -DestinationPath artifacts\inspect -Force
 ```
 
 Look at the `.nuspec` inside: the `id` should carry the prefix, the dependency `id`s should carry it
@@ -157,7 +157,7 @@ version number can never be reused. Push a prerelease first if there is any doub
 ## After the first push
 
 - Tag the commit. The repository holds several SDKs, so the tag has to say which one:
-  `git tag pollenrobotics-v0.2.0 && git push --tags`.
+  `git tag pollenrobotics-v0.3.0 && git push --tags`.
 - Verify a clean install actually works, from outside the repository:
 
   ```bash

@@ -36,7 +36,7 @@ EEVEE engine identifier, which the preview code probes for rather than hard-codi
 |---|---|
 | `common.py` | Modelling helpers: rounded boxes, lathes, tubes, helices, joints, export |
 | `reachy_mini.py` | Open bowl body, six exposed steel struts with brass fittings, slab head, base-sprung antennas |
-| `microduck.py` | Helmet head with an oversized eye and bill, pastel shells over a bare servo spine, oversized feet |
+| `microduck.py` | **Decodes Pollen's own baked mesh** (`duck.bin`) rather than modelling by eye |
 | `reachy2.py` | Striped torso, two seven-axis arms, Orbita neck, mobile base |
 | `build_models.py` | Entry point, preview renderer |
 
@@ -71,8 +71,11 @@ in exactly one place, where the duck's world pose is applied in `viewport.js`.
 
 ## What is approximate
 
-Pollen publishes no meshes under a licence this project could vendor, so every shape here is
-modelled from photographs. Silhouettes, proportions and colours are close; panel lines, fasteners
+Reachy Mini and Reachy 2 are modelled from photographs - Pollen publishes no meshes for them under
+a licence this project could vendor. **The MicroDuck is not**: `duck.bin` in Pollen's own
+`microduck` repository is their visual geometry under Apache 2.0, and `microduck.py` decodes it. A
+shape modelled by eye cannot compete with the shape the robot actually has, and looking for a
+licensed source beat improving the guess. Silhouettes, proportions and colours are close; panel lines, fasteners
 and circuit boards are not there at all.
 
 `images/reachy_mini3.jpg` is worth keeping: it is the only photograph of a Reachy Mini with its neck

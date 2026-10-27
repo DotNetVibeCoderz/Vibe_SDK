@@ -208,49 +208,35 @@ function driveReachyMini(model, nodes) {
     };
 }
 
+// The wire order of duck_ipc_proto::JOINT_NAMES. `mouth` has no MuJoCo joint - the physics model
+// fixes the jaw as a geom - so a table built from the MJCF alone has fourteen entries and the right
+// leg appears to start at 9. It starts at 10.
+const DUCK_JOINTS = [
+    'left_hip_yaw', 'left_hip_roll', 'left_hip_pitch', 'left_knee', 'left_ankle',
+    'neck_pitch', 'head_pitch', 'head_yaw', 'head_roll', 'mouth',
+    'right_hip_yaw', 'right_hip_roll', 'right_hip_pitch', 'right_knee', 'right_ankle',
+];
+
 function driveMicroDuck(model, nodes) {
     const body = nodes.get('body');
-
-    const legs = ['left', 'right'].map((side) => ({
-        hipYaw: nodes.get(`${side}_hip_yaw`),
-        hipRoll: nodes.get(`${side}_hip_roll`),
-        hipPitch: nodes.get(`${side}_hip_pitch`),
-        knee: nodes.get(`${side}_knee`),
-        ankle: nodes.get(`${side}_ankle`),
-    }));
-
-    const neckPitch = nodes.get('neck_pitch');
-    const headPitch = nodes.get('head_pitch');
-    const headYaw = nodes.get('head_yaw');
-    const headRoll = nodes.get('head_roll');
-
-    // The head sits between the legs in the catalogue, not after them. Pollen's own MuJoCo model
-    // orders the DOFs depth-first - left leg, then the neck and head, then the right leg - and an
-    // earlier version of this driver assumed leg-leg-head, so every index past the left ankle was
-    // reading the wrong joint.
-    const LEFT = 0;
-    const NECK = 5;
-    const RIGHT = 9;
+    const joints = DUCK_JOINTS.map((name) => nodes.get(name));
 
     return {
         group: model,
 
-        apply(joints, worldPose) {
-            for (let i = 0; i < 2; i++) {
-                const leg = legs[i];
-                const base = i === 0 ? LEFT : RIGHT;
+        apply(angles, worldPose) {
+            // Every joint is a hinge about its own local Z. That is not a convention this file
+            // invented - it is what the axis column says for all fifteen in Pollen's baked model,
+            // and the fixed frame each hinge is measured in is baked into a parent node. Writing
+            // rotation.z is therefore the whole of the articulation, with no per-joint axis table
+            // to drift out of step with the model.
+            for (let i = 0; i < joints.length; i++) {
+                const node = joints[i];
 
-                leg.hipYaw.rotation.y = joints[base] ?? 0;
-                leg.hipRoll.rotation.z = joints[base + 1] ?? 0;
-                leg.hipPitch.rotation.x = joints[base + 2] ?? 0;
-                leg.knee.rotation.x = -(joints[base + 3] ?? 0);
-                leg.ankle.rotation.x = joints[base + 4] ?? 0;
+                if (node) {
+                    node.rotation.z = angles[i] ?? 0;
+                }
             }
-
-            neckPitch.rotation.x = joints[NECK] ?? 0;
-            headPitch.rotation.x = joints[NECK + 1] ?? 0;
-            headYaw.rotation.y = joints[NECK + 2] ?? 0;
-            headRoll.rotation.z = joints[NECK + 3] ?? 0;
 
             // The duck walks, so its body pose moves in the world rather than staying at the
             // origin. This is the one place the robotics frame meets the three.js one.
@@ -326,7 +312,7 @@ const DRIVERS = {
     },
     MicroDuck: {
         drive: driveMicroDuck,
-        joints: ['body', 'left_knee', 'right_knee', 'neck_pitch', 'head_pitch', 'head_yaw', 'head_roll'],
+        joints: ['body', ...DUCK_JOINTS],
         framing: { camera: [0.52, 0.40, 0.62], target: [0, 0.16, 0], maxDistance: 6 },
     },
     Reachy2: {

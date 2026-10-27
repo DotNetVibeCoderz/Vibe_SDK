@@ -52,24 +52,24 @@ public static class RobotCatalog
         ]);
 
     /// <summary>
-    /// MicroDuck: fourteen servos - two five-DOF legs and a four-DOF neck and head.
+    /// MicroDuck: fifteen servos - two five-DOF legs, a four-DOF neck and head, and a mouth.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Transcribed from Pollen's own MuJoCo model, vendored at
-    /// <c>src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml</c> (Apache 2.0, upstream commit
-    /// 8904b65d3628). Names, order and limits are the robot's, not this project's.
+    /// This is the wire order of <c>duck_ipc_proto::JOINT_NAMES</c>, transcribed from Pollen's own
+    /// <c>scripts/bake-duck-mesh.py</c>, which names that list as a copy of the runtime contract.
+    /// Limits come from Pollen's MuJoCo model, vendored alongside it at
+    /// <c>src/PollenRobotics.Net.MicroDuck/Reference/robot_walk.xml</c> (Apache 2.0).
     /// </para>
     /// <para>
-    /// The order is the model's depth-first DOF order, which is <b>not</b> left leg then right leg:
-    /// the head sits between them. An earlier version of this table guessed fifteen joints in
-    /// leg-leg-head order with a beak on the end, and every index past the left ankle was wrong.
+    /// <b>The head sits between the legs.</b> The order is left leg, neck and head, mouth, then the
+    /// right leg - so the right leg starts at index 10, not 5 and not 9.
     /// </para>
     /// <para>
-    /// <b>There is no beak joint.</b> The head carries a <c>mouth_tip</c> site but nothing actuates
-    /// it, so the bill is fixed geometry. Head yaw also reaches much further than a neck normally
-    /// would - plus or minus 170 degrees - because it is the joint that lets the duck look behind
-    /// itself without turning its feet.
+    /// <b><c>mouth</c> is a servo with no MuJoCo joint.</b> The physics model fixes the jaw as a
+    /// geom because it does not affect locomotion, so reading joint names out of the MJCF alone
+    /// gives fourteen and silently drops it - which is exactly the mistake 0.2.0 shipped. The
+    /// runtime still reports fifteen values, and everything from index 10 onward is a leg.
     /// </para>
     /// </remarks>
     public static RobotDescription MicroDuck { get; } = new(
@@ -87,13 +87,18 @@ public static class RobotCatalog
             JointDescriptor.Degrees("head_yaw", 7, -170, 170),
             JointDescriptor.Degrees("head_roll", 8, -25, 25),
 
+            // The only guessed row left in this table. `mouth` is absent from the MuJoCo model, so
+            // its travel is not published anywhere this project can read; the range is deliberately
+            // conservative. Correct it against `robotctl monitor` on a real duck.
+            JointDescriptor.Degrees("mouth", 9, 0, 45),
+
             // Hip yaw mirrors: the left reaches further outward, the right further inward, so the
             // same value on both legs does not produce a symmetric stance.
-            JointDescriptor.Degrees("right_hip_yaw", 9, -30, 25),
-            JointDescriptor.Degrees("right_hip_roll", 10, -22, 22),
-            JointDescriptor.Degrees("right_hip_pitch", 11, -90, 90),
-            JointDescriptor.Degrees("right_knee", 12, -90, 90),
-            JointDescriptor.Degrees("right_ankle", 13, -90, 90),
+            JointDescriptor.Degrees("right_hip_yaw", 10, -30, 25),
+            JointDescriptor.Degrees("right_hip_roll", 11, -22, 22),
+            JointDescriptor.Degrees("right_hip_pitch", 12, -90, 90),
+            JointDescriptor.Degrees("right_knee", 13, -90, 90),
+            JointDescriptor.Degrees("right_ankle", 14, -90, 90),
         ]);
 
     /// <summary>

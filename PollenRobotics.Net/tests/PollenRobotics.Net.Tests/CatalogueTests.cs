@@ -23,17 +23,27 @@ public class MicroDuckCatalogueTests
 
         names.ShouldBe([
             "left_hip_yaw", "left_hip_roll", "left_hip_pitch", "left_knee", "left_ankle",
-            "neck_pitch", "head_pitch", "head_yaw", "head_roll",
+            "neck_pitch", "head_pitch", "head_yaw", "head_roll", "mouth",
             "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle",
         ]);
     }
 
-    /// <summary>The bill is fixed geometry: the model has a mouth_tip site but no joint.</summary>
+    /// <summary>
+    /// The mouth is a servo even though the physics model has no joint for it.
+    /// </summary>
+    /// <remarks>
+    /// Regression test for the mistake 0.2.0 shipped. The MuJoCo model fixes the jaw as a geom
+    /// because it does not affect locomotion, so a table built from that file alone has fourteen
+    /// entries and the right leg appears to start at 9. The runtime contract
+    /// (<c>duck_ipc_proto::JOINT_NAMES</c>) has fifteen, with the mouth at 9, and the right leg at
+    /// 10 - which is what hardware would have reported into a table that disagreed.
+    /// </remarks>
     [Fact]
-    public void ThereIsNoBeakJoint()
+    public void TheMouthIsAServoBetweenTheHeadAndTheRightLeg()
     {
-        RobotCatalog.MicroDuck.Joints.ShouldNotContain(j => j.Name.Contains("beak", StringComparison.OrdinalIgnoreCase));
-        RobotCatalog.MicroDuck.JointCount.ShouldBe(14);
+        RobotCatalog.MicroDuck.JointCount.ShouldBe(15);
+        RobotCatalog.MicroDuck["mouth"].Index.ShouldBe(9);
+        RobotCatalog.MicroDuck["right_hip_yaw"].Index.ShouldBe(10);
     }
 
     /// <summary>Hip yaw is asymmetric, and mirrored between the legs.</summary>
