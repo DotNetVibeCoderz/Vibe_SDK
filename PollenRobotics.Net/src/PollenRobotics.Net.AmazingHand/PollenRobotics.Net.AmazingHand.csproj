@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>Amazing Hand SDK for .NET (unofficial)</Title>
+    <Description>.NET client for the Pollen Robotics Amazing Hand: four parallel-linkage fingers, eight servos, and a posture model that turns bend and splay into the motor pair each finger actually has.</Description>
+    <PackageTags>$(PackageTags);amazing-hand;gripper;open-hardware</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
+  </ItemGroup>
+
+</Project>

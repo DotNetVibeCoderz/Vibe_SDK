@@ -30,6 +30,7 @@ BUILDERS = {
     "reachy-mini": ("reachy_mini", 0.34),
     "microduck": ("microduck", 0.40),
     "reachy2": ("reachy2", 1.70),
+    "amazing-hand": ("amazing_hand", 0.22),
 }
 
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / "apps" / "PollenRobotics.Net.Simulator" / "wwwroot" / "models"

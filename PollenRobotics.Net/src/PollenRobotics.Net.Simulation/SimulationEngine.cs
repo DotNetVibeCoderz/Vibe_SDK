@@ -80,6 +80,7 @@ public sealed class SimulationEngine : IAsyncDisposable
         RobotKind.ReachyMini => new SimulatedReachyMini(),
         RobotKind.MicroDuck => new SimulatedMicroDuck(),
         RobotKind.Reachy2 => new SimulatedReachy2(),
+        RobotKind.AmazingHand => new SimulatedAmazingHand(),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown robot kind."),
     };
 

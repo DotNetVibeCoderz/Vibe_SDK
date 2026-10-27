@@ -39,6 +39,7 @@ const PALETTE = {
 };
 
 const MODELS = {
+    AmazingHand: 'amazing-hand',
     ReachyMini: 'reachy-mini',
     MicroDuck: 'microduck',
     Reachy2: 'reachy2',
@@ -304,7 +305,44 @@ function driveReachy2(model, nodes) {
     };
 }
 
+// The Amazing Hand: four fingers, two servos each, in the actuator order of Pollen's MJCF - which
+// is also servo ids 1 to 8 on the bus.
+const HAND_JOINTS = [
+    'finger1_motor1', 'finger1_motor2', 'finger2_motor1', 'finger2_motor2',
+    'finger3_motor1', 'finger3_motor2', 'finger4_motor1', 'finger4_motor2',
+];
+
+function driveAmazingHand(model, nodes) {
+    const joints = HAND_JOINTS.map((name) => nodes.get(name));
+
+    return {
+        group: model,
+
+        apply(angles) {
+            // Hinges about local Z, as in the duck, and for the same reason: the frame each hinge
+            // is measured in is baked into a parent node, so the angle is the whole of it.
+            //
+            // Neither motor on a finger is a knuckle. They drive a four-bar together, so a pose
+            // that looks like a curl is the pair moving in step and a splay is them opposing. The
+            // passive links are fixed frames here - the viewport draws the mechanism, it does not
+            // solve it.
+            for (let i = 0; i < joints.length; i++) {
+                const node = joints[i];
+
+                if (node) {
+                    node.rotation.z = angles[i] ?? 0;
+                }
+            }
+        },
+    };
+}
+
 const DRIVERS = {
+    AmazingHand: {
+        drive: driveAmazingHand,
+        joints: HAND_JOINTS,
+        framing: { camera: [0.30, 0.20, 0.36], target: [0, 0.07, 0], maxDistance: 2 },
+    },
     ReachyMini: {
         drive: driveReachyMini,
         joints: ['body', 'neck', 'antenna.right', 'antenna.left', 'strut.0', 'strut.5'],

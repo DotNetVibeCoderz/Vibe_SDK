@@ -122,6 +122,7 @@ internal static class ProjectScaffold
         RobotKind.ReachyMini => "PollenRobotics.Net.ReachyMini",
         RobotKind.MicroDuck => "PollenRobotics.Net.MicroDuck",
         RobotKind.Reachy2 => "PollenRobotics.Net.Reachy2",
+        RobotKind.AmazingHand => "PollenRobotics.Net.AmazingHand",
         _ => "PollenRobotics.Net",
     };
 
@@ -139,6 +140,11 @@ internal static class ProjectScaffold
         RobotKind.Reachy2 =>
             "Clear the workspace before turning the arms on. Turning them off makes them compliant, "
             + "so they sag and anything a gripper is holding will drop.",
+
+        RobotKind.AmazingHand =>
+            "Give the fingers room to close. The hand has no contact sensing, so a finger that "
+            + "meets an obstacle keeps pushing until the servo stalls - and the servos will hold "
+            + "that stall indefinitely. Call RelaxAsync when you are done.",
 
         _ => "Check the robot has room to move before starting.",
     };

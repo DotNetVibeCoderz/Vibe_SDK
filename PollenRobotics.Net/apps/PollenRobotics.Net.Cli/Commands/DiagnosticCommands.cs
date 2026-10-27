@@ -219,6 +219,10 @@ internal static class RobotNames
                 kind = RobotKind.Reachy2;
                 return true;
 
+            case "amazinghand" or "hand" or "ah":
+                kind = RobotKind.AmazingHand;
+                return true;
+
             default:
                 kind = default;
                 return false;

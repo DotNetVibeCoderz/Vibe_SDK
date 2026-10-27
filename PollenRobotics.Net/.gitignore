@@ -16,3 +16,7 @@ tools/blender/preview/
 # The 32px proof the icon script writes. A check that the mark survives the size NuGet actually
 # lists it at - build output, not an asset. assets/package-icon.png is what ships.
 assets/package-icon-32.png
+
+# STL assets the Amazing Hand model is built from. 7.5 MB of CAD tessellation, fetched from
+# pollen-robotics/AmazingHand on first build - input, not an asset. The .glb is what ships.
+tools/blender/.stl-cache/

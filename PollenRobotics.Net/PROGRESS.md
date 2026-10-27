@@ -27,11 +27,12 @@ Run and observed working, in the simulation or on this machine.
 | Area | Evidence |
 |---|---|
 | Solution builds | `dotnet build PollenRobotics.Net.slnx` — 0 warnings, 0 errors |
-| Tests | 51 pass (`dotnet run --project tests/PollenRobotics.Net.Tests`) |
+| Tests | 59 pass (`dotnet run --project tests/PollenRobotics.Net.Tests`) |
 | Templates | 20/20 scaffold and compile (`tools/PollenRobotics.Net.TemplateCheck`) |
 | Reachy Mini simulation | Head pose, antennas, body yaw, gotos, easing curves, idle breath, motor modes, the 65-degree yaw constraint |
 | MicroDuck simulation | Init, velocity intents, gait, the seven action slots, falls and recovery, the velocity watchdog |
 | Reachy 2 simulation | Per-part movement queue, local IK, grippers, both arms in step |
+| Amazing Hand | Catalogue from Pollen's MJCF, posture model, simulation, and a 3D model built from their own CAD |
 | Safety limits | Violations throw through the whole stack; clamping works when asked for |
 | Kinematics | Stewart solver zeroes at home, covers the published tilt envelope, stays continuous across a sweep; arm IK converges and respects limits |
 | CLI | `doctor`, `joints`, `templates`, `new`, `sim`, `mini`, `duck` all run |
@@ -133,6 +134,10 @@ Kept because each one names a trap that is easy to fall into again.
 ## Not done
 
 - No hardware validation of any kind.
+- **An Amazing Hand hardware transport.** Pollen drives it over a Feetech serial bus and
+  publishes no network protocol. The client, posture model and simulation ship;
+  `IAmazingHandTransport` is the seam. Inventing a wire format was the one thing this project
+  has consistently refused to do.
 - **Media.** Camera frames and audio are modelled in the transport interface but not implemented;
   the Reachy Mini daemon exposes them over WebRTC/GStreamer, which is a substantial dependency.
 - **Recorded moves.** Record and replay work through the SDK; daemon-side `playMove` with audio,

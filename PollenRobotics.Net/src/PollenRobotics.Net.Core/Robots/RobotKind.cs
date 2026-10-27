@@ -11,4 +11,7 @@ public enum RobotKind
 
     /// <summary>Reachy 2 - two 7-DOF arms, Orbita neck, optional mobile base.</summary>
     Reachy2,
+
+    /// <summary>Amazing Hand - open-hardware four-finger hand, eight servos, one per linkage.</summary>
+    AmazingHand,
 }

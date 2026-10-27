@@ -141,14 +141,53 @@ public static class RobotCatalog
         ]);
 
     /// <summary>Looks a description up by robot family.</summary>
+    /// <summary>
+    /// Amazing Hand: four fingers, two servos each.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Transcribed from Pollen's own MuJoCo model, vendored at
+    /// <c>src/PollenRobotics.Net.AmazingHand/Reference/robot.xml</c> (Apache 2.0, upstream commit
+    /// 3e8241074df3). The order is the actuator order in that file, which also matches the servo
+    /// ids 1-8 in <c>Demo/AHControl/config/r_hand.toml</c> - the model and the wire agree here,
+    /// which is worth saying because for the MicroDuck they did not.
+    /// </para>
+    /// <para>
+    /// Every finger is a parallel four-bar: two servos drive one finger through a linkage, and the
+    /// finger's bend and its sideways splay are both consequences of the pair. Neither motor maps
+    /// to a human joint, so they are named for what they are. Driving them as if <c>motor1</c> were
+    /// a knuckle and <c>motor2</c> a fingertip produces nonsense; <c>AmazingHandPose</c> in the
+    /// AmazingHand package carries the pair-to-posture mapping. Core cannot reference it - the
+    /// dependency runs the other way - which is why this is prose rather than a cref.
+    /// </para>
+    /// <para>
+    /// The hand is handed. This table is the right hand; the left mirrors, and a left-hand servo
+    /// takes the opposite sign for the same posture.
+    /// </para>
+    /// </remarks>
+    public static RobotDescription AmazingHand { get; } = new(
+        RobotKind.AmazingHand,
+        "Amazing Hand",
+        [
+            JointDescriptor.Degrees("finger1_motor1", 0, -90, 90),
+            JointDescriptor.Degrees("finger1_motor2", 1, -90, 90),
+            JointDescriptor.Degrees("finger2_motor1", 2, -90, 90),
+            JointDescriptor.Degrees("finger2_motor2", 3, -90, 90),
+            JointDescriptor.Degrees("finger3_motor1", 4, -90, 90),
+            JointDescriptor.Degrees("finger3_motor2", 5, -90, 90),
+            JointDescriptor.Degrees("finger4_motor1", 6, -90, 90),
+            JointDescriptor.Degrees("finger4_motor2", 7, -90, 90),
+        ]);
+
     public static RobotDescription For(RobotKind kind) => kind switch
     {
         RobotKind.ReachyMini => ReachyMini,
         RobotKind.MicroDuck => MicroDuck,
         RobotKind.Reachy2 => Reachy2,
+        RobotKind.AmazingHand => AmazingHand,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown robot kind."),
     };
 
     /// <summary>Every description, in the order the pickers list them.</summary>
-    public static IReadOnlyList<RobotDescription> All { get; } = [ReachyMini, MicroDuck, Reachy2];
+    public static IReadOnlyList<RobotDescription> All { get; } = [ReachyMini, MicroDuck, Reachy2, AmazingHand];
 }

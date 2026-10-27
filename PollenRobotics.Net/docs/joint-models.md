@@ -178,6 +178,36 @@ drive with odometry.
 
 ---
 
+## Amazing Hand — 8 joints
+
+```
+[0] finger1_motor1   -90 .. 90    Documented
+[1] finger1_motor2   -90 .. 90    Documented
+[2] finger2_motor1   -90 .. 90    Documented
+[3] finger2_motor2   -90 .. 90    Documented
+[4] finger3_motor1   -90 .. 90    Documented
+[5] finger3_motor2   -90 .. 90    Documented
+[6] finger4_motor1   -90 .. 90    Documented
+[7] finger4_motor2   -90 .. 90    Documented
+```
+
+From Pollen's own MuJoCo model, vendored at
+[`src/PollenRobotics.Net.AmazingHand/Reference/robot.xml`](../src/PollenRobotics.Net.AmazingHand/Reference/robot.xml)
+(Apache 2.0, commit `3e8241074df3`). The order is that file's actuator order, and it matches servo
+ids 1–8 in their `Demo/AHControl/config/r_hand.toml`.
+
+**The model and the wire agree here**, which is worth stating explicitly: for the MicroDuck they
+did not, and assuming they would cost two releases. Both were checked.
+
+**Neither motor on a finger is a joint in the human sense.** Each finger is a parallel four-bar
+driven by both servos: their sum curls it, their difference splays it. The MJCF also carries ball
+joints and idler hinges for the passive links; those are not servos and are not in this table.
+Work in `FingerPose`, not in motor angles — see [amazing-hand.md](amazing-hand.md).
+
+**No thumb.** Four equivalent fingers.
+
+---
+
 ## Where the limits are enforced
 
 ```

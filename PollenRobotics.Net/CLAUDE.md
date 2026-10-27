@@ -9,7 +9,7 @@ MicroDuck, Reachy 2), plus an Avalonia gallery, a 3D simulator and an LLM-assist
 `requirements.md` (Indonesian) is the original spec; `PLAN.md` is the roadmap and `PROGRESS.md`
 tracks what is verified.
 
-The solution builds clean and 51 tests pass. **Nothing has been run against physical hardware** —
+The solution builds clean and 59 tests pass. **Nothing has been run against physical hardware** —
 read the "Written but not verified" section of `PROGRESS.md` before claiming anything works on a
 robot.
 
@@ -43,7 +43,7 @@ pwsh tools/sync-protos.ps1
 ## Layout
 
 ```
-src/      Core · Kinematics · Transport · ReachyMini · MicroDuck · Reachy2
+src/      Core · Kinematics · Transport · ReachyMini · MicroDuck · Reachy2 · AmazingHand
           Simulation · Ml · Ai · Ui · Wizard.Core
 apps/     Gallery · Simulator (Avalonia+Blazor+three.js) · Wizard · Cli (`pollen`)
 tools/    TemplateCheck — compiles every template; sync-protos.ps1
@@ -151,6 +151,16 @@ with `IClipboard.SetDataAsync`.
   safety-motivated. The existing code sets the density; match it.
 - Every subsystem logs to a shared `RobotLogSink`. In a desktop app there is no console anyone will
   look at, so a failure that does not reach the log panel is invisible.
+
+## The Amazing Hand has no hardware transport
+
+`src/PollenRobotics.Net.AmazingHand` ships the client, the `FingerPose` posture model and the
+simulation — and deliberately no way to drive a physical hand. Pollen controls it over a Feetech
+serial bus and publishes no network protocol, so a transport here would be an invented wire format.
+`IAmazingHandTransport` is the seam for anyone who wants to add one.
+
+Each finger is a parallel four-bar driven by **both** its servos: their sum curls it, their
+difference splays it. Code that treats `motor1` as a knuckle produces postures nobody meant.
 
 ## Two upstream files are vendored, not written
 

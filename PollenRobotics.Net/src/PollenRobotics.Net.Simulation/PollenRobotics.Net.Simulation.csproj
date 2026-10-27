@@ -10,6 +10,7 @@
     <ProjectReference Include="../PollenRobotics.Net.Core/PollenRobotics.Net.Core.csproj" />
     <ProjectReference Include="../PollenRobotics.Net.Kinematics/PollenRobotics.Net.Kinematics.csproj" />
     <ProjectReference Include="../PollenRobotics.Net.ReachyMini/PollenRobotics.Net.ReachyMini.csproj" />
+    <ProjectReference Include="../PollenRobotics.Net.AmazingHand/PollenRobotics.Net.AmazingHand.csproj" />
     <ProjectReference Include="../PollenRobotics.Net.MicroDuck/PollenRobotics.Net.MicroDuck.csproj" />
   </ItemGroup>
 

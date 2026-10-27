@@ -175,7 +175,7 @@ Clamping is still available — you just have to ask for it.
 
 ## Status
 
-The SDK builds clean and 51 tests pass. **Nothing has been run against physical hardware.** Read
+The SDK builds clean and 59 tests pass. **Nothing has been run against physical hardware.** Read
 [PROGRESS.md](PROGRESS.md) before relying on any of it on a robot — it separates what is verified
 from what is written against published documentation.
 
@@ -208,6 +208,7 @@ The version is 0.x deliberately. It reaches 1.0 when a real robot has answered.
 | [docs/joint-models.md](docs/joint-models.md) | Every joint limit and where it came from |
 | [docs/simulator.md](docs/simulator.md) | Architecture and the 3D rigs |
 | [docs/wizard.md](docs/wizard.md) | Templates, build/run/deploy, Jack |
+| [docs/amazing-hand.md](docs/amazing-hand.md) | Four fingers, eight servos, and why neither is a knuckle |
 | [docs/safety.md](docs/safety.md) | Limits and how they are enforced |
 | [docs/publishing.md](docs/publishing.md) | Package IDs, versioning, pushing to NuGet |
 
@@ -358,7 +359,7 @@ Penjepitan tetap tersedia — Anda hanya perlu memintanya secara eksplisit.
 
 ## Status
 
-SDK ini build bersih dan 51 test lulus. **Belum pernah dijalankan pada perangkat keras sungguhan.**
+SDK ini build bersih dan 59 test lulus. **Belum pernah dijalankan pada perangkat keras sungguhan.**
 Baca [PROGRESS.md](PROGRESS.md) sebelum mengandalkannya di robot — di sana dipisahkan mana yang sudah
 terverifikasi dan mana yang ditulis berdasarkan dokumentasi publik.
 
