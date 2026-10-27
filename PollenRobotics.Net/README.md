@@ -181,7 +181,7 @@ from what is written against published documentation.
 
 ### Packages
 
-Eleven packages, published on nuget.org at 0.3.0:
+Twelve packages, published on nuget.org at 0.3.0:
 
 ```bash
 dotnet add package Gravicode.PollenRobotics.Net.ReachyMini
@@ -365,7 +365,7 @@ terverifikasi dan mana yang ditulis berdasarkan dokumentasi publik.
 
 ### Paket
 
-Sebelas paket, sudah terbit di nuget.org pada versi 0.3.0:
+Dua belas paket, sudah terbit di nuget.org pada versi 0.3.0:
 
 ```bash
 dotnet add package Gravicode.PollenRobotics.Net.ReachyMini

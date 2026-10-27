@@ -63,8 +63,10 @@ The SDK can move all three robots and see nothing. That is the largest gap.
 - [ ] Reserve the `Gravicode.*` ID prefix on nuget.org. Done after the first push rather than
       before it, so it is still outstanding: until it lands, the prefix is a convention and not a
       claim on the namespace.
-- [ ] Automate the release: validate `VersionPrefix` against the tag, and push from CI rather than
-      from a workstation holding the API key.
+- [x] Automate the release — `.github/workflows/pollenrobotics-net-publish.yml` builds, tests,
+      compiles the templates, validates the tag against `VersionPrefix` and pushes using the
+      repository's `NUGET_API_KEY`. `pollenrobotics-net-ci.yml` runs the same checks on every push
+      and pull request.
 - [ ] A CI workflow that builds, tests, and runs `TemplateCheck` — the last one especially, because
       template drift is invisible until a user presses Build.
 - [ ] Sign the packages.

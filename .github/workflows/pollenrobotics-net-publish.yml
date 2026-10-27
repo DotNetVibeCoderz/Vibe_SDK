@@ -1,0 +1,147 @@
+# Rilis PollenRobotics.Net ke nuget.org.
+#
+# Pemicu:
+#   - tag  pollenrobotics-v0.3.0  (awalan dibuang, sisanya jadi versi paket)
+#   - jalankan manual lewat tab Actions dengan mengisi input `version`
+#
+# Tag diberi awalan nama SDK, bukan `v*` polos: Vibe_SDK memuat beberapa SDK, dan
+# tag rilis DepthAI.Net tidak boleh ikut mempublish paket PollenRobotics.
+#
+# Butuh secret repository: NUGET_API_KEY (API key dari nuget.org).
+name: PollenRobotics.Net Publish NuGet
+
+on:
+  push:
+    tags:
+      - 'pollenrobotics-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versi paket, mis. 0.3.1 atau 0.4.0-beta.1'
+        required: true
+        type: string
+      dry_run:
+        description: 'Pack saja, jangan push ke nuget.org'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    name: Pack & push
+    # Windows: galeri, simulator dan wizard adalah aplikasi Avalonia desktop, dan
+    # simulator meng-host viewport-nya di WebView2.
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Source Link butuh riwayat commit untuk menautkan sumber.
+
+      - name: Temukan folder SDK
+        id: sdk
+        shell: bash
+        run: |
+          slnx=$(find . -name 'PollenRobotics.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/.vs/*' | sort | head -n 1)
+          if [ -z "$slnx" ]; then echo "PollenRobotics.Net.slnx tidak ditemukan"; exit 1; fi
+          echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
+          echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
+
+      - name: Tentukan versi
+        id: ver
+        shell: bash
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#pollenrobotics-v}"
+          fi
+
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Versi tidak valid: '$version'"; exit 1
+          fi
+
+          # Cocokkan tag dengan VersionPrefix di repo. Tanpa ini, `-p:Version=`
+          # diam-diam menimpa apa yang tertulis di Directory.Build.props, sehingga
+          # repo bisa mengaku 0.3.0 sementara nuget.org menerima 0.4.0 - dan tidak
+          # ada yang memberi tahu siapa pun. SdkInfo.Version membaca angka yang
+          # ter-build, jadi CLI dan dialog About akan ikut salah.
+          # sed, bukan `grep -oP`: runner Windows memakai Git Bash, yang menolak -P
+          # di sebagian locale - workflow akan gagal karena alasan yang sama sekali lain.
+          prefix=$(sed -n 's/.*<VersionPrefix>\([^<]*\)<\/VersionPrefix>.*/\1/p' Directory.Build.props | head -n 1)
+          base="${version%%-*}"
+
+          if [ "$prefix" != "$base" ]; then
+            echo "Tag meminta $base tetapi VersionPrefix di Directory.Build.props adalah $prefix."
+            echo "Naikkan VersionPrefix dan commit sebelum memberi tag."
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Merilis versi $version"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
+
+      - name: Restore
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet restore ${{ steps.sdk.outputs.slnx }}
+
+      - name: Build
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet build ${{ steps.sdk.outputs.slnx }} -c Release --no-restore -p:Version=${{ steps.ver.outputs.version }}
+
+      # BUKAN `dotnet test`: proyek xUnit v3, dan .NET 10 SDK tidak lagi
+      # menjembatani xUnit v3 lewat VSTest. Proyek testnya executable.
+      - name: Test
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet run --project tests/PollenRobotics.Net.Tests -c Release --no-build
+
+      # Template ditulis tangan terhadap permukaan publik SDK dan tidak ada yang
+      # mengompilasinya ulang. Menerbitkan paket yang membuat template bawaannya
+      # gagal build adalah pengalaman pertama yang buruk bagi siapa pun.
+      - name: Kompilasi semua template
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet run --project tools/PollenRobotics.Net.TemplateCheck -c Release
+
+      - name: Pack
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet pack ${{ steps.sdk.outputs.slnx }} -c Release --no-build -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Unggah paket sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-${{ steps.ver.outputs.version }}
+          path: |
+            ${{ steps.sdk.outputs.dir }}/artifacts/packages/*.nupkg
+            ${{ steps.sdk.outputs.dir }}/artifacts/packages/*.snupkg
+          if-no-files-found: error
+
+      # --skip-duplicate: rilis ulang setelah kegagalan sebagian tidak berhenti
+      # hanya karena satu paket sudah terlanjur masuk ke nuget.org.
+      #
+      # Urutan tidak diatur dan tidak perlu: nuget.org tidak memeriksa keberadaan
+      # dependensi saat unggah. 0.3.0 mendorong sebelas paket dependen selagi Core
+      # masih divalidasi dan semuanya diterima.
+      - name: Push ke nuget.org
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "Secret NUGET_API_KEY belum diset di repository ini."; exit 1
+          fi
+          dotnet nuget push "artifacts/packages/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "$NUGET_API_KEY" \
+            --skip-duplicate

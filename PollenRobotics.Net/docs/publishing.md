@@ -70,7 +70,7 @@ naming convention and anyone can publish under it.
 
 ## Version
 
-`VersionPrefix` in `Directory.Build.props`, currently `0.3.0`. All eleven packages ship in lockstep —
+`VersionPrefix` in `Directory.Build.props`, currently `0.3.0`. All twelve packages ship in lockstep —
 they reference each other by exact version, so a partial push leaves a version of one package that
 cannot restore.
 
@@ -110,7 +110,7 @@ dotnet run --project tools/PollenRobotics.Net.TemplateCheck
 dotnet pack PollenRobotics.Net.slnx -c Release
 ```
 
-Eleven `.nupkg` and eleven `.snupkg` land in `artifacts/packages`. Only `src/` packs; apps, samples,
+Twelve `.nupkg` and twelve `.snupkg` land in `artifacts/packages`. Only `src/` packs; apps, samples,
 tools and tests opt out through `IsPackable` in `Directory.Build.props`.
 
 Run `TemplateCheck` before packing, not after. It is the only thing that compiles the twenty
@@ -127,6 +127,26 @@ Expand-Archive artifacts\packages\Gravicode.PollenRobotics.Net.Core.0.3.0.nupkg 
 Look at the `.nuspec` inside: the `id` should carry the prefix, the dependency `id`s should carry it
 too, and `README.md` should be at the package root.
 
+## CI does this for you
+
+Tagging is the whole release:
+
+```bash
+git tag pollenrobotics-v0.3.1 && git push origin pollenrobotics-v0.3.1
+```
+
+`.github/workflows/pollenrobotics-net-publish.yml` then builds, runs the tests, compiles all twenty
+templates, packs and pushes with the repository's `NUGET_API_KEY` secret. The steps below are what
+it runs, and what to do by hand when CI is not an option.
+
+**The workflow refuses a tag that disagrees with the repository.** It reads `VersionPrefix` out of
+`Directory.Build.props` and fails if the tag asks for a different version, because `-p:Version=`
+would otherwise silently override it - the repo would say 0.3.0 while nuget.org received 0.4.0, and
+`SdkInfo.Version` would bake the wrong number into the CLI banner and the About dialog. Bump
+`VersionPrefix` and commit *before* tagging.
+
+`workflow_dispatch` takes an explicit version and a `dry_run` box that packs without pushing.
+
 ## Push
 
 The API key is in `C:\Users\mifma\Documents\CodeSandbox\PackageCredentials.txt`, on the
@@ -142,11 +162,16 @@ dotnet nuget push "artifacts\packages\*.nupkg" `
   --skip-duplicate
 ```
 
-`--skip-duplicate` matters here: eleven packages push one at a time, and without it a failure
+`--skip-duplicate` matters here: twelve packages push one at a time, and without it a failure
 halfway through cannot be retried without erroring on everything already up.
 
-Push `Gravicode.PollenRobotics.Net.Core` first and wait for it to index (usually a few minutes).
-The other ten depend on it, and nuget.org rejects a package whose dependencies it cannot resolve.
+Push `Gravicode.PollenRobotics.Net.Core` first. The other eleven depend on it, so if anything is
+going to be rejected it will be rejected first, before eleven more uploads have gone out.
+
+**You do not have to wait for it to index.** An earlier version of this page said nuget.org rejects
+a package whose dependencies it cannot resolve, and that it was necessary to wait. It is not true:
+0.3.0 pushed all eleven dependents while Core was still validating and every one was accepted.
+nuget.org does not check dependency existence at upload. Waiting only matters before *installing*.
 
 Symbol packages go up with the same command — `dotnet nuget push` picks up the matching `.snupkg`
 automatically.

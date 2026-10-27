@@ -1,0 +1,95 @@
+# CI PollenRobotics.Net — build, uji, dan pack setiap perubahan.
+#
+# Vibe_SDK adalah monorepo (DepthAI.Net, Unitree.Net, PollenRobotics.Net, ...), jadi
+# workflow ini dibatasi ke subfolder PollenRobotics.Net saja.
+#
+# Hanya windows-latest, bukan matrix dua OS seperti DepthAI.Net: galeri, simulator
+# dan wizard adalah aplikasi Avalonia desktop, dan simulator meng-host viewport 3D
+# di dalam WebView2 lewat NativeControlHost. Paket WebView2-nya sudah dikondisikan
+# ke Windows, tapi build Linux untuk solusi ini belum pernah dijalankan siapa pun —
+# menambahkan ubuntu ke matrix berarti menebak, dan repo ini tidak menebak.
+name: PollenRobotics.Net CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'PollenRobotics.Net/**'
+      - '.github/workflows/pollenrobotics-net-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'PollenRobotics.Net/**'
+      - '.github/workflows/pollenrobotics-net-ci.yml'
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  build:
+    name: Build, test & templates
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Temukan folder SDK
+        id: sdk
+        shell: bash
+        run: |
+          slnx=$(find . -name 'PollenRobotics.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/.vs/*' | sort | head -n 1)
+          if [ -z "$slnx" ]; then echo "PollenRobotics.Net.slnx tidak ditemukan"; exit 1; fi
+          echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
+          echo "slnx=$(basename "$slnx")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
+
+      - name: Cache paket NuGet
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('PollenRobotics.Net/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet restore ${{ steps.sdk.outputs.slnx }}
+
+      - name: Build
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet build ${{ steps.sdk.outputs.slnx }} -c Release --no-restore
+
+      # BUKAN `dotnet test`. Ini proyek xUnit v3 dan .NET 10 SDK tidak lagi
+      # menjembatani xUnit v3 lewat VSTest — `dotnet test` gagal dengan pesan yang
+      # tidak menyebutkan sebabnya. Proyek testnya adalah executable; jalankan saja.
+      - name: Test
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet run --project tests/PollenRobotics.Net.Tests -c Release --no-build
+
+      # Dua puluh template ditulis tangan terhadap permukaan publik SDK dan tidak
+      # ada yang mengompilasinya ulang. Empat dari dua puluh gagal pertama kali
+      # alat ini dijalankan. Butuh sekitar 90 detik dan menangkap jenis kerusakan
+      # yang tidak akan ditangkap test mana pun.
+      - name: Kompilasi semua template
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet run --project tools/PollenRobotics.Net.TemplateCheck -c Release
+
+      - name: Pack
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: dotnet pack ${{ steps.sdk.outputs.slnx }} -c Release --no-build
+
+      - name: Unggah paket sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-ci
+          path: |
+            ${{ steps.sdk.outputs.dir }}/artifacts/packages/*.nupkg
+            ${{ steps.sdk.outputs.dir }}/artifacts/packages/*.snupkg
+          if-no-files-found: error
+          retention-days: 7
