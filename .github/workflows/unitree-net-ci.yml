@@ -1,4 +1,4 @@
-name: CI
+name: Unitree.Net CI
 
 # The two WPF shells (Simulator, Wizard) target net10.0-windows10.0.19041.0, so the full solution
 # only restores on Windows. Linux builds every cross-platform project instead — that is the
@@ -9,11 +9,11 @@ on:
     branches: [main]
     paths:
       - 'Unitree.Net/**'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/unitree-net-ci.yml'
   pull_request:
     paths:
       - 'Unitree.Net/**'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/unitree-net-ci.yml'
   workflow_dispatch:
 
 env:

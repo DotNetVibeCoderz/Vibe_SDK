@@ -64,7 +64,7 @@ git tag unitree-net-v0.2.0
 git push origin unitree-net-v0.2.0
 ```
 
-`.github/workflows/release.yml` then builds, tests, packs at the tag's version, pushes every
+`.github/workflows/unitree-net-publish.yml` (at the root of the monorepo) then builds, tests, packs at the tag's version, pushes every
 `.nupkg` and `.snupkg` to nuget.org, and attaches them to a GitHub release. The version comes from
 the tag, and a tag that is not a valid NuGet version fails the job before anything is uploaded —
 nuget.org has no unpublish.
@@ -78,7 +78,7 @@ if it is missing rather than skipping the push silently.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push and pull request that touches the SDK:
+`.github/workflows/unitree-net-ci.yml` runs on every push and pull request that touches the SDK:
 
 | Job | Runner | What it protects |
 |---|---|---|

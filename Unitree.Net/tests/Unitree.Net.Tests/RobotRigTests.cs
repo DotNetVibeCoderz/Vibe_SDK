@@ -224,4 +224,57 @@ public sealed class RobotRigTests
     {
         Should.Throw<ArgumentOutOfRangeException>(() => RobotRig.For(RobotModel.Unknown));
     }
+
+    [Fact]
+    public void Go2IsDrawnWithManufacturerMeshesOnEveryLink()
+    {
+        RobotRig go2 = RobotRig.For(RobotModel.Go2);
+
+        go2.Links.ShouldAllBe(link => link.Mesh != null);
+        go2["FL_thigh"].Mesh!.Value.Asset.ShouldBe("go2/thigh.glb");
+        go2["FR_thigh"].Mesh!.Value.Asset.ShouldBe("go2/thigh_mirror.glb");
+    }
+
+    [Fact]
+    public void Go2HipMeshesAreFlippedTheWayTheUrdfDrawsThem()
+    {
+        RobotRig go2 = RobotRig.For(RobotModel.Go2);
+
+        // go2_description.urdf: FL rpy 0 0 0, FR pi 0 0, RL 0 pi 0, RR pi pi 0. Getting one wrong puts
+        // that hip's motor housing inside the body instead of outside it.
+        go2["FL_hip"].Mesh!.Value.Rotation.ShouldBe(Vector3.Zero);
+        go2["FR_hip"].Mesh!.Value.Rotation.ShouldBe(new Vector3(MathF.PI, 0f, 0f));
+        go2["RL_hip"].Mesh!.Value.Rotation.ShouldBe(new Vector3(0f, MathF.PI, 0f));
+        go2["RR_hip"].Mesh!.Value.Rotation.ShouldBe(new Vector3(MathF.PI, MathF.PI, 0f));
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryModel))]
+    public void EveryMeshTheRigNamesShipsWithTheSimulator(RobotModel model)
+    {
+        // A missing file degrades quietly to primitives at runtime, which is the right behaviour for a
+        // viewer and the wrong one for a build: this is where a typo in an asset name gets caught.
+        string root = Path.Combine(RepositoryRoot(), "apps", "Unitree.Net.Simulator", "wwwroot", "models");
+
+        foreach (RigLink link in RobotRig.For(model).Links)
+        {
+            if (link.Mesh is { } mesh)
+            {
+                File.Exists(Path.Combine(root, mesh.Asset)).ShouldBeTrue($"{link.Name} names {mesh.Asset}");
+            }
+        }
+    }
+
+    private static string RepositoryRoot()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "Unitree.Net.slnx")))
+            {
+                return dir.FullName;
+            }
+        }
+
+        throw new DirectoryNotFoundException("Unitree.Net.slnx not found above the test output directory.");
+    }
 }

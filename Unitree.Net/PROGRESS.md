@@ -1,6 +1,6 @@
 # PROGRESS
 
-Last updated: 1 August 2026
+Last updated: 28 October 2026
 
 ## Current state
 
@@ -11,12 +11,12 @@ exercised end to end against the simulator. **Nothing has been run against real 
 |---|---|
 | Projects | 25 (16 libraries, 4 apps, 3 samples, 1 tool, 1 test project) plus a VS Code extension |
 | Build | 0 errors, 0 warnings (Debug and Release) |
-| Tests | 320 passing, 0 failing, 0 skipped |
+| Tests | 330 passing, 0 failing, 0 skipped |
 | Target | .NET 10 · TypeScript 5.7 for the extension |
 
 ```
 dotnet build Unitree.Net.slnx -c Release  → Build succeeded. 0 Warning(s), 0 Error(s)
-dotnet test  Unitree.Net.slnx             → Passed! Failed: 0, Passed: 320, Skipped: 0
+dotnet test  Unitree.Net.slnx             → Passed! Failed: 0, Passed: 330, Skipped: 0
 dotnet run --project tools/Unitree.Net.TemplateCheck
                                           → All 16 templates compile.
 cd tools/vscode-unitree && npm run compile → 0 errors
@@ -110,6 +110,23 @@ derived from ground speed and wheel radius.
 A third followed from the second: the humanoid gait originally used hard-coded joint indices, which
 put H1's right leg at index 6 when its pitch-only ankle puts it at 5. Its right leg never moved. Joint
 indices are now resolved from the rig by link name.
+
+### Go2 drawn from Unitree's meshes — checked by eye in the simulator
+
+Go2's links now carry the visual meshes from `unitree_ros`'s `go2_description`, converted to GLB
+(26 MB of DAE down to 1.4 MB) by `tools/meshes/convert_meshes.py`. Before any code was written, the
+URDF was assembled at zero pose in Python and drawn from the side and top, to confirm that its link
+frames are the rig's: hips at ±0.1934 / ±0.0465, thigh 0.0955 out, 0.213 segments. They are, so the
+meshes hang off the existing links with only the URDF's visual rotations.
+
+Then it was run. Go2 trotted in the simulator with every mesh in place, in both themes, and switching
+model and back reused the cached files. Two things only showed up there. The foot glow came out as
+specks, because the URDF puts the foot sphere inside the calf's rubber tip; the calf's contact part now
+lights with its foot. And the WebView's tree is not reachable through the WPF window's automation
+peer, only through the `msedgewebview2` window, which matters for anyone scripting the UI.
+
+Tests pin the hip mesh rotations against the URDF and fail on any asset name with no file behind it.
+Every other platform still uses primitives, which remain the fallback when a mesh fails to load.
 
 ### Wizard templates — every one compiles
 
@@ -320,8 +337,8 @@ Nothing below can be closed without a robot:
 | No concrete `IFirmwareChannel` | OTA orchestration exists; the transport to the robot does not |
 | No camera or audio streams | Topics are named; no decoding |
 | ROS 2 bridge does not republish point clouds | Decoding exists in `Unitree.Net.Sensors` |
-| CI has never run on GitHub | Both workflows are written and their shell steps were rehearsed locally, but no job has executed on a runner |
-| Nothing published to nuget.org yet | The 16 packages build locally; the first `unitree-net-v*` tag will be the first real publish |
+| CI has never run on GitHub | The workflows sat in `Unitree.Net/.github/workflows`, which GitHub ignores: only the repository root's `.github/workflows` is read. They now live there as `unitree-net-ci.yml` and `unitree-net-publish.yml`, but no job has executed on a runner yet |
+| Release workflow not yet proven | 0.1.0 is on nuget.org, but it did not come from the workflow, which had never run. 0.2.0 is the first release cut by tag |
 | Deployment never run against a robot | Publish, SFTP copy and systemd install are written but unexercised, in both the wizard and the extension |
 | The extension has no automated tests | It is verified by running it; the logic it wraps is tested in C# |
 | Simulator is kinematic, not dynamic | Motion is generated, not integrated. It will not tell you whether a controller is stable |
@@ -341,7 +358,7 @@ Nothing below can be closed without a robot:
 3. Measure loop jitter on the actual robot host.
 4. Implement `unitree_hg` for humanoid low-level control, so the simulator can publish humanoid
    low-level state and the wizard can generate G1 low-level code.
-5. Push the workflows and confirm the first CI run is green, then cut `unitree-net-v0.1.0` to
+5. Push the workflows and confirm the first CI run is green, then cut `unitree-net-v0.2.0` to
    publish the packages — see [docs/publishing.md](docs/publishing.md).
 6. Exercise the deploy path against a real Jetson module, from both the wizard and the extension.
 7. Publish the VS Code extension.

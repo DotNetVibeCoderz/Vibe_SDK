@@ -31,6 +31,12 @@ public readonly record struct ViewportShape(
     int Surface,
     int AxisAlong);
 
+/// <summary>A manufacturer mesh, as the viewport sees it.</summary>
+/// <param name="Asset">GLB path relative to <c>wwwroot/models</c>.</param>
+/// <param name="Offset">Translation within the link frame.</param>
+/// <param name="Rotation">Roll, pitch and yaw within the link frame, in radians.</param>
+public readonly record struct ViewportMesh(string Asset, ViewportVector Offset, ViewportVector Rotation);
+
 /// <summary>One rigid body, as the viewport sees it.</summary>
 /// <param name="Name">Link name.</param>
 /// <param name="Parent">Parent link name, or <see langword="null"/> for the root.</param>
@@ -39,6 +45,7 @@ public readonly record struct ViewportShape(
 /// <param name="JointIndex">Index into the pose array, or -1 when fixed.</param>
 /// <param name="Sign">Maps joint angle sign to rotation direction.</param>
 /// <param name="Shapes">Primitives drawn in this link's frame.</param>
+/// <param name="Mesh">Mesh drawn in place of <paramref name="Shapes"/> once it loads, or null.</param>
 public sealed record ViewportLink(
     string Name,
     string? Parent,
@@ -46,7 +53,8 @@ public sealed record ViewportLink(
     ViewportVector Axis,
     int JointIndex,
     float Sign,
-    IReadOnlyList<ViewportShape> Shapes);
+    IReadOnlyList<ViewportShape> Shapes,
+    ViewportMesh? Mesh);
 
 /// <summary>
 /// A rig flattened into the shape <c>viewport.js</c> consumes.
@@ -102,7 +110,10 @@ public sealed record ViewportRig(
                 ViewportVector.From(link.Axis),
                 link.JointIndex,
                 link.Sign,
-                shapes));
+                shapes,
+                link.Mesh is { } mesh
+                    ? new ViewportMesh(mesh.Asset, ViewportVector.From(mesh.Offset), ViewportVector.From(mesh.Rotation))
+                    : null));
         }
 
         return new ViewportRig(

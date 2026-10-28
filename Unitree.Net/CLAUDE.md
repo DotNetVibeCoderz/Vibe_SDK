@@ -8,7 +8,7 @@ A .NET 10 SDK wrapping Unitree SDK 2 for Unitree robots — quadrupeds (Go2, B2)
 R1). `requirements.md` (Indonesian) is the original spec; `PLAN.md` tracks the roadmap and `PROGRESS.md`
 the current state, including what has and has not been validated.
 
-The solution builds clean and 120 tests pass. **Nothing has been run against real hardware** — see the
+The solution builds clean and 330 tests pass. **Nothing has been run against real hardware** — see the
 "Not yet done" section of `PROGRESS.md` before claiming anything works on a robot.
 
 ## Commands
@@ -59,6 +59,7 @@ apps/     Unitree.Net.Cli · Unitree.Net.Dashboard (Blazor Server)
 samples/  VirtualRobot · LowLevelControl · PatrolRobot
 tools/    Unitree.Net.TemplateCheck — compiles every wizard template
           vscode-unitree — VS Code extension (TypeScript, npm)
+          meshes — converts unitree_ros URDF meshes to the simulator's GLB files (Python)
 tests/    Unitree.Net.Tests (xunit.v3 + Shouldly)
 native/   unitree_net_native — Cyclone DDS shim (C ABI, CMake)
 docs/     architecture, getting-started, dds-networking, safety, low-level-control,
@@ -114,6 +115,16 @@ asserts its own joint count against `RobotModelInfo.GetActuatedJointCount`. That
 real errors: H1 modelled with 21 joints (its ankle is pitch-only and its arms have no wrists, hence
 19) and the wheeled variants modelled without their four drive wheels. Never resolve a humanoid joint
 index by hard-coding — H1's leg layout shifts every index after it. Look it up by link name.
+
+**A rig link's mesh hangs in the URDF's link frame, so the rig's frame must be the URDF's.** Go2's are,
+which is the only reason its `unitree_ros` meshes drop in unmodified. The humanoid rigs are not built
+on URDF frames yet; giving one a mesh without first matching its frames puts every part in the wrong
+place, and nothing but looking at it will tell you. Primitives stay as the fallback, and the viewport
+swaps all of a robot's meshes in or none of them.
+
+**The workflows live at the monorepo root.** `.github/workflows/unitree-net-{ci,publish}.yml` in
+`Vibe_SDK`, not under `Unitree.Net/`, because GitHub reads workflows from the repository root only.
+A copy under the SDK folder looks complete and never runs, which is how CI went unexercised.
 
 **Wizard templates and `SdkPlugin`'s reference are hand-written against the SDK's public surface, and
 nothing recompiles them by accident.** After changing a public API, run

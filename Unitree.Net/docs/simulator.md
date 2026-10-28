@@ -20,6 +20,8 @@ The dashboard works against it in full, control page included: its posture butto
 the simulated robot the same way they would reach hardware. Nothing needs configuring — both default to
 `239.255.0.1:7447`.
 
+![Go2 trotting in the simulator, drawn from Unitree's meshes, with the telemetry ribbon and system log](images/simulator-go2.png)
+
 ## What it is
 
 Eight platforms are modelled: Go2, Go2-W, B2, B2-W, G1, H1, H1-2 and R1. Each has an articulated rig
@@ -62,6 +64,8 @@ that everything above the robot can be developed honestly.
 
 ## Humanoids publish less
 
+![G1 walking in the light theme. Its rig is still drawn from primitives, and the rt/lowstate lane is greyed out](images/simulator-g1-light.png)
+
 Quadrupeds publish `rt/lowstate` and `rt/sportmodestate`. Humanoids publish **only**
 `rt/sportmodestate`, and the ribbon greys the other lane out and says why.
 
@@ -84,6 +88,51 @@ wrists, which is what makes it 19.
 
 Frames follow Unitree's convention — x forward, y left, z up. The whole robot hangs under one group
 rotated −90° about x, mapping `(x, y, z)` to `(x, z, −y)`, so rig numbers are used verbatim in metres.
+
+## Manufacturer meshes
+
+Go2 is drawn from Unitree's own visual meshes, taken from
+[`unitree_ros`](https://github.com/unitreerobotics/unitree_ros) (`robots/go2_description`). Every other
+platform still uses primitives.
+
+**A mesh is decoration, not description.** `RigLink.Mesh` names a GLB file; the link's `Shapes` stay
+the rig's geometry. The viewport draws the primitives at once, loads the meshes in the background, and
+swaps them in — all of a robot's or none of them. If one file fails, every primitive stays and the
+reason goes to the system log. A robot that is half mesh and half box looks broken in a way that hides
+which file is missing.
+
+**The rig's link frames are the URDF's own.** Go2's hip, thigh, calf and foot sit at the same origins as
+in `go2_description.urdf` (hips at ±0.1934 / ±0.0465, thigh 0.0955 out, 0.213 segments), so a URDF
+visual hangs off the matching link unmodified. The only per-link data is the URDF's visual origin: the
+right-hand thigh and calf use mirrored meshes, and the single hip mesh is flipped about X on the right
+and about Y at the rear. `RobotRigTests` pins those four rotations.
+
+**Colours come from the theme, not the file.** The converter tags each part by the luminance of its
+source colour as `shell`, `limb` or `contact`, and the viewport paints those roles exactly as it paints
+the primitives, so the light/dark switch reaches the meshes too. The calf's rubber tip is `contact`,
+which is why the whole foot pad lights when that foot is loaded.
+
+Why not [`unitree_model`](https://github.com/unitreerobotics/unitree_model)? It holds USD files for
+Isaac Sim, which three.js cannot read reliably. It is deprecated in favour of Hugging Face, and its
+own README says its models are generated from `unitree_ros`'s URDFs. `unitree_ros` is the source.
+
+### Converting a platform
+
+```bash
+pip install trimesh pycollada fast_simplification numpy scipy
+python tools/meshes/convert_meshes.py <unitree_ros>/robots/go2_description/dae \
+    apps/Unitree.Net.Simulator/wwwroot/models/go2 \
+    base=14000 hip=5000 thigh=5000 thigh_mirror=5000 calf=2500 calf_mirror=2500 foot=800
+```
+
+The budgets are triangle counts. Go2's DAE files total 26 MB and 197 k triangles; at these budgets they
+come to 1.4 MB and 38 k. Each colour group is decimated on its own, so two-tone panels keep their
+boundary.
+
+Then set the platform's `MeshSet` in `RobotRig` and check that every link's frame matches the URDF's.
+`EveryMeshTheRigNamesShipsWithTheSimulator` fails on any asset name with no file behind it. The
+meshes are BSD-3-Clause; `wwwroot/models/LICENSE.unitree_ros` carries the notice and must ship with
+them.
 
 ## Adding a platform
 

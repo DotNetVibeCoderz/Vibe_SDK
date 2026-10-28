@@ -1,4 +1,4 @@
-name: Release (NuGet)
+name: Unitree.Net Publish NuGet
 
 # Publishes every Unitree.Net package to nuget.org.
 #
@@ -63,6 +63,14 @@ jobs:
           if ! printf '%s' "$version" |
                grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$'; then
             echo "::error::'$version' is not a valid NuGet version"
+            exit 1
+          fi
+          # The tag must agree with VersionPrefix in Directory.Build.props. -p:Version overrides it
+          # silently, so without this the repo can say 0.1.0 while nuget.org receives 0.2.0, and the
+          # version the CLI and the wizard's About dialog report is wrong with nobody told.
+          prefix=$(sed -n 's/.*<VersionPrefix>\([^<]*\)<\/VersionPrefix>.*/\1/p' "$PROJECT_DIR/Directory.Build.props" | head -n 1)
+          if [ "$prefix" != "${version%%-*}" ]; then
+            echo "::error::Tag asks for ${version%%-*} but Directory.Build.props has VersionPrefix $prefix. Bump it and commit before tagging."
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"

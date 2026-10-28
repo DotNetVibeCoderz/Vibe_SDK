@@ -26,6 +26,8 @@ odometry advances — enough movement to exercise thresholds, charts and alerts 
 It is not a physics simulator. Anything depending on real dynamics — a learned policy, a balance
 controller — needs Isaac Lab or Gazebo publishing through the same transport.
 
+![The dashboard connected to the simulator: battery, motor temperature, speed and foot contact, charted live](images/dashboard.png)
+
 ## With a robot
 
 1. **Connect by Ethernet.** Direct cable is what Unitree assume and avoids every multicast problem.

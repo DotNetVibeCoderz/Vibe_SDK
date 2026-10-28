@@ -68,6 +68,31 @@ public readonly record struct RigShape(
     int AxisAlong = 1);
 
 /// <summary>
+/// A manufacturer mesh drawn for a link in place of its primitives.
+/// </summary>
+/// <param name="Asset">
+/// Path of the GLB file relative to the viewer's model root, e.g. <c>go2/hip.glb</c>. The file holds
+/// the URDF visual converted by <c>tools/meshes/convert_meshes.py</c>, in the link frame, Z up, metres.
+/// </param>
+/// <param name="Offset">The URDF visual origin's translation within the link frame, in metres.</param>
+/// <param name="Rotation">The URDF visual origin's roll, pitch and yaw, in radians.</param>
+/// <remarks>
+/// A mesh is decoration, not description. The link's <see cref="RigLink.Shapes"/> stay the rig's
+/// geometry and are what a viewer falls back to when the file cannot be loaded, so a missing asset
+/// costs fidelity rather than a robot.
+/// </remarks>
+public readonly record struct RigMesh(string Asset, Vector3 Offset, Vector3 Rotation)
+{
+    /// <summary>A mesh drawn at the link origin with the given URDF roll/pitch/yaw.</summary>
+    /// <param name="asset">Path of the GLB file relative to the viewer's model root.</param>
+    /// <param name="roll">Rotation about X, in radians.</param>
+    /// <param name="pitch">Rotation about Y, in radians.</param>
+    /// <param name="yaw">Rotation about Z, in radians.</param>
+    public static RigMesh At(string asset, float roll = 0f, float pitch = 0f, float yaw = 0f) =>
+        new(asset, Vector3.Zero, new Vector3(roll, pitch, yaw));
+}
+
+/// <summary>
 /// One rigid body in a robot rig.
 /// </summary>
 /// <param name="Name">Unique link name.</param>
@@ -89,7 +114,14 @@ public sealed record RigLink(
     Vector3 Axis,
     int JointIndex,
     float Sign,
-    IReadOnlyList<RigShape> Shapes);
+    IReadOnlyList<RigShape> Shapes)
+{
+    /// <summary>
+    /// The manufacturer mesh drawn for this link, or <see langword="null"/> to draw
+    /// <see cref="Shapes"/> only.
+    /// </summary>
+    public RigMesh? Mesh { get; init; }
+}
 
 /// <summary>
 /// A complete kinematic and visual description of one robot platform.
@@ -211,15 +243,21 @@ public sealed class RobotRig
         float CalfLength,
         float LimbRadius,
         float FootRadius,
-        bool Wheeled)
+        bool Wheeled,
+        string? MeshSet = null)
     {
         // Go2 URDF: trunk 0.3762 long, hips at ±0.1934 / ±0.0465, thigh and calf both 0.213.
         // The trunk box is widened here from the URDF's 0.0935 collision width to the shell width a
         // person actually sees — this drives a viewport, not a collision check.
+        //
+        // The link frames are the URDF's own (base, hip, thigh, calf, foot at the same origins), which
+        // is what lets unitree_ros's visual meshes hang off these links unmodified.
         internal static QuadrupedSpec Go2 { get; } =
-            new(new Vector3(0.3762f, 0.190f, 0.114f), 0.1934f, 0.0465f, 0.0955f, 0.213f, 0.213f, 0.024f, 0.022f, false);
+            new(new Vector3(0.3762f, 0.190f, 0.114f), 0.1934f, 0.0465f, 0.0955f, 0.213f, 0.213f, 0.024f, 0.022f, false, "go2");
 
-        internal static QuadrupedSpec Go2W { get; } = Go2 with { Wheeled = true, FootRadius = 0.070f };
+        // Go2-W's calf ends in a wheel mount, not Go2's foot, so it keeps primitives rather than
+        // borrowing meshes that would put a foot where its wheel is.
+        internal static QuadrupedSpec Go2W { get; } = Go2 with { Wheeled = true, FootRadius = 0.070f, MeshSet = null };
 
         internal static QuadrupedSpec B2 { get; } =
             new(new Vector3(0.660f, 0.300f, 0.190f), 0.3455f, 0.072f, 0.1200f, 0.350f, 0.350f, 0.040f, 0.037f, false);
@@ -230,6 +268,10 @@ public sealed class RobotRig
     private static RobotRig Quadruped(RobotModel model, string name, string summary, QuadrupedSpec spec)
     {
         var links = new List<RigLink>();
+
+        // Meshes come from unitree_ros's URDF visuals; see tools/meshes. Null when the platform has none.
+        RigMesh? MeshOf(string part, float roll = 0f, float pitch = 0f) =>
+            spec.MeshSet is { } set ? RigMesh.At($"{set}/{part}.glb", roll, pitch) : null;
 
         links.Add(new RigLink(
             "trunk", null, Vector3.Zero, Vector3.Zero, -1, 1f,
@@ -255,7 +297,10 @@ public sealed class RobotRig
                     new Vector3((spec.Body.X * 0.5f) + (spec.Body.X * 0.04f), 0f, spec.Body.Z * 0.72f),
                     RigSurface.Sensor,
                     AxisAlong: 2),
-            ]));
+            ])
+        {
+            Mesh = MeshOf("base"),
+        });
 
         // FR, FL, RR, RL — the order the unitree_go motor array uses.
         ReadOnlySpan<string> legNames = ["FR", "FL", "RR", "RL"];
@@ -272,6 +317,11 @@ public sealed class RobotRig
             int thighJoint = hipJoint + 1;
             int calfJoint = hipJoint + 2;
 
+            // The URDF draws one hip mesh four ways — flipped about X on the right, about Y at the
+            // rear — and gives the right-hand thigh and calf mirrored meshes of their own.
+            bool right = sy < 0f;
+            string mirror = right ? "_mirror" : "";
+
             // Hip: abduction about the body's X axis.
             links.Add(new RigLink(
                 $"{prefix}_hip", "trunk",
@@ -284,7 +334,10 @@ public sealed class RobotRig
                         new Vector3(0f, sy * spec.LimbRadius * 1.2f, 0f),
                         RigSurface.Actuator,
                         AxisAlong: 1),
-                ]));
+                ])
+            {
+                Mesh = MeshOf("hip", right ? MathF.PI : 0f, sx < 0f ? MathF.PI : 0f),
+            });
 
             // Thigh: flexion about Y, hanging down -Z.
             links.Add(new RigLink(
@@ -304,7 +357,10 @@ public sealed class RobotRig
                         new Vector3(0f, 0f, -spec.ThighLength * 0.5f),
                         RigSurface.Limb,
                         AxisAlong: 2),
-                ]));
+                ])
+            {
+                Mesh = MeshOf("thigh" + mirror),
+            });
 
             // Calf: knee about Y.
             links.Add(new RigLink(
@@ -318,7 +374,10 @@ public sealed class RobotRig
                         new Vector3(0f, 0f, -spec.CalfLength * 0.5f),
                         RigSurface.Limb,
                         AxisAlong: 2),
-                ]));
+                ])
+            {
+                Mesh = MeshOf("calf" + mirror),
+            });
 
             // Foot, or a wheel on the W variants. The wheel is a driven joint — Go2-W and B2-W have
             // sixteen actuators, not twelve — so it spins about the leg's lateral axis rather than
@@ -343,7 +402,10 @@ public sealed class RobotRig
                 spec.Wheeled ? Vector3.UnitY : Vector3.Zero,
                 spec.Wheeled ? GoJoint.Count + leg : -1,
                 1f,
-                [contact]));
+                [contact])
+            {
+                Mesh = spec.Wheeled ? null : MeshOf("foot"),
+            });
         }
 
         // Standing pose: hips level, thighs forward, knees folded back. The wheeled variants keep the

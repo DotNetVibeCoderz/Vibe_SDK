@@ -7,9 +7,16 @@
 // Frames: Unitree (and ROS) use x forward, y left, z up. Three.js is y up. Rather than converting
 // every coordinate, the whole robot hangs under one group rotated -90 degrees about x, which maps
 // (x, y, z) to (x, z, -y). Rig numbers are then used verbatim, in metres.
+//
+// Links that name a manufacturer mesh are drawn with it once it loads; until then, and for good if it
+// does not, they show the rig's primitives. The meshes are URDF visuals in the link frame (see
+// tools/meshes), so they hang off the same nodes the primitives do and need no kinematics of their own.
 
 import * as THREE from 'three';
 import { OrbitControls } from '../lib/three/OrbitControls.js';
+import { GLTFLoader } from '../lib/three/loaders/GLTFLoader.js';
+
+const MODEL_ROOT = '/models/';
 
 const THEMES = {
     dark: {
@@ -52,6 +59,11 @@ const THEMES = {
 
 const SURFACE = ['shell', 'limb', 'actuator', 'contact', 'sensor'];
 
+// One load per file for the life of the page. Switching back to a model is then instant, and the four
+// legs that share a hip mesh fetch it once.
+const meshCache = new Map();
+const gltfLoader = new GLTFLoader();
+
 let renderer = null;
 let scene = null;
 let camera = null;
@@ -62,11 +74,18 @@ let container = null;
 let robotRoot = null;      // frame conversion node
 let bodyNode = null;       // body pose (position + orientation)
 let jointNodes = [];       // index -> { node, axis, sign }
-let contactNodes = [];     // index -> mesh, in rig contact order
+let contactMaterials = []; // index -> material, in rig contact order; cloned so each foot lights alone
 let materials = {};
 let ground = null;
 let grid = null;
 let themeName = 'dark';
+let generation = 0;        // bumped by every dispose, so a load that outlives its scene is dropped
+
+function report(text) {
+    // index.html's record() forwards to the log panel. A desktop app has no console anyone reads.
+    if (typeof window.record === 'function') window.record(text);
+    else console.error(text);
+}
 
 function disposeTree(object) {
     object.traverse((child) => {
@@ -113,6 +132,7 @@ function buildShape(shape) {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.position.set(shape.center.x, shape.center.y, shape.center.z);
+    mesh.userData.primitive = true;
 
     // Capsules and cylinders are built along Y. Re-aim them at the axis the rig asked for.
     if (shape.kind === 1 || shape.kind === 2) {
@@ -134,7 +154,8 @@ function buildRobot(rig) {
     root.add(body);
 
     jointNodes = new Array(rig.jointCount).fill(null);
-    contactNodes = [];
+    contactMaterials = [];
+    const meshJobs = [];
 
     for (const link of rig.links) {
         const node = new THREE.Group();
@@ -149,6 +170,8 @@ function buildRobot(rig) {
         (parent ?? body).add(node);
         nodes.set(link.name, node);
 
+        if (link.mesh) meshJobs.push({ node, mesh: link.mesh, contact: -1 });
+
         if (link.jointIndex >= 0 && link.jointIndex < jointNodes.length) {
             jointNodes[link.jointIndex] = {
                 node,
@@ -158,20 +181,80 @@ function buildRobot(rig) {
         }
     }
 
-    for (const name of rig.contactLinks) {
+    rig.contactLinks.forEach((name, index) => {
         const node = nodes.get(name);
         // The first mesh under a contact link is the pad or tyre. Lighting it when the foot is loaded
         // is what ties the 3D view back to the numbers in the status panel.
         const mesh = node ? node.children.find((child) => child.isMesh) : null;
         if (mesh) {
             mesh.material = mesh.material.clone();
-            contactNodes.push(mesh);
+            contactMaterials.push(mesh.material);
         } else {
-            contactNodes.push(null);
+            contactMaterials.push(null);
         }
+
+        // A foot drawn as a mesh lights the same material, so the cue survives the swap. So does the
+        // parent's contact-role part: in Unitree's meshes the rubber pad belongs to the calf and the
+        // foot sphere sits mostly inside it, so lighting the foot alone shows as a few stray specks.
+        for (const job of meshJobs) {
+            if (node && (job.node === node || job.node === node.parent)) job.contact = index;
+        }
+    });
+
+    return { root, body, meshJobs };
+}
+
+function loadAsset(asset) {
+    let pending = meshCache.get(asset);
+    if (!pending) {
+        pending = gltfLoader.loadAsync(MODEL_ROOT + asset).then((gltf) => gltf.scene);
+        // A failure is not cached: the next model switch gets to try again.
+        pending.catch(() => meshCache.delete(asset));
+        meshCache.set(asset, pending);
+    }
+    return pending;
+}
+
+/**
+ * Swaps primitives for meshes, all or nothing. A robot drawn half from meshes and half from boxes looks
+ * broken in a way that hides which file is missing, so one failure keeps every primitive and says why.
+ */
+async function loadMeshes(jobs, owner) {
+    if (jobs.length === 0) return;
+
+    let scenes;
+    try {
+        scenes = await Promise.all(jobs.map((job) => loadAsset(job.mesh.asset)));
+    } catch (error) {
+        if (owner === generation) report('robot meshes not loaded, showing primitives: ' + (error?.message ?? error));
+        return;
     }
 
-    return { root, body };
+    if (owner !== generation) return;
+
+    jobs.forEach((job, i) => {
+        const model = scenes[i].clone(true);
+        const { offset, rotation } = job.mesh;
+        model.position.set(offset.x, offset.y, offset.z);
+        // URDF rpy is extrinsic X, Y, Z, which is three.js's intrinsic 'ZYX'.
+        model.rotation.set(rotation.x, rotation.y, rotation.z, 'ZYX');
+
+        model.traverse((child) => {
+            if (!child.isMesh) return;
+            // The converter names each material after its surface role; the theme supplies the colour.
+            const role = child.material?.name;
+            child.material = role === 'contact' && job.contact >= 0 && contactMaterials[job.contact]
+                ? contactMaterials[job.contact]
+                : materials[role] ?? materials.limb;
+            child.castShadow = true;
+            child.receiveShadow = true;
+        });
+
+        for (const child of job.node.children) {
+            if (child.userData.primitive) child.visible = false;
+        }
+        job.node.add(model);
+    });
 }
 
 function buildStage(theme, reach) {
@@ -206,6 +289,7 @@ function applyTheme(theme) {
     materials.contact.color.setHex(theme.contact);
     materials.sensor.color.setHex(theme.sensor);
     materials.sensor.emissive.setHex(theme.sensor);
+    for (const material of contactMaterials) material?.color.setHex(theme.contact);
 
     if (ground) ground.material.color.setHex(theme.ground);
 
@@ -284,6 +368,9 @@ const api = {
         bodyNode.position.z = rig.standingHeight;
         scene.add(robotRoot);
 
+        // Not awaited: the primitives are a complete robot, so the scene is usable while meshes load.
+        loadMeshes(built.meshJobs, generation);
+
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.07;
@@ -326,12 +413,12 @@ const api = {
         bodyNode.rotation.set(roll, pitch, yaw, 'ZYX');
 
         if (contacts) {
-            for (let i = 0; i < contactNodes.length && i < contacts.length; i++) {
-                const mesh = contactNodes[i];
-                if (!mesh) continue;
+            for (let i = 0; i < contactMaterials.length && i < contacts.length; i++) {
+                const material = contactMaterials[i];
+                if (!material) continue;
                 const loaded = Math.min(1, contacts[i] / 140);
-                mesh.material.emissive.setHex(THEMES[themeName].contactLive);
-                mesh.material.emissiveIntensity = loaded * 0.9;
+                material.emissive.setHex(THEMES[themeName].contactLive);
+                material.emissiveIntensity = loaded * 0.9;
             }
         }
     },
@@ -351,6 +438,8 @@ const api = {
     },
 
     dispose() {
+        generation++;
+
         if (resizeObserver) {
             resizeObserver.disconnect();
             resizeObserver = null;
@@ -370,7 +459,7 @@ const api = {
         robotRoot = null;
         bodyNode = null;
         jointNodes = [];
-        contactNodes = [];
+        contactMaterials = [];
     },
 };
 

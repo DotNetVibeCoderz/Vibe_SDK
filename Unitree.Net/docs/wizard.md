@@ -7,6 +7,8 @@ your project, looks things up, and writes code against the real SDK.
 dotnet run --project apps/Unitree.Net.Wizard
 ```
 
+![The wizard with a project open: explorer, editor, output, and Jack's chat panel](images/wizard.png)
+
 ## The window
 
 ```
@@ -51,6 +53,8 @@ Two routes: **Blank** — pick a kind and get a minimal application that connect
 | Desktop | A windowed operator console |
 | Web | ASP.NET Core — a dashboard or an HTTP API |
 | Embedded | Published self-contained for the robot's ARM64 module, deployed over SSH |
+
+![The New project dialog's template gallery](images/wizard-templates.png)
 
 ### Templates
 
