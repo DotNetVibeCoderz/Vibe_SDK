@@ -103,7 +103,7 @@ dotnet run --project TypeSafe.Cli -- classify "I was charged twice" --live
 
 ## Tanpa API key
 
-`Simulator = true` menjawab pertanyaan `choice`, `noul`, dan `score` secara lokal dan deterministik, sehingga unit test dan CI berjalan tanpa jaringan.
+`Simulator = true` menjawab pertanyaan `choice`, `noul`, dan `score` secara lokal dan deterministik (pertanyaan `box` untuk gambar dijawab seluruh bingkai dengan confidence 0), sehingga unit test dan CI berjalan tanpa jaringan.
 
 ```csharp
 await using var client = new TypeSafeClient(new TypeSafeOptions { Simulator = true });

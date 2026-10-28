@@ -38,12 +38,30 @@ public sealed record ChoiceSchema(IReadOnlyList<string> Values, string Instructi
     };
 }
 
-/// <summary>Pertanyaan biner bernilai kontinu 0..1. Menghasilkan <c>{ type: "noul", ... }</c>.</summary>
-public sealed record NoulSchema(string Instructions, string? True = null, string? False = null) : IQuestionSchema
+/// <summary>
+/// Pertanyaan biner bernilai kontinu 0..1. Menghasilkan <c>{ type: "noul", ... }</c>. Instruksi boleh null
+/// selama setidaknya satu hasil (<paramref name="True"/> atau <paramref name="False"/>) dideskripsikan.
+/// </summary>
+public sealed record NoulSchema(string? Instructions, string? True = null, string? False = null) : IQuestionSchema
 {
-    public object ToApiQuestion() => True is null && False is null
-        ? new { type = "noul", instructions = Instructions }
-        : new { type = "noul", instructions = Instructions, criteria = new { @true = True, @false = False } };
+    public object ToApiQuestion()
+    {
+        var question = new Dictionary<string, object?> { ["type"] = "noul" };
+        if (Instructions is not null) question["instructions"] = Instructions;
+        if (True is not null || False is not null) question["criteria"] = new Dictionary<string, object?> { ["true"] = True, ["false"] = False };
+        return question;
+    }
+}
+
+/// <summary>
+/// Pertanyaan yang menemukan lokasi hal yang dijelaskan instruksi di dalam gambar request.
+/// Menghasilkan <c>{ type: "box", instructions }</c>; butuh model vision-language seperti <c>jev-preview</c>.
+/// </summary>
+public sealed record BoxSchema(string? Instructions = null) : IQuestionSchema
+{
+    public object ToApiQuestion() => Instructions is null
+        ? new Dictionary<string, object?> { ["type"] = "box" }
+        : new Dictionary<string, object?> { ["type"] = "box", ["instructions"] = Instructions };
 }
 
 /// <summary>Pertanyaan skala berurutan. Menghasilkan <c>{ type: "score", instructions, criteria }</c>.</summary>
@@ -86,6 +104,42 @@ public static class QuestionPayload
 
     private static Dictionary<string, object> NormalizeMap(IEnumerable<KeyValuePair<string, object>> map)
         => map.ToDictionary(pair => pair.Key, pair => pair.Value is IQuestionSchema schema ? schema.ToApiQuestion() : pair.Value, StringComparer.Ordinal);
+
+    /// <summary>
+    /// Menolak payload yang pasti ditolak API, sebelum menyentuh jaringan: tanpa pertanyaan, pertanyaan tanpa
+    /// <c>type</c>, choice/score tanpa criteria, atau noul tanpa instruksi maupun hasil yang dideskripsikan.
+    /// Field yang tidak dikenal dibiarkan lewat agar fitur API baru tetap bisa dipakai.
+    /// </summary>
+    /// <exception cref="TypeSafeException">Payload pertanyaan tidak valid.</exception>
+    public static void Validate(object normalized)
+    {
+        using var document = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(normalized, JsonDefaults.Options));
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object || !root.EnumerateObject().Any()) throw new TypeSafeException("At least one question is required.");
+        foreach (var property in root.EnumerateObject())
+        {
+            var (name, question) = (property.Name, property.Value);
+            if (question.ValueKind != JsonValueKind.Object || !question.TryGetProperty("type", out var typeProperty)
+                || typeProperty.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(typeProperty.GetString()))
+                throw new TypeSafeException($"Question \"{name}\" must be a question object or a dictionary with a nonempty string \"type\".");
+            var type = typeProperty.GetString();
+            var hasCriteria = question.TryGetProperty("criteria", out var criteria);
+            if (type is "choice" or "score" && !hasCriteria) throw new TypeSafeException($"Question \"{name}\" requires \"criteria\".");
+            if (type == "score" && criteria.ValueKind == JsonValueKind.Array && criteria.GetArrayLength() == 0)
+                throw new TypeSafeException($"Score question \"{name}\" has no criteria; at least one score is required.");
+            if (type == "choice" && criteria.ValueKind == JsonValueKind.Object && !criteria.EnumerateObject().Any())
+                throw new TypeSafeException($"Choice question \"{name}\" has no criteria; at least one choice is required.");
+            if (type == "noul")
+            {
+                if (hasCriteria && criteria.ValueKind is not (JsonValueKind.Object or JsonValueKind.Null))
+                    throw new TypeSafeException($"Noul question \"{name}\" criteria must be an object.");
+                var hasInstructions = question.TryGetProperty("instructions", out var instructions) && instructions.ValueKind != JsonValueKind.Null;
+                var describesOutcome = hasCriteria && criteria.ValueKind == JsonValueKind.Object && criteria.EnumerateObject().Any(p => p.Value.ValueKind != JsonValueKind.Null);
+                if (!hasInstructions && !describesOutcome)
+                    throw new TypeSafeException($"Noul question \"{name}\" has neither instructions nor criteria; at least one is required.");
+            }
+        }
+    }
 }
 
 /// <summary>Response endpoint System One.</summary>
@@ -102,6 +156,7 @@ public sealed record SystemOneResponse
         .ToDictionary(x => x.Key, x => { var answer = (ChoiceAnswer)x.Value; return new ChoiceValue(answer.Choice, answer.Confidence); });
     [JsonIgnore] public IReadOnlyDictionary<string, ChoiceAnswer> ChoiceAnswers => Filter<ChoiceAnswer>();
     [JsonIgnore] public IReadOnlyDictionary<string, ScoreAnswer> Scores => Filter<ScoreAnswer>();
+    [JsonIgnore] public IReadOnlyDictionary<string, BoxAnswer> Boxes => Filter<BoxAnswer>();
 
     private IReadOnlyDictionary<string, T> Filter<T>() where T : Answer
         => Answers.Where(x => x.Value is T).ToDictionary(x => x.Key, x => (T)x.Value, StringComparer.Ordinal);
@@ -136,6 +191,7 @@ public sealed record SystemOneResponse
 [JsonDerivedType(typeof(NoulAnswer), "noul")]
 [JsonDerivedType(typeof(ChoiceAnswer), "choice")]
 [JsonDerivedType(typeof(ScoreAnswer), "score")]
+[JsonDerivedType(typeof(BoxAnswer), "box")]
 public abstract record Answer(string Type)
 {
     public static Answer Parse(JsonElement json)
@@ -146,9 +202,14 @@ public abstract record Answer(string Type)
             "noul" => new NoulAnswer(json.GetProperty("noul").GetDouble()),
             "choice" => new ChoiceAnswer(json.GetProperty("choice").GetString() ?? "", ReadNumberMap(json, "probabilities"), ReadConfidence(json)),
             "score" => new ScoreAnswer(json.GetProperty("score").GetDouble(), ReadStringMap(json, "legend"), ReadNumberMap(json, "probabilities"), ReadConfidence(json)),
+            "box" => new BoxAnswer(ReadBox(json.GetProperty("box")),
+                json.TryGetProperty("confidence", out var boxConfidence) && boxConfidence.ValueKind == JsonValueKind.Number ? boxConfidence.GetDouble() : null),
             _ => throw new JsonException($"Unsupported TypeSafe answer type '{type}'.")
         };
     }
+
+    private static BoxCoordinates ReadBox(JsonElement box)
+        => new(box.GetProperty("top").GetDouble(), box.GetProperty("bottom").GetDouble(), box.GetProperty("left").GetDouble(), box.GetProperty("right").GetDouble());
 
     private static double ReadConfidence(JsonElement json) => json.TryGetProperty("confidence", out var value) && value.ValueKind == JsonValueKind.Number ? value.GetDouble() : 1;
     private static IReadOnlyDictionary<string, double> ReadNumberMap(JsonElement json, string name)
@@ -182,6 +243,29 @@ public sealed record ScoreAnswer(double Score, IReadOnlyDictionary<string, strin
         : LegendByLevel.OrderBy(pair => Math.Abs(pair.Key - Score)).First().Value;
 }
 
+/// <summary>Kotak yang ditemukan beserta confidence-nya. Confidence null bila model tidak menyediakannya.</summary>
+public sealed record BoxAnswer(BoxCoordinates Box, double? Confidence) : Answer("box");
+
+/// <summary>
+/// Tepi kotak sebagai pecahan 0..1 dari tinggi gambar (<see cref="Top"/>, <see cref="Bottom"/>, diukur dari atas)
+/// dan lebar gambar (<see cref="Left"/>, <see cref="Right"/>, diukur dari kiri).
+/// </summary>
+public sealed record BoxCoordinates(double Top, double Bottom, double Left, double Right)
+{
+    /// <summary>Lebar kotak sebagai pecahan lebar gambar.</summary>
+    public double Width => Right - Left;
+    /// <summary>Tinggi kotak sebagai pecahan tinggi gambar.</summary>
+    public double Height => Bottom - Top;
+
+    /// <summary>Mengubah kotak ke piksel <c>(X, Y, Width, Height)</c> untuk gambar berukuran tertentu.</summary>
+    public (int X, int Y, int Width, int Height) ToPixels(int imageWidth, int imageHeight)
+    {
+        var x = (int)Math.Round(Left * imageWidth);
+        var y = (int)Math.Round(Top * imageHeight);
+        return (x, y, (int)Math.Round(Right * imageWidth) - x, (int)Math.Round(Bottom * imageHeight) - y);
+    }
+}
+
 /// <summary>Ringkasan label terpilih untuk akses cepat.</summary>
 public sealed record ChoiceValue(string Choice, double Confidence = 1.0);
 
@@ -196,7 +280,8 @@ public sealed record Usage(
 
 /// <summary>
 /// Simulator lokal deterministik. Menjawab pertanyaan choice, noul, dan score tanpa jaringan
-/// sehingga demo, unit test, dan pipeline CI berjalan tanpa API key.
+/// sehingga demo, unit test, dan pipeline CI berjalan tanpa API key. Simulator tidak melihat gambar:
+/// pertanyaan box dijawab dengan seluruh bingkai dan confidence 0.
 /// </summary>
 public static class TypeSafeSimulator
 {
@@ -251,6 +336,8 @@ public static class TypeSafeSimulator
             "choice" => SimulateChoice(text, question),
             "noul" => SimulateNoul(text, instructions, question),
             "score" => SimulateScore(text, question),
+            // Tanpa penglihatan tidak ada sinyal: seluruh bingkai dengan confidence 0, bukan tebakan.
+            "box" => new BoxAnswer(new BoxCoordinates(0, 1, 0, 1), 0),
             _ => null
         };
     }
@@ -485,7 +572,7 @@ public static class TypeSafeSimulator
     private static string Flatten(object? state)
     {
         if (state is null) return "";
-        if (state is string text) return text;
+        if (state is string text) return AssetReference.Replace(text, " ");
         var builder = new System.Text.StringBuilder();
         try
         {
@@ -493,8 +580,11 @@ public static class TypeSafeSimulator
             Collect(document.RootElement, builder);
         }
         catch (JsonException) { return state.ToString() ?? ""; }
-        return builder.ToString();
+        return AssetReference.Replace(builder.ToString(), " ");
     }
+
+    // Rujukan aset bukan isi teks: tanpa ini, kata "image" ikut dinilai.
+    private static readonly System.Text.RegularExpressions.Regex AssetReference = new("<image:[0-9a-f]{32}>");
 
     private static void Collect(JsonElement element, System.Text.StringBuilder builder)
     {

@@ -47,6 +47,15 @@ Tidak ada satu pun test yang menyentuh jaringan atau memerlukan API key. Perilak
 - Nilai `TypeSafeConstants`, penyensoran header rahasia, dan nama environment variable
 - `Usage` memperlakukan angka yang tidak dilaporkan sebagai null
 
+### Sinkronisasi Python SDK 0.7.5 (`UpstreamSyncTests`)
+- Bentuk wire pertanyaan `box` dan parsing `BoxAnswer`, termasuk confidence null dan field tambahan seperti `assets_used`
+- `noul` dengan hasil yang dideskripsikan tanpa instruksi
+- Penolakan sebelum jaringan: state null, tanpa pertanyaan, tanpa `type`, criteria hilang atau kosong, dan `noul` tanpa deskripsi
+- `NaN` dan `Infinity` dikirim sebagai string
+- Kompresi zstd hanya pada body besar, mati dengan `RequestCompression.None`, tidak pernah pada `GET`, dan byte terkompresi yang sama pada retry
+- Tata letak multipart untuk gambar lewat alias, ditempatkan di state, dan dirujuk saat dipasang; scope `AttachAssets` yang tumpang-tindih; satu gambar dengan dua nama; aset `extraBody` menggantikan milik SDK; gambar yang tidak terbaca atau kosong gagal sebelum jaringan; label part PNG/JPEG/tidak dikenal
+- Simulator menjawab `box` dengan seluruh bingkai dan confidence 0
+
 ### Simulator (`ParityTests`, `TypeSafeSdkTests`)
 - Menjawab pertanyaan choice, noul, dan score; probabilitas berjumlah satu; keluarannya deterministik
 - Kata yang dimiliki semua kriteria tidak menentukan jawaban; kata yang unik pada satu kriteria menentukan
@@ -99,6 +108,8 @@ Hasil, 24 September 2026:
 
 Dua hal layak dicatat dari sesi itu. API live melaporkan `model` sebagai build yang terselesaikan (`jev-1.13.0`), bukan alias yang diminta, dan `release_date` berupa timestamp penuh, bukan `YYYY-MM-DD` — itulah sebabnya `ModelMetadata.ReleaseDate` bertipe `string`. Keduanya terparsing benar.
 
+Pada 28 Oktober 2026, setelah sinkronisasi Python SDK 0.7.5, sebuah skrip sementara menguji jalur baru secara live: body 2,4 KB yang dikirim dengan `Content-Encoding: zstd` terklasifikasi `billing`; `noul` yang hanya berisi `criteria.true` mengembalikan `0.84`; dan PNG 400×300 berisi lingkaran merah di (240, 40, 120, 120) px dan persegi biru di (30, 180, 100, 100) px dikembalikan `jev-preview` sebagai kotak di (240, 39, 124, 120) dan (32, 174, 100, 105), confidence 0,63 dan 0,93 — `jev-latest` memberi kotak yang sama. `noul` yang merujuk gambar terpasang di dalam teks interpolasi bernilai `0.99` untuk "berisi bentuk merah". Model terselesaikan adalah `jev-1.14.0`. Tanpa `TypeSafe-Danger-Zone-Images: true` API menjawab 400 dengan `api_usage_error`.
+
 Jev Gallery juga dijalankan penuh terhadap API live dengan mengubah `UseSimulator` menjadi `false`. Deskripsi quest yang sama yang dinilai `steady` oleh simulator dikembalikan model live sebagai `2.18 — demanding`, dan itulah ukuran jujur jarak di antara keduanya.
 
 ## Verifikasi paket
@@ -108,7 +119,7 @@ Artefak hasil pack dipasang ke console app sekali pakai sebelum rilis, untuk mem
 ```bash
 dotnet pack TypeSafeSdk/TypeSafeSdk.csproj -c Release -o artifacts
 dotnet new console -o /tmp/pkgtest
-dotnet add /tmp/pkgtest package Gravicode.TypeSafeSdk --source ./artifacts --version 1.1.0
+dotnet add /tmp/pkgtest package Gravicode.TypeSafeSdk --source ./artifacts --version 1.2.0
 ```
 
 Console app `Microsoft.NET.Sdk` biasa harus bisa dikompilasi dan dijalankan — SDK ini sengaja bergantung pada `Microsoft.Extensions.Logging.Abstractions`, bukan shared framework ASP.NET Core, supaya hal itu mungkin.

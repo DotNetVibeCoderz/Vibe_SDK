@@ -1,6 +1,8 @@
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace TypeSafeSdk;
@@ -13,6 +15,7 @@ public sealed class TypeSafeClient : IAsyncDisposable, IDisposable
     private readonly ILogger? _logger;
     private readonly bool _ownsHttp;
     private readonly ModelsClient _models;
+    private readonly AttachedAssets _attached = new();
     private bool _disposed;
 
     /// <summary>Resource daftar model: <c>client.Models.ListAsync()</c>.</summary>
@@ -50,7 +53,9 @@ public sealed class TypeSafeClient : IAsyncDisposable, IDisposable
     /// <param name="timeout">Timeout per request; null memakai <see cref="TypeSafeOptions.Timeout"/>.</param>
     /// <param name="extraHeaders">Header tambahan khusus pemanggilan ini.</param>
     /// <param name="extraBody">Field tambahan yang digabungkan ke body request.</param>
+    /// <param name="assets">Aset menurut nama yang dipakai untuknya di <c>state</c> atau pertanyaan, misalnya <c>"&lt;photo&gt;"</c>.</param>
     /// <param name="cancellationToken">Token pembatalan pemanggilan.</param>
+    /// <exception cref="TypeSafeException">Request tidak valid sebelum dikirim, misalnya pertanyaan kosong atau aset yang tidak bisa dibaca.</exception>
     public async Task<SystemOneResponse> SystemOneAsync(
         object state,
         object questions,
@@ -59,25 +64,50 @@ public sealed class TypeSafeClient : IAsyncDisposable, IDisposable
         TimeSpan? timeout = null,
         IReadOnlyDictionary<string, string>? extraHeaders = null,
         IReadOnlyDictionary<string, object?>? extraBody = null,
+        IReadOnlyDictionary<string, Asset>? assets = null,
         CancellationToken cancellationToken = default)
     {
+        if (state is null) throw new TypeSafeException("State is required.");
         var normalized = QuestionPayload.Normalize(questions);
+        QuestionPayload.Validate(normalized);
         if (_options.Simulator) return TypeSafeSimulator.Answer(state, normalized, model ?? _options.DefaultModel);
         if (string.IsNullOrWhiteSpace(_options.ApiKey)) throw new TypeSafeAuthenticationException(0, $"TypeSafe API key is required. Set {TypeSafeConstants.ApiKeyEnv} or TypeSafeOptions.ApiKey.", null, null, TypeSafeConstants.SystemOnePath);
 
         var body = new Dictionary<string, object?>(StringComparer.Ordinal) { ["state"] = state, ["model"] = model ?? _options.DefaultModel, ["questions"] = normalized };
         if (extraBody is not null) foreach (var pair in extraBody) body[pair.Key] = pair.Value;
+        var content = await SystemOneRequestBuilder.BuildAsync(body, assets, _attached.Snapshot(), cancellationToken);
 
-        var (raw, responseHeaders) = await SendAsync(HttpMethod.Post, TypeSafeConstants.SystemOnePath, body, retry, timeout, extraHeaders, cancellationToken);
+        var (raw, responseHeaders) = await SendAsync(HttpMethod.Post, TypeSafeConstants.SystemOnePath, content, retry, timeout, extraHeaders, cancellationToken);
         try { return SystemOneResponse.Parse(raw) with { RequestId = responseHeaders.GetValueOrDefault(TypeSafeConstants.RequestIdHeader) }; }
         catch (JsonException ex) { throw new TypeSafeApiResponseValidationException("answers", raw, ex); }
     }
+
+    /// <summary>Overload 1.1 tanpa <c>assets</c>, dipertahankan untuk kompatibilitas biner.</summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public Task<SystemOneResponse> SystemOneAsync(object state, object questions, string? model, RetryPolicy? retry, TimeSpan? timeout,
+        IReadOnlyDictionary<string, string>? extraHeaders, IReadOnlyDictionary<string, object?>? extraBody, CancellationToken cancellationToken)
+        => SystemOneAsync(state, questions, model, retry, timeout, extraHeaders, extraBody, null, cancellationToken);
+
+    /// <summary>
+    /// Memasang aset pada pemanggilan client ini sampai hasilnya di-dispose, agar aset bisa dirujuk di dalam teks:
+    /// setiap aset terpasang yang rujukannya (<c>asset.ToString()</c>) muncul di request ikut dikirim.
+    /// </summary>
+    /// <remarks>Rujukan ke aset yang tidak dipasang, tidak dilewatkan lewat <c>assets</c>, dan tidak diletakkan langsung di isi request dikirim sebagai teks biasa.</remarks>
+    /// <example><code>
+    /// var photo = ImageAsset.FromFile("product.jpg");
+    /// using (client.AttachAssets(photo))
+    ///     await client.SystemOneAsync($"Product: {photo}", new Dictionary&lt;string, object&gt; { ["damaged"] = new NoulSchema("Is the product damaged?") });
+    /// </code></example>
+    public IDisposable AttachAssets(params Asset[] assets) => _attached.Attach(assets);
+
+    /// <inheritdoc cref="AttachAssets(Asset[])"/>
+    public IDisposable AttachAssets(IEnumerable<Asset> assets) => _attached.Attach(assets);
 
     /// <summary>Mengirim request dengan retry, timeout, dan pemetaan error terpusat.</summary>
     internal async Task<(string Body, IReadOnlyDictionary<string, string> Headers)> SendAsync(
         HttpMethod method,
         string path,
-        object? body,
+        RequestBody? body,
         RetryPolicy? retry,
         TimeSpan? timeout,
         IReadOnlyDictionary<string, string>? extraHeaders,
@@ -88,6 +118,9 @@ public sealed class TypeSafeClient : IAsyncDisposable, IDisposable
         var effectiveTimeout = timeout ?? _options.Timeout;
         var endpoint = new Uri(new Uri(_options.Endpoint.TrimEnd('/') + "/"), path);
         var budget = Stopwatch.StartNew();
+        // Body yang cukup besar dikompres sekali untuk semua percobaan.
+        var encoding = body is not null && body.Content.Length >= TypeSafeConstants.MinCompressedBodyLength ? _options.Compression : RequestCompression.None;
+        var content = encoding == RequestCompression.Zstd ? ZstdCompress(body!.Content) : body?.Content;
 
         for (var attempt = 0; ; attempt++)
         {
@@ -99,7 +132,12 @@ public sealed class TypeSafeClient : IAsyncDisposable, IDisposable
             if (attempt > 0) request.Headers.TryAddWithoutValidation(TypeSafeConstants.RetryCountHeader, attempt.ToString());
             foreach (var header in _options.Headers) request.Headers.TryAddWithoutValidation(header.Key, header.Value);
             if (extraHeaders is not null) foreach (var header in extraHeaders) request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            if (body is not null) request.Content = JsonContent.Create(body, options: JsonDefaults.Options);
+            if (body is not null)
+            {
+                request.Content = new ByteArrayContent(content!);
+                request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(body.ContentType);
+                if (encoding == RequestCompression.Zstd) request.Content.Headers.ContentEncoding.Add("zstd");
+            }
 
             _logger?.LogInformation("TypeSafe {Method} {Endpoint} (attempt {Attempt})", method.Method, endpoint, attempt + 1);
 
@@ -140,6 +178,12 @@ public sealed class TypeSafeClient : IAsyncDisposable, IDisposable
             }
             throw TypeSafeErrorFactory.Create(status, payload, headers, endpoint.AbsoluteUri);
         }
+    }
+
+    private static byte[] ZstdCompress(byte[] content)
+    {
+        using var compressor = new ZstdSharp.Compressor();
+        return compressor.Wrap(content).ToArray();
     }
 
     private bool CanRetry(RetryPolicy policy, int attempt, Stopwatch budget, TimeSpan? retryAfter)
@@ -188,6 +232,11 @@ public sealed class TypeSafeOptions
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     /// <summary>Level log yang dibaca dari <c>TYPESAFE_LOG_LEVEL</c>, bila diisi.</summary>
     public LogLevel? LogLevel { get; set; }
+    /// <summary>
+    /// Kompresi body request. Default <see cref="RequestCompression.Zstd"/>, sama dengan Python SDK; pakai
+    /// <see cref="RequestCompression.None"/> untuk gateway atau API tidak resmi yang belum mendukung zstd.
+    /// </summary>
+    public RequestCompression Compression { get; set; } = RequestCompression.Zstd;
 
     /// <summary>Membangun opsi dari environment variable standar TypeSafe.</summary>
     public static TypeSafeOptions FromEnvironment() => new()
@@ -200,7 +249,20 @@ public sealed class TypeSafeOptions
     };
 }
 
+/// <summary>Kompresi body request, dikirim lewat header <c>Content-Encoding</c>.</summary>
+public enum RequestCompression
+{
+    /// <summary>Body dikirim apa adanya.</summary>
+    None,
+    /// <summary>Body minimal <see cref="TypeSafeConstants.MinCompressedBodyLength"/> byte dikompres dengan zstd.</summary>
+    Zstd
+}
+
 internal static class JsonDefaults
 {
-    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+    // JSON tidak punya token NaN/Infinity; seperti Python SDK, keduanya dikirim sebagai string "NaN"/"Infinity"/"-Infinity".
+    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
+    {
+        NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.AllowNamedFloatingPointLiterals
+    };
 }

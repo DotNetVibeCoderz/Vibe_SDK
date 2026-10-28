@@ -31,7 +31,7 @@ public static class TypeSafeConstants
     /// <summary>Nama SDK yang dikirim pada header identifikasi.</summary>
     public const string SdkName = "typesafe-sdk-dotnet";
     /// <summary>Versi SDK, satu sumber kebenaran untuk header dan paket NuGet.</summary>
-    public const string SdkVersion = "1.1.0";
+    public const string SdkVersion = "1.2.0";
 
     /// <summary>Header identifikasi SDK.</summary>
     public const string SdkHeader = "X-TypeSafe-SDK";
@@ -41,6 +41,11 @@ public static class TypeSafeConstants
     public const string RetryCountHeader = "X-TypeSafe-Retry-Count";
     /// <summary>Header request id yang dikembalikan API.</summary>
     public const string RequestIdHeader = "x-typesafe-request-id";
+    /// <summary>
+    /// Header opt-in yang diminta API selama dukungan gambar masih eksperimental. SDK tidak mengirimnya otomatis,
+    /// sama seperti Python SDK; pasang lewat <see cref="TypeSafeOptions.Headers"/> atau <c>extraHeaders</c> bernilai <c>"true"</c>.
+    /// </summary>
+    public const string ImagesOptInHeader = "TypeSafe-Danger-Zone-Images";
     /// <summary>Header <c>Retry-After</c> dalam detik.</summary>
     public const string RetryAfterHeader = "retry-after";
     /// <summary>Header <c>Retry-After</c> dalam milidetik.</summary>
@@ -48,6 +53,10 @@ public static class TypeSafeConstants
 
     /// <summary>Panjang maksimum body error yang disertakan pada pesan exception.</summary>
     public const int MaxErrorBodyLength = 200;
+    /// <summary>
+    /// Body di bawah ukuran ini muat dalam satu segmen TCP, jadi tidak dikompres: tidak menghemat round trip, hanya memakan CPU.
+    /// </summary>
+    public const int MinCompressedBodyLength = 1024;
 
     /// <summary>Header yang tidak pernah boleh muncul pada log.</summary>
     public static readonly IReadOnlySet<string> SecretHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

@@ -1,0 +1,107 @@
+# Rilis Gravicode.TypeSafeSdk ke nuget.org.
+#
+# Pemicu:
+#   - tag  typesafe-sdk-v1.2.0   (awalan dibuang, sisanya harus sama dengan versi di source)
+#       git tag typesafe-sdk-v1.2.0 && git push origin typesafe-sdk-v1.2.0
+#   - jalankan manual lewat tab Actions dengan mengisi input `version`
+#
+# Tag diberi awalan nama SDK karena Vibe_SDK memuat beberapa SDK; tag rilis SDK
+# lain tidak boleh ikut mempublish paket ini.
+#
+# Versi TIDAK ditimpa dari tag. Versi paket dikirim juga pada header X-TypeSafe-SDK
+# lewat TypeSafeConstants.SdkVersion, jadi tag, <Version> di csproj, dan konstanta
+# itu wajib sama; bila tidak, rilis dihentikan sebelum build.
+#
+# Butuh secret repository: NUGET_API_KEY (API key dari nuget.org).
+name: TypeSafe SDK Publish NuGet
+
+on:
+  push:
+    tags:
+      - 'typesafe-sdk-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versi paket, harus sama dengan <Version> di TypeSafeSdk.csproj (mis. 1.2.0)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Pack saja, jangan push ke nuget.org'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    name: Pack & push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: TypeSafeSDK
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Source Link butuh riwayat commit untuk menautkan sumber.
+
+      - name: Cocokkan versi
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#typesafe-sdk-v}"
+          fi
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Versi tidak valid: '$version'"; exit 1
+          fi
+          csproj=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' TypeSafeSdk/TypeSafeSdk.csproj)
+          constant=$(sed -n 's:.*SdkVersion = "\(.*\)";.*:\1:p' TypeSafeSdk/Constants.cs)
+          if [ "$version" != "$csproj" ] || [ "$version" != "$constant" ]; then
+            echo "Versi tidak sinkron: rilis=$version, csproj=$csproj, TypeSafeConstants.SdkVersion=$constant"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Merilis Gravicode.TypeSafeSdk $version"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        run: dotnet test TypeSafeSdk.Tests/TypeSafeSdk.Tests.csproj -c Release
+
+      - name: Pack
+        run: dotnet pack TypeSafeSdk/TypeSafeSdk.csproj -c Release -o artifacts/nuget
+
+      - name: Unggah paket sebagai artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: typesafe-nuget-${{ steps.ver.outputs.version }}
+          path: |
+            TypeSafeSDK/artifacts/nuget/*.nupkg
+            TypeSafeSDK/artifacts/nuget/*.snupkg
+          if-no-files-found: error
+
+      # .snupkg di folder yang sama ikut terdorong otomatis bersama .nupkg-nya.
+      # --skip-duplicate: rilis ulang setelah kegagalan sebagian tidak berhenti
+      # hanya karena paket sudah terlanjur masuk ke nuget.org.
+      - name: Push ke nuget.org
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "Secret NUGET_API_KEY belum diset di repository ini."; exit 1
+          fi
+          dotnet nuget push "artifacts/nuget/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "$NUGET_API_KEY" \
+            --skip-duplicate

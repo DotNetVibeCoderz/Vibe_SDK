@@ -1,5 +1,27 @@
 # Development Progress
 
+## 2026-10-28
+- SDK disinkronkan dengan Python SDK resmi v0.7.5 (sebelumnya sejajar dengan v0.7.1) dan dinaikkan ke 1.2.0:
+  - `BoxSchema`, `BoxAnswer`, `BoxCoordinates` (plus `Width`, `Height`, `ToPixels`), dan `SystemOneResponse.Boxes`.
+  - `ImageAsset` (`FromBytes`, `FromFile`, `FromBase64`, `FromStream`) dan parameter `assets`. Request bergambar
+    dikirim sebagai `multipart/form-data` dengan tata letak yang sama dengan Python: part `request` lalu `asset-N`.
+    Gambar bisa lewat alias, ditempatkan langsung di state, atau dirujuk di teks lewat `AttachAssets`.
+    Nama `Image` sengaja tidak dipakai karena bentrok dengan kontrol `Image` Avalonia/WPF.
+  - Kompresi body zstd (≥ 1 KB) aktif secara default lewat `ZstdSharp.Port`; `TypeSafeOptions.Compression`
+    untuk mematikannya.
+  - `NaN`/`Infinity` dikirim sebagai string; `noul` boleh tanpa instruksi bila hasilnya dideskripsikan;
+    state null dan pertanyaan tidak valid ditolak sebelum menyentuh jaringan.
+  - `TypeSafeConstants.ImagesOptInHeader`: API live menolak gambar dengan 400 tanpa
+    `TypeSafe-Danger-Zone-Images: true`, dan Python SDK pun tidak mengirimnya otomatis.
+  - Overload `SystemOneAsync` 1.1 dipertahankan agar tetap kompatibel secara biner.
+- Diverifikasi ke API live: body zstd, noul tanpa instruksi, serta box pada PNG uji dengan `jev-preview` dan
+  `jev-latest` (selisih maksimal 6 px dari posisi sebenarnya). Detail di `docs/TESTING.*.md`.
+- Ikon paket NuGet baru (`TypeSafeSdk/icon.png`): `<T>` generik di atas strip distribusi probabilitas, dengan palet Jev Gallery.
+- Workflow GitHub Actions `typesafe-sdk-ci.yml` (build/test Windows + Ubuntu, pack prerelease) dan
+  `typesafe-sdk-publish.yml` (tag `typesafe-sdk-v*`, memakai secret `NUGET_API_KEY`, menolak rilis bila versi
+  tag, csproj, dan `SdkVersion` tidak sama).
+- 27 test kontrak baru di `UpstreamSyncTests`; total 200 test lulus (123 SDK + 77 AppGen).
+
 ## 2026-09-25
 - TypeSafeAppGen ditulis ulang dari kerangka menjadi code editor yang berfungsi sesuai `requirements.md`:
   - Jack terhubung ke LLM sungguhan lewat Semantic Kernel: OpenAI (plus endpoint kompatibel), Azure OpenAI,

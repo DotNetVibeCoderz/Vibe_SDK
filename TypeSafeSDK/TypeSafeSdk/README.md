@@ -40,6 +40,25 @@ var tone     = response.Scores["tone"].NearestLabel;      // an expected value o
 
 Every answer carries its full probability distribution, so an ambiguous case is visible instead of hidden behind a single label.
 
+## Find things in an image
+
+```csharp
+var options = TypeSafeOptions.FromEnvironment();
+options.Headers[TypeSafeConstants.ImagesOptInHeader] = "true";   // images are experimental
+await using var client = new TypeSafeClient(options);
+
+var photo = ImageAsset.FromFile("shelf.jpg");
+var result = await client.SystemOneAsync(
+    "<photo>",
+    new Dictionary<string, object> { ["dog"] = new BoxSchema("The dog") },
+    model: "jev-preview",
+    assets: new Dictionary<string, Asset> { ["<photo>"] = photo });
+
+var (x, y, w, h) = result.Boxes["dog"].Box.ToPixels(1920, 1080);
+```
+
+An image can also be placed straight into `state`, or referenced inside text with `using (client.AttachAssets(photo)) { … $"Product: {photo}" … }`. Requests with images go out as `multipart/form-data`.
+
 ## Typed failures
 
 `TypeSafeApiException` is the base for every HTTP failure, and each one carries `StatusCode`, `Body`, `Headers`, `Endpoint`, and `RequestId`.
@@ -67,13 +86,15 @@ var options = new TypeSafeOptions
 
 Any of it can be overridden per call, alongside `extraHeaders` and `extraBody`.
 
+Bodies of 1 KB or more are sent zstd-compressed, as the Python SDK does. Set `Compression = RequestCompression.None` for a gateway that does not accept compressed bodies.
+
 ## Tests without a key
 
 ```csharp
 await using var client = new TypeSafeClient(new TypeSafeOptions { Simulator = true });
 ```
 
-The simulator answers `choice`, `noul`, and `score` questions locally and deterministically — no key, no network. It is lexical rather than semantic: it weights rare criteria words above common ones, honours negation, and abstains with a flat distribution when it finds no signal instead of guessing.
+The simulator answers `choice`, `noul`, and `score` questions locally and deterministically (and `box` with the whole frame at confidence 0 — it cannot see) — no key, no network. It is lexical rather than semantic: it weights rare criteria words above common ones, honours negation, and abstains with a flat distribution when it finds no signal instead of guessing.
 
 ## Configuration
 

@@ -248,7 +248,58 @@ Give your criteria real descriptions and both the simulator and the live model d
 }, "What state is this asset in?")
 ```
 
-## 15. Best practices
+## 15. Images and box questions
+
+A request can carry images. `ImageAsset` wraps the image bytes, a file, base64 text, or a stream, and `BoxSchema` asks the model where something is. Images need a vision-language model, and while image support is experimental the API also asks for an opt-in header.
+
+```csharp
+var options = new TypeSafeOptions
+{
+    ApiKey = key,
+    Headers = { [TypeSafeConstants.ImagesOptInHeader] = "true" }   // TypeSafe-Danger-Zone-Images
+};
+await using var client = new TypeSafeClient(options);
+
+var photo = ImageAsset.FromFile("shelf.jpg");
+var result = await client.SystemOneAsync(
+    "<photo>",
+    new Dictionary<string, object>
+    {
+        ["dog"]     = new BoxSchema("The dog"),
+        ["damaged"] = new NoulSchema("Is any product on the shelf damaged?")
+    },
+    model: "jev-preview",
+    assets: new Dictionary<string, Asset> { ["<photo>"] = photo });
+
+var box = result.Boxes["dog"].Box;                 // Top, Bottom, Left, Right as 0..1 fractions
+var (x, y, w, h) = box.ToPixels(1920, 1080);       // back to pixels for drawing
+```
+
+There are three ways to put an image into a request, and they can be mixed:
+
+| Way | How | Sent as |
+| --- | --- | --- |
+| By alias | `assets: { ["<photo>"] = photo }`, then write `<photo>` anywhere in state, instructions, or criteria | the alias |
+| By placement | put the asset object itself inside state, e.g. `new { photo, caption }` | its reference |
+| By reference in text | `using (client.AttachAssets(photo))` then `$"Product: {photo}"` | its reference |
+
+`photo.ToString()` returns a unique reference such as `<image:3f2a…>`, which is why string interpolation works. A reference to an image that was neither passed, placed, nor attached is sent as plain text, without the image.
+
+The SDK reads each image once, then sends the request as `multipart/form-data`: the JSON body is the first part, named `request`, and each image follows as its own part. PNG and JPEG are labelled by their file signature; anything else is sent as binary and the API detects the format itself. An unreadable file or empty data fails with a `TypeSafeException` naming the alias, before anything is sent.
+
+The simulator cannot see. It answers a box question with the whole frame and confidence 0 — honest, not useful — so assert on boxes only against the live API.
+
+## 16. Request compression
+
+Bodies of 1 KB or more are compressed with zstd and sent with `Content-Encoding: zstd`, the same default as the Python SDK. Smaller bodies fit in a single TCP segment, so compressing them would cost CPU and save nothing. A body is compressed once and the same bytes are reused by every retry.
+
+Some gateways and non-official endpoints do not accept compressed bodies yet. Turn it off for them:
+
+```csharp
+var options = new TypeSafeOptions { Endpoint = gatewayUrl, Compression = RequestCompression.None };
+```
+
+## 17. Best practices
 
 1. Use the simulator for unit tests and CI.
 2. Store API keys in a secret manager or environment variable.

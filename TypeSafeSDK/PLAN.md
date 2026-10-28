@@ -21,10 +21,13 @@
       code explorer, editor bertab dengan highlighting dan line number, go to line, format code,
       build/run/stop/deploy, panel Output/Problems/Logs, dialog New Project (Blank/From Template, 12 template),
       dan Settings untuk seluruh `app.config.json`
+- [x] Sinkron dengan Python SDK 0.7.5: pertanyaan box, aset gambar multipart, `AttachAssets`, kompresi zstd,
+      angka non-finite, validasi sebelum jaringan (`Gravicode.TypeSafeSdk` 1.2.0)
+- [x] Ikon paket NuGet dan workflow GitHub Actions untuk build, test, dan publish paket
 
 ## Berikutnya
 - [ ] TypeSafeAppGen: simpan API key di penyimpanan kredensial OS (DPAPI/Keychain) alih-alih teks biasa
 - [ ] TypeSafeAppGen: tampilkan diff sebelum Jack menimpa file, dengan opsi terima/tolak
 - [ ] TypeSafeAppGen: uji build semua template di CI (butuh restore NuGet online)
 - [ ] Batching dan rate limiting di lapisan aplikasi untuk pemrosesan volume besar
-- [ ] Workflow GitHub Actions untuk build, test, dan publish paket
+- [ ] Jev Gallery: specimen berbasis gambar (box) dengan overlay kotak di atas foto

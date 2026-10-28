@@ -1,0 +1,116 @@
+# CI TypeSafe .NET SDK — build, uji, dan pack setiap perubahan.
+#
+# Vibe_SDK adalah monorepo, jadi workflow ini dibatasi ke subfolder TypeSafeSDK saja.
+# Seluruh test berjalan offline (simulator dan HttpMessageHandler stub), tanpa API key.
+#
+# Build solution penuh hanya di Windows: TypeSafe.BoardGames adalah aplikasi WPF
+# (net10.0-windows). Di Linux cukup SDK dan project test-nya.
+name: TypeSafe SDK CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'TypeSafeSDK/**'
+      - '.github/workflows/typesafe-sdk-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'TypeSafeSDK/**'
+      - '.github/workflows/typesafe-sdk-ci.yml'
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  solution:
+    name: Build & test solution (windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: TypeSafeSDK
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache paket NuGet
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: nuget-typesafe-windows-${{ hashFiles('TypeSafeSDK/**/*.csproj') }}
+          restore-keys: nuget-typesafe-windows-
+
+      - name: Build
+        run: dotnet build TypeSafeSDK.slnx -c Release
+
+      - name: Test
+        run: dotnet test TypeSafeSDK.slnx -c Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./artifacts/test-results
+
+      - name: Unggah hasil uji
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typesafe-test-results-windows
+          path: TypeSafeSDK/artifacts/test-results/**/*.trx
+          if-no-files-found: ignore
+
+  sdk-linux:
+    name: Build & test SDK (ubuntu)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: TypeSafeSDK
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test SDK
+        run: dotnet test TypeSafeSdk.Tests/TypeSafeSdk.Tests.csproj -c Release
+
+      - name: Test App Generator
+        run: dotnet test TypeSafeAppGen.Tests/TypeSafeAppGen.Tests.csproj -c Release
+
+  pack:
+    name: Pack
+    needs: [ solution, sdk-linux ]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: TypeSafeSDK
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Suffix prerelease dari nomor build supaya paket dari main tidak pernah
+      # bentrok dengan rilis stabil di nuget.org. --version-suffix tidak dipakai
+      # karena csproj mengisi <Version> secara eksplisit, yang mengabaikan suffix.
+      - name: Pack
+        shell: bash
+        run: |
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' TypeSafeSdk/TypeSafeSdk.csproj)
+          dotnet pack TypeSafeSdk/TypeSafeSdk.csproj -c Release -o artifacts/nuget -p:Version="$version-ci.${{ github.run_number }}"
+
+      - name: Unggah paket
+        uses: actions/upload-artifact@v4
+        with:
+          name: typesafe-nuget-packages
+          path: |
+            TypeSafeSDK/artifacts/nuget/*.nupkg
+            TypeSafeSDK/artifacts/nuget/*.snupkg
+          if-no-files-found: error

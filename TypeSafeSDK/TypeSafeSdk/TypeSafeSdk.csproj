@@ -12,21 +12,22 @@
 
   <!-- Versi tunggal: harus sama dengan TypeSafeConstants.SdkVersion, yang dikirim pada header X-TypeSafe-SDK. -->
   <PropertyGroup>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <PackageId>Gravicode.TypeSafeSdk</PackageId>
     <Title>TypeSafe .NET SDK (unofficial)</Title>
     <Authors>Gravicode Studios</Authors>
     <Company>Gravicode Studios</Company>
     <Product>TypeSafe .NET SDK</Product>
-    <Description>Unofficial, strongly typed .NET 10 client for the TypeSafe System One API, ported from the official Python SDK. Choice, noul, and score questions; typed exceptions per status code; retry with jitter and Retry-After; per-call timeout, headers, and body; and a deterministic offline simulator for tests and CI.</Description>
-    <PackageTags>typesafe;systemone;jev;llm;classification;ai;sdk;avalonia;blazor</PackageTags>
+    <Description>Unofficial, strongly typed .NET 10 client for the TypeSafe System One API, ported from the official Python SDK. Choice, noul, score, and box questions; image assets; typed exceptions per status code; retry with jitter and Retry-After; per-call timeout, headers, and body; and a deterministic offline simulator for tests and CI.</Description>
+    <PackageTags>typesafe;systemone;jev;llm;classification;vision;bounding-box;ai;sdk</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK</PackageProjectUrl>
     <RepositoryUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <Copyright>Copyright (c) Gravicode Studios</Copyright>
-    <PackageReleaseNotes>Parity pass against the official Python SDK: full typed exception hierarchy, request ids, Retry-After, client-level retry and timeout, custom headers and extra body, TypeSafeConstants, ListModelsResponse, and a simulator that answers choice, noul, and score questions.</PackageReleaseNotes>
+    <PackageReleaseNotes>Sync with Python SDK 0.7.5: BoxSchema and BoxAnswer for locating things in images; ImageAsset (bytes, file, base64, stream) uploaded as multipart, by alias, by placement, or via AttachAssets; zstd request compression on by default (TypeSafeOptions.Compression); NaN and Infinity sent as strings; noul questions may omit instructions when an outcome is described; invalid questions and null state rejected before the network.</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -44,10 +45,13 @@
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <!-- Kompresi body zstd, default Python SDK sejak 0.7.5. Implementasi managed murni, tanpa library native. -->
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

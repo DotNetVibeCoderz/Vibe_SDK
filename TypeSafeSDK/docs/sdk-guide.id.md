@@ -164,6 +164,57 @@ Beri kriteria Anda deskripsi sungguhan, maka simulator maupun model live sama-sa
 }, "What state is this asset in?")
 ```
 
+## Gambar dan pertanyaan box
+
+Request bisa membawa gambar. `ImageAsset` membungkus byte gambar, file, teks base64, atau stream, dan `BoxSchema` menanyakan di mana letak sesuatu. Gambar butuh model vision-language, dan selama dukungan gambar masih eksperimental API juga meminta header opt-in.
+
+```csharp
+var options = new TypeSafeOptions
+{
+    ApiKey = key,
+    Headers = { [TypeSafeConstants.ImagesOptInHeader] = "true" }   // TypeSafe-Danger-Zone-Images
+};
+await using var client = new TypeSafeClient(options);
+
+var photo = ImageAsset.FromFile("rak.jpg");
+var result = await client.SystemOneAsync(
+    "<photo>",
+    new Dictionary<string, object>
+    {
+        ["dog"]     = new BoxSchema("The dog"),
+        ["damaged"] = new NoulSchema("Is any product on the shelf damaged?")
+    },
+    model: "jev-preview",
+    assets: new Dictionary<string, Asset> { ["<photo>"] = photo });
+
+var box = result.Boxes["dog"].Box;                 // Top, Bottom, Left, Right sebagai pecahan 0..1
+var (x, y, w, h) = box.ToPixels(1920, 1080);       // kembali ke piksel untuk digambar
+```
+
+Ada tiga cara memasukkan gambar ke request, dan ketiganya boleh dicampur:
+
+| Cara | Bagaimana | Dikirim sebagai |
+| --- | --- | --- |
+| Lewat alias | `assets: { ["<photo>"] = photo }`, lalu tulis `<photo>` di state, instruksi, atau criteria | alias-nya |
+| Lewat penempatan | letakkan objek aset langsung di state, misalnya `new { photo, caption }` | rujukannya |
+| Lewat rujukan di teks | `using (client.AttachAssets(photo))` lalu `$"Product: {photo}"` | rujukannya |
+
+`photo.ToString()` mengembalikan rujukan unik seperti `<image:3f2a…>`, karena itu interpolasi string bekerja. Rujukan ke gambar yang tidak dilewatkan, tidak ditempatkan, dan tidak dipasang dikirim sebagai teks biasa, tanpa gambarnya.
+
+SDK membaca setiap gambar sekali, lalu mengirim request sebagai `multipart/form-data`: body JSON menjadi part pertama bernama `request`, dan setiap gambar menyusul sebagai part tersendiri. PNG dan JPEG diberi label dari signature filenya; format lain dikirim sebagai data biner dan dideteksi API. File yang tidak bisa dibaca atau data kosong gagal dengan `TypeSafeException` yang menyebut alias-nya, sebelum apa pun terkirim.
+
+Simulator tidak bisa melihat. Pertanyaan box dijawab dengan seluruh bingkai dan confidence 0 — jujur, tetapi tidak berguna — jadi uji hasil box hanya terhadap API live.
+
+## Kompresi request
+
+Body berukuran 1 KB ke atas dikompres dengan zstd dan dikirim dengan `Content-Encoding: zstd`, default yang sama dengan Python SDK. Body yang lebih kecil muat dalam satu segmen TCP, jadi mengompresnya hanya memakan CPU tanpa menghemat apa pun. Body dikompres sekali dan byte yang sama dipakai ulang oleh setiap retry.
+
+Sebagian gateway dan endpoint tidak resmi belum menerima body terkompresi. Matikan untuk mereka:
+
+```csharp
+var options = new TypeSafeOptions { Endpoint = gatewayUrl, Compression = RequestCompression.None };
+```
+
 ## Environment variable
 
 Namanya tersedia sebagai konstanta di `TypeSafeConstants` agar tidak perlu diketik ulang.

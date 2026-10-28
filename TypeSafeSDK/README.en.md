@@ -103,7 +103,7 @@ dotnet run --project TypeSafe.Cli -- classify "I was charged twice" --live
 
 ## Without an API key
 
-`Simulator = true` answers `choice`, `noul`, and `score` questions locally and deterministically, so unit tests and CI run with no network.
+`Simulator = true` answers `choice`, `noul`, and `score` questions locally and deterministically (a `box` question about an image gets the whole frame at confidence 0), so unit tests and CI run with no network.
 
 ```csharp
 await using var client = new TypeSafeClient(new TypeSafeOptions { Simulator = true });
