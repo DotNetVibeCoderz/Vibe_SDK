@@ -28,7 +28,7 @@
     <Company>Gravicode Studios</Company>
     <Authors>Gravicode Studios</Authors>
     <Copyright>Copyright (c) Gravicode Studios and Unitree.Net contributors</Copyright>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <PackageProjectUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/Unitree.Net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/DotNetVibeCoderz/Vibe_SDK/tree/main/Unitree.Net</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
