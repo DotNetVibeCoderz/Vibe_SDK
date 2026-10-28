@@ -222,8 +222,19 @@ public sealed class ProjectPlugin
             return false;
         }
 
+        // The model writes Windows paths as often as not. On Linux a backslash is an ordinary filename
+        // character and "C:\..." is a relative name, so left alone both would quietly land inside the
+        // project as one oddly named file instead of meaning what they say.
+        string normalized = relativePath.Replace('\\', '/');
+
+        if (normalized.Length >= 2 && char.IsAsciiLetter(normalized[0]) && normalized[1] == ':')
+        {
+            error = $"'{relativePath}' resolves outside the project. Only files inside the project can be touched.";
+            return false;
+        }
+
         string root = Path.GetFullPath(project.RootPath);
-        string candidate = Path.GetFullPath(Path.Combine(root, relativePath));
+        string candidate = Path.GetFullPath(Path.Combine(root, normalized));
 
         // Compared after full resolution, so "sub/../../outside" is caught the same way "../outside"
         // is. The trailing separator stops a sibling folder with a shared prefix from passing.

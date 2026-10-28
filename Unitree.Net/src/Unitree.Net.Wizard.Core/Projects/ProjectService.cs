@@ -176,7 +176,10 @@ public sealed class ProjectService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectName);
 
-        if (projectName.AsSpan().IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        // GetInvalidFileNameChars is the host's list, and on Linux it allows '\' and ':'. A project made
+        // there must still open on the Windows desk it was written for, so those are refused everywhere.
+        if (projectName.AsSpan().IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+            || projectName.AsSpan().IndexOfAny('\\', '/', ':') >= 0)
         {
             throw new ArgumentException(
                 "A project name cannot contain path characters.", nameof(projectName));

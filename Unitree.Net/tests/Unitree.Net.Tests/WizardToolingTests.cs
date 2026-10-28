@@ -174,6 +174,19 @@ public static class Guard
     }
 
     [Fact]
+    public async Task ProjectPluginWritesWindowsStylePathsIntoTheirFolder()
+    {
+        var projects = new ProjectService(RepositoryRoot());
+        WizardProject project = await projects.CreateAsync(_workspace, "Separators", template: null);
+        var plugin = new ProjectPlugin(() => project, projects);
+
+        // On Linux this used to create one file literally named "src\Robot.cs" in the project root.
+        plugin.WriteProjectFile("src\\Robot.cs", "// here");
+
+        File.Exists(Path.Combine(project.RootPath, "src", "Robot.cs")).ShouldBeTrue();
+    }
+
+    [Fact]
     public void ProjectPluginSaysSoWhenNothingIsOpen()
     {
         var plugin = new ProjectPlugin(() => null, new ProjectService(RepositoryRoot()));
