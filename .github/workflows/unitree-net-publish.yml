@@ -1,0 +1,125 @@
+name: Release (NuGet)
+
+# Publishes every Unitree.Net package to nuget.org.
+#
+# Trigger by pushing a tag — the SDK lives in a subfolder of the Vibe_SDK monorepo, so the tag is
+# prefixed to keep it distinguishable from other SDKs in the same repository:
+#
+#     git tag unitree-net-v0.1.0 && git push origin unitree-net-v0.1.0
+#
+# Or run it by hand from the Actions tab with an explicit version. A run with `dry_run` set builds
+# and packs but pushes nothing, which is the way to rehearse a release.
+#
+# Requires the repository secret NUGET_API_KEY (nuget.org → API Keys → a key scoped to Unitree.Net*).
+
+on:
+  push:
+    tags:
+      - 'unitree-net-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version, e.g. 0.1.0 or 0.2.0-preview.1'
+        required: true
+        type: string
+      dry_run:
+        description: 'Pack only; do not push to nuget.org'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  PROJECT_DIR: Unitree.Net
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  release:
+    name: Pack and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # to attach the packages to the GitHub release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # Source Link embeds the commit; a shallow clone loses it
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ env.PROJECT_DIR }}/global.json
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version='${{ inputs.version }}'
+          else
+            version="${GITHUB_REF_NAME#unitree-net-v}"
+          fi
+          # Reject anything that is not a NuGet version, so a mistyped tag fails here rather than
+          # putting a package nobody can unpublish onto nuget.org.
+          if ! printf '%s' "$version" |
+               grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::'$version' is not a valid NuGet version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing $version"
+
+      # The solution contains Windows-only WPF shells, so this builds the libraries directly.
+      - name: Build libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for p in "$PROJECT_DIR"/src/*/*.csproj; do
+            dotnet build "$p" -c Release -p:Version=${{ steps.version.outputs.version }}
+          done
+
+      - name: Test
+        run: dotnet test ${{ env.PROJECT_DIR }}/tests/Unitree.Net.Tests/Unitree.Net.Tests.csproj -c Release
+
+      - name: Pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          for p in "$PROJECT_DIR"/src/*/*.csproj; do
+            dotnet pack "$p" -c Release --no-build -p:Version=${{ steps.version.outputs.version }}
+          done
+          ls -la "$PROJECT_DIR"/artifacts/packages
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-${{ steps.version.outputs.version }}
+          path: |
+            ${{ env.PROJECT_DIR }}/artifacts/packages/*.nupkg
+            ${{ env.PROJECT_DIR }}/artifacts/packages/*.snupkg
+          if-no-files-found: error
+
+      - name: Push to nuget.org
+        if: github.event_name == 'push' || inputs.dry_run == false
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NUGET_API_KEY:-}" ]; then
+            echo "::error::NUGET_API_KEY is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          # Pushing the .nupkg uploads the matching .snupkg with it, so only the former is globbed.
+          # --skip-duplicate keeps a re-run from failing on packages that already went up.
+          dotnet nuget push "$PROJECT_DIR"/artifacts/packages/*.nupkg \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "$NUGET_API_KEY" \
+            --skip-duplicate
+
+      - name: Attach packages to the GitHub release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.PROJECT_DIR }}/artifacts/packages/*.nupkg
+            ${{ env.PROJECT_DIR }}/artifacts/packages/*.snupkg
+          generate_release_notes: true

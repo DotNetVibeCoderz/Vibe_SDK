@@ -43,7 +43,7 @@
 
   <ItemGroup Label="Desktop tools (Windows-only hosts)">
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="10.0.90" />
-    <PackageVersion Include="SSH.NET" Version="2025.1.0" />
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

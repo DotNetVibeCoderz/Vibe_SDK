@@ -35,6 +35,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>unitree;robotics;dds;ros2;go2;g1;b2;h1</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <!-- The SDK bundles Source Link, which overwrites RepositoryUrl from the git remote when this is
          true. The URLs above point at this SDK's folder inside the Vibe_SDK monorepo, which the
          remote does not describe, so the explicit values win. -->
@@ -52,6 +53,7 @@
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>
