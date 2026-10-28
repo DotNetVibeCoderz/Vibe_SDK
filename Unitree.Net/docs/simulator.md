@@ -64,7 +64,7 @@ that everything above the robot can be developed honestly.
 
 ## Humanoids publish less
 
-![G1 walking in the light theme. Its rig is still drawn from primitives, and the rt/lowstate lane is greyed out](images/simulator-g1-light.png)
+![G1 walking in the light theme, drawn from Unitree's meshes. The rt/lowstate lane is greyed out](images/simulator-g1-light.png)
 
 Quadrupeds publish `rt/lowstate` and `rt/sportmodestate`. Humanoids publish **only**
 `rt/sportmodestate`, and the ribbon greys the other lane out and says why.
@@ -91,26 +91,59 @@ rotated −90° about x, mapping `(x, y, z)` to `(x, z, −y)`, so rig numbers a
 
 ## Manufacturer meshes
 
-Go2 is drawn from Unitree's own visual meshes, taken from
-[`unitree_ros`](https://github.com/unitreerobotics/unitree_ros) (`robots/go2_description`). Every other
-platform still uses primitives.
+All eight platforms are drawn from Unitree's own visual meshes, taken from
+[`unitree_ros`](https://github.com/unitreerobotics/unitree_ros): `go2_description`, `b2_description`,
+`b2w_description`, `g1_description/g1_29dof_rev_1_0.urdf`, `h1_description`,
+`h1_2_description/h1_2_handless.urdf` and `r1_description`. Go2-W's calves and wheels come from
+[`unitree_mujoco`](https://github.com/unitreerobotics/unitree_mujoco), because `go2w_description`
+references DAE files it does not ship.
+
+![All eight platforms standing in the simulator, drawn from Unitree's meshes](images/simulator-lineup.png)
 
 **A mesh is decoration, not description.** `RigLink.Mesh` names a GLB file; the link's `Shapes` stay
 the rig's geometry. The viewport draws the primitives at once, loads the meshes in the background, and
 swaps them in — all of a robot's or none of them. If one file fails, every primitive stays and the
 reason goes to the system log. A robot that is half mesh and half box looks broken in a way that hides
-which file is missing.
+which file is missing. Once they are in, every primitive is hidden, including those on links with no
+mesh of their own: B2's calf mesh already ends in its foot, and the foot sphere would sit inside it.
 
 **The rig's link frames are the URDF's own.** Go2's hip, thigh, calf and foot sit at the same origins as
 in `go2_description.urdf` (hips at ±0.1934 / ±0.0465, thigh 0.0955 out, 0.213 segments), so a URDF
 visual hangs off the matching link unmodified. The only per-link data is the URDF's visual origin: the
 right-hand thigh and calf use mirrored meshes, and the single hip mesh is flipped about X on the right
-and about Y at the rear. `RobotRigTests` pins those four rotations.
+and about Y at the rear. `RobotRigTests` pins those four rotations. B2 ships a separate mesh for every
+leg and needs no flips; its rig was corrected to the URDF on the way (hips at x = 0.3285, not 0.3455).
+
+The wheeled variants share their walking sibling's body, hip and thigh meshes and frames, and add
+calves and wheels of their own. Go2-W's axle sits 0.2264 below the knee, not 0.213, and its wheels are
+0.088 in radius; B2-W's are 0.112. The radius is what turns ground speed into wheel spin, so it comes
+from the meshes rather than a guess.
+
+![B2 trotting, drawn from its per-leg meshes](images/simulator-b2.png)
+
+**Every humanoid is a transcription of its URDF, fixed rotations included.** Some joint origins are
+rotated as well as offset — G1's hip roll and knee by ±0.1749 rad, R1's hips by ±0.436, every
+platform's shoulders by ±0.26–0.44. `RigLink.Rotation` carries that `rpy`, and the viewport turns each
+joint about its axis inside it. `tools/meshes/urdf_to_rig.py` prints the rows from the URDF;
+`HumanoidForwardKinematicsMatchTheUrdf` chains each rig at zero and checks feet, hands and R1's head
+against positions computed from the URDF in Python. Drop one fixed rotation and they move by
+centimetres.
+
+Transcribing the URDFs corrected the platforms, not just their looks. H1's hip chain runs yaw, roll,
+pitch; H1-2's runs yaw, pitch, roll. R1 was modelled with a two-axis waist and six-joint arms, when its
+URDF has a waist that rolls then yaws, five-joint arms ending in a wrist roll, and a two-axis head; the
+joint count was 26 either way, which is why nothing caught it. Link names did not change where the
+gait looks them up, and joint indices follow URDF order — `unitree_hg`'s for G1. The others have no SDK
+index table yet, because their low-level state is not implemented.
+
+Every URDF's zero pose holds the forearms out in front, elbows at a right angle. The neutral pose
+lowers them by 0.8 rad, and the gait's elbow swing is added to the neutral rather than replacing it.
 
 **Colours come from the theme, not the file.** The converter tags each part by the luminance of its
 source colour as `shell`, `limb` or `contact`, and the viewport paints those roles exactly as it paints
 the primitives, so the light/dark switch reaches the meshes too. The calf's rubber tip is `contact`,
-which is why the whole foot pad lights when that foot is loaded.
+which is why the whole foot pad lights when that foot is loaded. A wheel is all `contact` and always
+loaded, so the wheeled variants' wheels stay lit while they stand or roll.
 
 Why not [`unitree_model`](https://github.com/unitreerobotics/unitree_model)? It holds USD files for
 Isaac Sim, which three.js cannot read reliably. It is deprecated in favour of Hugging Face, and its
@@ -127,12 +160,32 @@ python tools/meshes/convert_meshes.py <unitree_ros>/robots/go2_description/dae \
 
 The budgets are triangle counts. Go2's DAE files total 26 MB and 197 k triangles; at these budgets they
 come to 1.4 MB and 38 k. Each colour group is decimated on its own, so two-tone panels keep their
-boundary.
+boundary. B2 and G1 come to 3.2 MB each.
 
-Then set the platform's `MeshSet` in `RobotRig` and check that every link's frame matches the URDF's.
+G1's meshes are STL, which has no colour. The role then comes from the URDF's material name — `white`
+is `shell`, `dark` is `limb`, and the feet are `contact` so they light on load — and is given per file
+with `@role`. Files that sit at the same URDF origin are merged with `+`:
+
+```bash
+python tools/meshes/convert_meshes.py <unitree_ros>/robots/g1_description/meshes \
+    apps/Unitree.Net.Simulator/wwwroot/models/g1 \
+    pelvis:pelvis+pelvis_contour_link=4000@limb head:head_link+logo_link=4000@limb \
+    torso_link_rev_1_0=8000@shell left_knee_link=4000@shell left_ankle_roll_link=2000@contact ...
+```
+
+H1, H1-2 and R1 colour every part alike in the URDF (H1 is 0.1 grey throughout), so luminance cannot
+tell body from limb. Their roles are set per file: the torso is `shell` so it reads as the body.
+
+For a quadruped, set the platform's `MeshSet` in `RobotRig` and check every link's frame against the
+URDF's. For a humanoid, generate its rows and pin them with forward kinematics:
+
+```bash
+python tools/meshes/urdf_to_rig.py <unitree_ros>/robots/r1_description/R1.urdf names_r1.py
+```
+
 `EveryMeshTheRigNamesShipsWithTheSimulator` fails on any asset name with no file behind it. The
-meshes are BSD-3-Clause; `wwwroot/models/LICENSE.unitree_ros` carries the notice and must ship with
-them.
+meshes are BSD-3-Clause; `wwwroot/models/LICENSE.unitree_ros` and `LICENSE.unitree_mujoco` carry the
+notices and must ship with them.
 
 ## Adding a platform
 

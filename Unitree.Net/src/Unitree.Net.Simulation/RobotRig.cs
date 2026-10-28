@@ -121,6 +121,16 @@ public sealed record RigLink(
     /// <see cref="Shapes"/> only.
     /// </summary>
     public RigMesh? Mesh { get; init; }
+
+    /// <summary>
+    /// Fixed roll, pitch and yaw of this link's frame relative to its parent, in radians, applied
+    /// before the joint's own rotation about <see cref="Axis"/>.
+    /// </summary>
+    /// <remarks>
+    /// This is a URDF joint origin's <c>rpy</c>. Most joints have none; G1's hip roll, knee and
+    /// shoulders do, and without it every mesh below them hangs at the wrong angle.
+    /// </remarks>
+    public Vector3 Rotation { get; init; }
 }
 
 /// <summary>
@@ -211,10 +221,10 @@ public sealed class RobotRig
         RobotModel.Go2W => Quadruped(model, "Go2-W", "Go2 on wheels. 12 leg joints plus 4 drive wheels.", QuadrupedSpec.Go2W),
         RobotModel.B2 => Quadruped(model, "B2", "60 kg industrial quadruped rated for 40 kg payload.", QuadrupedSpec.B2),
         RobotModel.B2W => Quadruped(model, "B2-W", "B2 on wheels — 6 m/s on hard ground.", QuadrupedSpec.B2W),
-        RobotModel.G1 => Humanoid(model, "G1", "1.32 m humanoid, 29 joints with dual 7-DoF arms.", HumanoidSpec.G1),
-        RobotModel.H1 => Humanoid(model, "H1", "1.80 m humanoid, 19 joints. Unitree's full-size platform.", HumanoidSpec.H1),
-        RobotModel.H12 => Humanoid(model, "H1-2", "H1 revision with wrists — 27 joints.", HumanoidSpec.H12),
-        RobotModel.R1 => Humanoid(model, "R1", "1.21 m dual-arm humanoid, 26 joints.", HumanoidSpec.R1),
+        RobotModel.G1 => G1(),
+        RobotModel.H1 => H1(),
+        RobotModel.H12 => H12(),
+        RobotModel.R1 => R1(),
         _ => throw new ArgumentOutOfRangeException(nameof(model), model, "No rig is defined for this model."),
     };
 
@@ -244,7 +254,9 @@ public sealed class RobotRig
         float LimbRadius,
         float FootRadius,
         bool Wheeled,
-        string? MeshSet = null)
+        string? MeshSet = null,
+        bool MeshPerLeg = false,
+        string? WheelMeshSet = null)
     {
         // Go2 URDF: trunk 0.3762 long, hips at ±0.1934 / ±0.0465, thigh and calf both 0.213.
         // The trunk box is widened here from the URDF's 0.0935 collision width to the shell width a
@@ -255,14 +267,22 @@ public sealed class RobotRig
         internal static QuadrupedSpec Go2 { get; } =
             new(new Vector3(0.3762f, 0.190f, 0.114f), 0.1934f, 0.0465f, 0.0955f, 0.213f, 0.213f, 0.024f, 0.022f, false, "go2");
 
-        // Go2-W's calf ends in a wheel mount, not Go2's foot, so it keeps primitives rather than
-        // borrowing meshes that would put a foot where its wheel is.
-        internal static QuadrupedSpec Go2W { get; } = Go2 with { Wheeled = true, FootRadius = 0.070f, MeshSet = null };
+        // Go2-W shares Go2's body, hips and thighs, but its calf ends in a wheel mount whose axle sits
+        // 0.2264 below the knee, not 0.213, and the wheel's radius is 0.088. Its calf and wheel meshes
+        // come from unitree_mujoco, because go2w_description references DAE files it does not ship.
+        internal static QuadrupedSpec Go2W { get; } =
+            Go2 with { Wheeled = true, CalfLength = 0.2264f, FootRadius = 0.088f, WheelMeshSet = "go2w" };
 
+        // B2 URDF: hips at ±0.3285 / ±0.072, thigh 0.11973 out, thigh and calf both 0.35. The calf
+        // origin also sits 0.087 mm off the leg plane, which is left out. The foot radius is where the
+        // calf mesh's sole actually ends, 0.035 below the foot frame, so the meshes stand on the floor.
+        // Unitree ships one mesh per leg rather than mirroring, and the calf mesh includes the foot.
         internal static QuadrupedSpec B2 { get; } =
-            new(new Vector3(0.660f, 0.300f, 0.190f), 0.3455f, 0.072f, 0.1200f, 0.350f, 0.350f, 0.040f, 0.037f, false);
+            new(new Vector3(0.660f, 0.300f, 0.190f), 0.3285f, 0.072f, 0.11973f, 0.350f, 0.350f, 0.040f, 0.035f, false, "b2", MeshPerLeg: true);
 
-        internal static QuadrupedSpec B2W { get; } = B2 with { Wheeled = true, FootRadius = 0.120f };
+        // B2-W shares B2's frames and its body, hip and thigh meshes; its calves and 0.112 m wheels are
+        // its own. Its URDF body mesh is a 72 MB variant of the same chassis, so B2's is drawn instead.
+        internal static QuadrupedSpec B2W { get; } = B2 with { Wheeled = true, FootRadius = 0.112f, WheelMeshSet = "b2w" };
     }
 
     private static RobotRig Quadruped(RobotModel model, string name, string summary, QuadrupedSpec spec)
@@ -272,6 +292,10 @@ public sealed class RobotRig
         // Meshes come from unitree_ros's URDF visuals; see tools/meshes. Null when the platform has none.
         RigMesh? MeshOf(string part, float roll = 0f, float pitch = 0f) =>
             spec.MeshSet is { } set ? RigMesh.At($"{set}/{part}.glb", roll, pitch) : null;
+
+        // A wheeled variant's calves and wheels come from a set of their own.
+        RigMesh? WheelMeshOf(string part, float roll = 0f) =>
+            spec.WheelMeshSet is { } set ? RigMesh.At($"{set}/{part}.glb", roll) : MeshOf(part);
 
         links.Add(new RigLink(
             "trunk", null, Vector3.Zero, Vector3.Zero, -1, 1f,
@@ -317,10 +341,14 @@ public sealed class RobotRig
             int thighJoint = hipJoint + 1;
             int calfJoint = hipJoint + 2;
 
-            // The URDF draws one hip mesh four ways — flipped about X on the right, about Y at the
-            // rear — and gives the right-hand thigh and calf mirrored meshes of their own.
+            // Go2's URDF draws one hip mesh four ways — flipped about X on the right, about Y at the
+            // rear — and gives the right-hand thigh and calf mirrored meshes of their own. B2's has a
+            // separate mesh for every leg and needs no flips.
             bool right = sy < 0f;
             string mirror = right ? "_mirror" : "";
+            string hipMesh = spec.MeshPerLeg ? $"{prefix}_hip" : "hip";
+            string thighMesh = spec.MeshPerLeg ? $"{prefix}_thigh" : "thigh" + mirror;
+            string calfMesh = spec.MeshPerLeg ? $"{prefix}_calf" : "calf" + mirror;
 
             // Hip: abduction about the body's X axis.
             links.Add(new RigLink(
@@ -336,7 +364,9 @@ public sealed class RobotRig
                         AxisAlong: 1),
                 ])
             {
-                Mesh = MeshOf("hip", right ? MathF.PI : 0f, sx < 0f ? MathF.PI : 0f),
+                Mesh = spec.MeshPerLeg
+                    ? MeshOf(hipMesh)
+                    : MeshOf(hipMesh, right ? MathF.PI : 0f, sx < 0f ? MathF.PI : 0f),
             });
 
             // Thigh: flexion about Y, hanging down -Z.
@@ -359,7 +389,7 @@ public sealed class RobotRig
                         AxisAlong: 2),
                 ])
             {
-                Mesh = MeshOf("thigh" + mirror),
+                Mesh = MeshOf(thighMesh),
             });
 
             // Calf: knee about Y.
@@ -376,7 +406,7 @@ public sealed class RobotRig
                         AxisAlong: 2),
                 ])
             {
-                Mesh = MeshOf("calf" + mirror),
+                Mesh = WheelMeshOf(calfMesh),
             });
 
             // Foot, or a wheel on the W variants. The wheel is a driven joint — Go2-W and B2-W have
@@ -404,7 +434,12 @@ public sealed class RobotRig
                 1f,
                 [contact])
             {
-                Mesh = spec.Wheeled ? null : MeshOf("foot"),
+                // B2's calf mesh already ends in the foot; the viewport hides this link's sphere along
+                // with every other primitive once the meshes are in. Go2-W draws one wheel mesh both
+                // ways, flipped about X on the left as unitree_mujoco does; B2-W has one per leg.
+                Mesh = spec.Wheeled
+                    ? WheelMeshOf(spec.MeshPerLeg ? $"{prefix}_foot" : "wheel", spec.MeshPerLeg || right ? 0f : MathF.PI)
+                    : spec.MeshPerLeg ? null : MeshOf("foot"),
             });
         }
 
@@ -448,303 +483,339 @@ public sealed class RobotRig
     }
 
     // ------------------------------------------------------------------- humanoids
+    //
+    // Every humanoid is a transcription of its URDF in unitree_ros: each offset and fixed rotation below
+    // is that file's joint origin, so its visual meshes hang off these links unmodified. The rows were
+    // generated by tools/meshes/urdf_to_rig.py and are pinned by RobotRigTests, which chains each rig
+    // at zero and compares feet and arms against positions computed from the URDF independently.
+    //
+    // Link names are fixed by the gait, which finds its joints by name: <side>_hip_pitch, <side>_calf
+    // (knee), <side>_ankle (ankle pitch), <side>_shoulder_pitch, <side>_forearm (elbow), and <side>_foot
+    // for ground contact. Joint indices follow URDF order. For G1 that is unitree_hg's order; for the
+    // others the SDK has no index table yet, because their low-level state is not implemented.
 
-    /// <summary>
-    /// Proportions and degrees of freedom that distinguish one humanoid from another.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Lengths are in metres. The three degree-of-freedom counts are what actually separate the
-    /// platforms: <c>AnkleDof</c> is 1 for a pitch-only ankle or 2 with roll; <c>WaistDof</c> is 1 for
-    /// yaw, 2 to add pitch, 3 to add roll as well; <c>WristDof</c> is 0 for no wrist, 2 for roll and
-    /// pitch, 3 to add yaw.
-    /// </para>
-    /// <para>
-    /// <c>JointCount</c> is the platform's published figure, asserted against what the rig actually
-    /// builds. A wrong entry fails loudly at construction rather than surfacing later as a limb that
-    /// silently never moves.
-    /// </para>
-    /// </remarks>
-    private readonly record struct HumanoidSpec(
-        int JointCount,
-        float PelvisWidth,
-        float ThighLength,
-        float CalfLength,
-        float AnkleHeight,
-        float FootLength,
-        float TorsoHeight,
-        float ShoulderWidth,
-        float UpperArmLength,
-        float ForearmLength,
-        float HeadRadius,
-        float LimbRadius,
-        int AnkleDof,
-        int WaistDof,
-        int WristDof)
+    /// <summary>G1 from <c>g1_29dof_rev_1_0.urdf</c>.</summary>
+    private static RobotRig G1()
     {
-        // G1: 1.32 m, 29 joints — legs 2x6, waist 3, arms 2x7.
-        internal static HumanoidSpec G1 { get; } =
-            new(29, 0.150f, 0.300f, 0.300f, 0.040f, 0.180f, 0.310f, 0.290f, 0.180f, 0.190f, 0.085f, 0.044f, 2, 3, 3);
+        var rig = new UrdfRig("g1");
 
-        // H1: 1.80 m, 19 joints — legs 2x5 (the ankle is pitch-only), waist yaw, arms 2x4 with no wrist.
-        internal static HumanoidSpec H1 { get; } =
-            new(19, 0.190f, 0.400f, 0.400f, 0.055f, 0.240f, 0.420f, 0.400f, 0.260f, 0.280f, 0.110f, 0.058f, 1, 1, 0);
+        rig.Add("pelvis", null, Vector3.Zero, Vector3.Zero, "pelvis",
+            [UrdfRig.Box(new Vector3(0.12f, 0.20f, 0.11f), new Vector3(0f, 0f, -0.04f), RigSurface.Shell)]);
 
-        // H1-2: the H1 body with an ankle roll and full wrists — legs 2x6, waist yaw, arms 2x7 = 27.
-        internal static HumanoidSpec H12 { get; } = H1 with { JointCount = 27, AnkleDof = 2, WristDof = 3 };
+        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
+        {
+            string p = side > 0 ? "left" : "right";
 
-        // R1: 1.21 m, 26 joints — legs 2x6, waist 2, arms 2x6.
-        internal static HumanoidSpec R1 { get; } =
-            new(26, 0.140f, 0.270f, 0.270f, 0.038f, 0.165f, 0.300f, 0.300f, 0.175f, 0.185f, 0.080f, 0.042f, 2, 2, 2);
+            rig.Add($"{p}_hip_pitch", "pelvis", new Vector3(0f, side * 0.064452f, -0.1027f), Vector3.UnitY,
+                $"{p}_hip_pitch_link", [UrdfRig.Housing(0.04f)]);
+
+            // The roll joint is pitched back by 0.1749 rad and the knee pitched forward by the same,
+            // so the thigh slants while the shin hangs straight at zero.
+            rig.Add($"{p}_hip_roll", $"{p}_hip_pitch", new Vector3(0f, side * 0.052f, -0.030465f), Vector3.UnitX,
+                $"{p}_hip_roll_link", [], rotation: new Vector3(0f, -0.1749f, 0f));
+            rig.Add($"{p}_thigh", $"{p}_hip_roll", new Vector3(0.025001f, 0f, -0.12412f), Vector3.UnitZ,
+                $"{p}_hip_yaw_link", [UrdfRig.Bone(new Vector3(-0.078273f, 0f, -0.17734f), 0.04f)]);
+            rig.Add($"{p}_calf", $"{p}_thigh", new Vector3(-0.078273f, side * 0.0021489f, -0.17734f), Vector3.UnitY,
+                $"{p}_knee_link", [UrdfRig.Bone(new Vector3(0f, 0f, -0.30001f))], rotation: new Vector3(0f, 0.1749f, 0f));
+            rig.Add($"{p}_ankle", $"{p}_calf", new Vector3(0f, -side * 9.4445e-5f, -0.30001f), Vector3.UnitY,
+                $"{p}_ankle_pitch_link", []);
+            rig.Add($"{p}_foot", $"{p}_ankle", new Vector3(0f, 0f, -0.017558f), Vector3.UnitX,
+                $"{p}_ankle_roll_link", [UrdfRig.Box(new Vector3(0.17f, 0.07f, 0.03f), new Vector3(0.03f, 0f, -0.02f), RigSurface.Contact)]);
+        }
+
+        rig.Add("waist_yaw", "pelvis", Vector3.Zero, Vector3.UnitZ, "waist_yaw_link_rev_1_0", []);
+        rig.Add("waist_roll", "waist_yaw", new Vector3(-0.0039635f, 0f, 0.044f), Vector3.UnitX, "waist_roll_link_rev_1_0", []);
+        rig.Add("waist_pitch", "waist_roll", Vector3.Zero, Vector3.UnitY, "torso_link_rev_1_0", []);
+
+        // The URDF's torso is the waist-pitch link itself. This fixed child shares its frame and
+        // carries the fallback shapes, so the shoulders keep the parent name every humanoid rig uses.
+        rig.Add("torso", "waist_pitch", Vector3.Zero, Vector3.Zero, null,
+            [UrdfRig.Box(new Vector3(0.13f, 0.22f, 0.30f), new Vector3(0f, 0f, 0.17f), RigSurface.Shell)]);
+        rig.Add("head", "torso", new Vector3(0.0039635f, 0f, -0.044f), Vector3.Zero, "head",
+            [UrdfRig.Box(new Vector3(0.12f, 0.12f, 0.14f), new Vector3(0f, 0f, 0.47f), RigSurface.Shell)]);
+
+        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
+        {
+            string p = side > 0 ? "left" : "right";
+
+            // The shoulder pitch frame is rolled outward by 0.2793 rad and the roll frame rolls it
+            // back, which is what tilts the shoulder actuator the way the real one sits.
+            rig.Add($"{p}_shoulder_pitch", "torso",
+                new Vector3(0.0039563f, side > 0 ? 0.10022f : -0.10021f, 0.24778f), Vector3.UnitY,
+                $"{p}_shoulder_pitch_link", [UrdfRig.Housing(0.036f)],
+                rotation: new Vector3(side * 0.27931f, 5.4949e-5f, -side * 0.00019159f));
+            rig.Add($"{p}_shoulder_roll", $"{p}_shoulder_pitch", new Vector3(0f, side * 0.038f, -0.013831f), Vector3.UnitX,
+                $"{p}_shoulder_roll_link", [], rotation: new Vector3(-side * 0.27925f, 0f, 0f));
+            rig.Add($"{p}_upper_arm", $"{p}_shoulder_roll", new Vector3(0f, side * 0.00624f, -0.1032f), Vector3.UnitZ,
+                $"{p}_shoulder_yaw_link", [UrdfRig.Bone(new Vector3(0.015783f, 0f, -0.080518f), 0.032f)]);
+            rig.Add($"{p}_forearm", $"{p}_upper_arm", new Vector3(0.015783f, 0f, -0.080518f), Vector3.UnitY,
+                $"{p}_elbow_link", [UrdfRig.Bone(new Vector3(0.1f, 0f, -0.01f), 0.028f)]);
+            rig.Add($"{p}_wrist_roll", $"{p}_forearm", new Vector3(0.1f, side * 0.00188791f, -0.01f), Vector3.UnitX,
+                $"{p}_wrist_roll_link", []);
+            rig.Add($"{p}_wrist_pitch", $"{p}_wrist_roll", new Vector3(0.038f, 0f, 0f), Vector3.UnitY,
+                $"{p}_wrist_pitch_link", []);
+            rig.Add($"{p}_wrist_yaw", $"{p}_wrist_pitch", new Vector3(0.046f, 0f, 0f), Vector3.UnitZ,
+                $"{p}_wrist_yaw_link", []);
+            rig.Add($"{p}_hand", $"{p}_wrist_yaw", new Vector3(0.0415f, side * 0.003f, 0f), Vector3.Zero,
+                $"{p}_rubber_hand", [UrdfRig.Box(new Vector3(0.09f, 0.035f, 0.06f), new Vector3(0.04f, 0f, 0f), RigSurface.Contact)]);
+        }
+
+        // Pelvis height with the sole on the floor, from the URDF's foot mesh with the legs in the
+        // gait's standing pose (hip -0.10, knee 0.18, ankle -0.044). The same holds for every humanoid.
+        return rig.Build(RobotModel.G1, "G1", "1.32 m humanoid, 29 joints with dual 7-DoF arms.", 0.795f);
     }
 
-    private static RobotRig Humanoid(RobotModel model, string name, string summary, HumanoidSpec spec)
+    /// <summary>H1 from <c>h1_description/urdf/h1.urdf</c>.</summary>
+    /// <remarks>
+    /// The hip chain runs yaw, roll, pitch — the reverse of G1's — and the ankle is pitch-only, so
+    /// the foot is a fixed child of it. The arms have no wrists: 2×5 legs, a waist and 2×4 arms is 19.
+    /// </remarks>
+    private static RobotRig H1()
     {
-        var links = new List<RigLink>();
-        int next = 0;
+        var rig = new UrdfRig("h1");
 
-        links.Add(new RigLink(
-            "pelvis", null, Vector3.Zero, Vector3.Zero, -1, 1f,
-            [
-                new RigShape(
-                    RigShapeKind.Box,
-                    new Vector3(spec.LimbRadius * 3.4f, spec.PelvisWidth * 1.9f, spec.LimbRadius * 3.0f),
-                    Vector3.Zero,
-                    RigSurface.Shell),
-            ]));
-
-        // Legs first, matching the unitree_hg convention: left leg, then right leg, then waist, then
-        // arms. The joint indices assigned here are what the pose array is indexed by.
-        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
-        {
-            string prefix = side > 0 ? "left" : "right";
-
-            int hipPitch = next++;
-            int hipRoll = next++;
-            int hipYaw = next++;
-            int knee = next++;
-            int anklePitch = next++;
-            int ankleRoll = spec.AnkleDof >= 2 ? next++ : -1;
-
-            links.Add(new RigLink(
-                $"{prefix}_hip_pitch", "pelvis",
-                new Vector3(0f, side * spec.PelvisWidth * 0.5f, -spec.LimbRadius * 1.2f),
-                Vector3.UnitY, hipPitch, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Cylinder,
-                        new Vector3(spec.LimbRadius * 1.15f, spec.LimbRadius * 1.7f, 0f),
-                        Vector3.Zero, RigSurface.Actuator, AxisAlong: 1),
-                ]));
-
-            links.Add(new RigLink(
-                $"{prefix}_hip_roll", $"{prefix}_hip_pitch",
-                Vector3.Zero, Vector3.UnitX, hipRoll, 1f, []));
-
-            links.Add(new RigLink(
-                $"{prefix}_thigh", $"{prefix}_hip_roll",
-                Vector3.Zero, Vector3.UnitZ, hipYaw, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Capsule,
-                        new Vector3(spec.LimbRadius, spec.ThighLength * 0.82f, 0f),
-                        new Vector3(0f, 0f, -spec.ThighLength * 0.5f),
-                        RigSurface.Limb, AxisAlong: 2),
-                ]));
-
-            links.Add(new RigLink(
-                $"{prefix}_calf", $"{prefix}_thigh",
-                new Vector3(0f, 0f, -spec.ThighLength),
-                Vector3.UnitY, knee, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Capsule,
-                        new Vector3(spec.LimbRadius * 0.86f, spec.CalfLength * 0.84f, 0f),
-                        new Vector3(0f, 0f, -spec.CalfLength * 0.5f),
-                        RigSurface.Limb, AxisAlong: 2),
-                ]));
-
-            links.Add(new RigLink(
-                $"{prefix}_ankle", $"{prefix}_calf",
-                new Vector3(0f, 0f, -spec.CalfLength),
-                Vector3.UnitY, anklePitch, 1f, []));
-
-            // H1's ankle is pitch-only, so on that platform the foot is a fixed child of the ankle
-            // rather than a rolling joint of its own.
-            links.Add(new RigLink(
-                $"{prefix}_foot", $"{prefix}_ankle",
-                Vector3.Zero,
-                ankleRoll >= 0 ? Vector3.UnitX : Vector3.Zero,
-                ankleRoll, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Box,
-                        new Vector3(spec.FootLength, spec.FootLength * 0.42f, spec.AnkleHeight),
-                        new Vector3(spec.FootLength * 0.16f, 0f, -spec.AnkleHeight * 0.5f),
-                        RigSurface.Contact),
-                ]));
-        }
-
-        // Waist: yaw on every platform, then roll and pitch as the platform provides them. H1 stops at
-        // yaw, R1 adds pitch, G1 carries all three.
-        int waistYaw = next++;
-        links.Add(new RigLink(
-            "waist_yaw", "pelvis",
-            new Vector3(0f, 0f, spec.LimbRadius * 1.6f),
-            Vector3.UnitZ, waistYaw, 1f, []));
-
-        string torsoParent = "waist_yaw";
-
-        if (spec.WaistDof >= 3)
-        {
-            links.Add(new RigLink("waist_roll", torsoParent, Vector3.Zero, Vector3.UnitX, next++, 1f, []));
-            torsoParent = "waist_roll";
-        }
-
-        if (spec.WaistDof >= 2)
-        {
-            links.Add(new RigLink("waist_pitch", torsoParent, Vector3.Zero, Vector3.UnitY, next++, 1f, []));
-            torsoParent = "waist_pitch";
-        }
-
-        links.Add(new RigLink(
-            "torso", torsoParent, Vector3.Zero, Vector3.Zero, -1, 1f,
-            [
-                new RigShape(
-                    RigShapeKind.Box,
-                    new Vector3(spec.LimbRadius * 3.2f, spec.ShoulderWidth * 0.80f, spec.TorsoHeight),
-                    new Vector3(0f, 0f, spec.TorsoHeight * 0.5f),
-                    RigSurface.Shell),
-
-                // Chest plate, slightly proud of the torso — the visual cue that tells front from back
-                // at a glance when the robot is turned away from the camera.
-                new RigShape(
-                    RigShapeKind.Box,
-                    new Vector3(spec.LimbRadius * 0.9f, spec.ShoulderWidth * 0.52f, spec.TorsoHeight * 0.46f),
-                    new Vector3(spec.LimbRadius * 1.9f, 0f, spec.TorsoHeight * 0.60f),
-                    RigSurface.Shell),
-            ]));
-
-        links.Add(new RigLink(
-            "head", "torso",
-            new Vector3(0f, 0f, spec.TorsoHeight + (spec.HeadRadius * 0.9f)),
-            Vector3.Zero, -1, 1f,
-            [
-                new RigShape(
-                    RigShapeKind.Box,
-                    new Vector3(spec.HeadRadius * 1.7f, spec.HeadRadius * 1.8f, spec.HeadRadius * 1.9f),
-                    Vector3.Zero, RigSurface.Shell),
-                new RigShape(
-                    RigShapeKind.Box,
-                    new Vector3(spec.HeadRadius * 0.28f, spec.HeadRadius * 1.5f, spec.HeadRadius * 0.5f),
-                    new Vector3(spec.HeadRadius * 0.86f, 0f, spec.HeadRadius * 0.15f),
-                    RigSurface.Sensor),
-            ]));
+        rig.Add("pelvis", null, Vector3.Zero, Vector3.Zero, "pelvis",
+            [UrdfRig.Box(new Vector3(0.14f, 0.24f, 0.14f), new Vector3(0f, 0f, -0.08f), RigSurface.Shell)]);
 
         foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
         {
-            string prefix = side > 0 ? "left" : "right";
+            string p = side > 0 ? "left" : "right";
 
-            int shoulderPitch = next++;
-            int shoulderRoll = next++;
-            int shoulderYaw = next++;
-            int elbow = next++;
+            rig.Add($"{p}_hip_yaw", "pelvis", new Vector3(0f, side * 0.0875f, -0.1742f), Vector3.UnitZ,
+                $"{p}_hip_yaw_link", [UrdfRig.Housing(0.05f)]);
+            rig.Add($"{p}_hip_roll", $"{p}_hip_yaw", new Vector3(0.039468f, 0f, 0f), Vector3.UnitX,
+                $"{p}_hip_roll_link", [UrdfRig.Bone(new Vector3(0f, side * 0.11536f, 0f), 0.05f)]);
+            rig.Add($"{p}_hip_pitch", $"{p}_hip_roll", new Vector3(0f, side * 0.11536f, 0f), Vector3.UnitY,
+                $"{p}_hip_pitch_link", [UrdfRig.Bone(new Vector3(0f, 0f, -0.4f), 0.05f)]);
+            rig.Add($"{p}_calf", $"{p}_hip_pitch", new Vector3(0f, 0f, -0.4f), Vector3.UnitY,
+                $"{p}_knee_link", [UrdfRig.Bone(new Vector3(0f, 0f, -0.4f), 0.04f)]);
+            rig.Add($"{p}_ankle", $"{p}_calf", new Vector3(0f, 0f, -0.4f), Vector3.UnitY, $"{p}_ankle_link", []);
 
-            // The shoulder is pushed out past the torso's half-width plus a limb radius, so the upper
-            // arm hangs clear of the chest instead of intersecting it.
-            float shoulderY = (spec.ShoulderWidth * 0.40f) + (spec.LimbRadius * 1.6f);
-
-            links.Add(new RigLink(
-                $"{prefix}_shoulder_pitch", "torso",
-                new Vector3(0f, side * shoulderY, spec.TorsoHeight * 0.86f),
-                Vector3.UnitY, shoulderPitch, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Cylinder,
-                        new Vector3(spec.LimbRadius * 1.1f, spec.LimbRadius * 1.6f, 0f),
-                        Vector3.Zero, RigSurface.Actuator, AxisAlong: 1),
-                ]));
-
-            links.Add(new RigLink(
-                $"{prefix}_shoulder_roll", $"{prefix}_shoulder_pitch",
-                Vector3.Zero, Vector3.UnitX, shoulderRoll, 1f, []));
-
-            links.Add(new RigLink(
-                $"{prefix}_upper_arm", $"{prefix}_shoulder_roll",
-                Vector3.Zero, Vector3.UnitZ, shoulderYaw, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Capsule,
-                        new Vector3(spec.LimbRadius * 0.80f, spec.UpperArmLength * 0.80f, 0f),
-                        new Vector3(0f, 0f, -spec.UpperArmLength * 0.5f),
-                        RigSurface.Limb, AxisAlong: 2),
-                ]));
-
-            links.Add(new RigLink(
-                $"{prefix}_forearm", $"{prefix}_upper_arm",
-                new Vector3(0f, 0f, -spec.UpperArmLength),
-                Vector3.UnitY, elbow, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Capsule,
-                        new Vector3(spec.LimbRadius * 0.68f, spec.ForearmLength * 0.78f, 0f),
-                        new Vector3(0f, 0f, -spec.ForearmLength * 0.5f),
-                        RigSurface.Limb, AxisAlong: 2),
-                ]));
-
-            // The wrist chain is where the platforms differ most: H1 has none, R1 has roll and pitch,
-            // G1 and H1-2 add yaw. Only the first wrist link carries the forearm's length offset.
-            string handParent = $"{prefix}_forearm";
-            bool hasWrist = spec.WristDof >= 2;
-
-            if (hasWrist)
-            {
-                links.Add(new RigLink(
-                    $"{prefix}_wrist_roll", handParent,
-                    new Vector3(0f, 0f, -spec.ForearmLength),
-                    Vector3.UnitZ, next++, 1f, []));
-                handParent = $"{prefix}_wrist_roll";
-
-                links.Add(new RigLink(
-                    $"{prefix}_wrist_pitch", handParent,
-                    Vector3.Zero, Vector3.UnitY, next++, 1f, []));
-                handParent = $"{prefix}_wrist_pitch";
-            }
-
-            if (spec.WristDof >= 3)
-            {
-                links.Add(new RigLink(
-                    $"{prefix}_wrist_yaw", handParent,
-                    Vector3.Zero, Vector3.UnitX, next++, 1f, []));
-                handParent = $"{prefix}_wrist_yaw";
-            }
-
-            links.Add(new RigLink(
-                $"{prefix}_hand", handParent,
-                hasWrist ? Vector3.Zero : new Vector3(0f, 0f, -spec.ForearmLength),
-                Vector3.Zero, -1, 1f,
-                [
-                    new RigShape(
-                        RigShapeKind.Box,
-                        new Vector3(spec.LimbRadius * 1.5f, spec.LimbRadius * 0.85f, spec.LimbRadius * 2.2f),
-                        new Vector3(0f, 0f, -spec.LimbRadius * 1.1f),
-                        RigSurface.Contact),
-                ]));
+            // The ankle link is the foot; this fixed child is only the contact point the gait loads.
+            rig.Add($"{p}_foot", $"{p}_ankle", Vector3.Zero, Vector3.Zero, null,
+                [UrdfRig.Box(new Vector3(0.22f, 0.08f, 0.05f), new Vector3(0.04f, 0f, -0.045f), RigSurface.Contact)]);
         }
 
-        // The joint layout above must account for exactly the joints the platform claims to have. A
-        // mismatch means the pose array and the rig disagree, which shows up as a limb that never moves.
-        if (next != spec.JointCount)
+        rig.Add("torso", "pelvis", Vector3.Zero, Vector3.UnitZ, "torso_link",
+            [UrdfRig.Box(new Vector3(0.16f, 0.30f, 0.45f), new Vector3(0f, 0f, 0.28f), RigSurface.Shell)]);
+
+        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
         {
-            throw new InvalidOperationException(
-                $"The {name} rig defines {next} joints but the platform has {spec.JointCount}.");
+            string p = side > 0 ? "left" : "right";
+
+            rig.Add($"{p}_shoulder_pitch", "torso", new Vector3(0.0055f, side * 0.15535f, 0.42999f), Vector3.UnitY,
+                $"{p}_shoulder_pitch_link", [UrdfRig.Housing(0.045f)], rotation: new Vector3(side * 0.43633f, 0f, 0f));
+            rig.Add($"{p}_shoulder_roll", $"{p}_shoulder_pitch", new Vector3(-0.0055f, side * 0.0565f, -0.0165f), Vector3.UnitX,
+                $"{p}_shoulder_roll_link", [], rotation: new Vector3(-side * 0.43633f, 0f, 0f));
+            rig.Add($"{p}_upper_arm", $"{p}_shoulder_roll", new Vector3(0f, 0f, -0.1343f), Vector3.UnitZ,
+                $"{p}_shoulder_yaw_link", [UrdfRig.Bone(new Vector3(0.0185f, 0f, -0.198f), 0.04f)]);
+            rig.Add($"{p}_forearm", $"{p}_upper_arm", new Vector3(0.0185f, 0f, -0.198f), Vector3.UnitY,
+                $"{p}_elbow_link", [UrdfRig.Bone(new Vector3(0.26f, 0f, 0f), 0.035f)]);
         }
 
-        var neutral = new float[spec.JointCount];
-        float standing = spec.ThighLength + spec.CalfLength + spec.AnkleHeight;
+        return rig.Build(RobotModel.H1, "H1", "1.80 m humanoid, 19 joints. Unitree's full-size platform.", 1.048f);
+    }
 
-        return new RobotRig(
-            model, name, summary, spec.JointCount, standing, links,
-            ["left_foot", "right_foot"], neutral);
+    /// <summary>H1-2 from <c>h1_2_description/h1_2_handless.urdf</c>.</summary>
+    /// <remarks>
+    /// The H1 body revised: the hip chain becomes yaw, pitch, roll, the ankle gains a roll joint, and
+    /// the arms gain three-axis wrists — 2×6, a waist and 2×7 is 27. Both wrists share one yaw mesh.
+    /// </remarks>
+    private static RobotRig H12()
+    {
+        var rig = new UrdfRig("h12");
+
+        rig.Add("pelvis", null, Vector3.Zero, Vector3.Zero, "pelvis",
+            [UrdfRig.Box(new Vector3(0.14f, 0.24f, 0.14f), new Vector3(0f, 0f, -0.08f), RigSurface.Shell)]);
+
+        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
+        {
+            string p = side > 0 ? "left" : "right";
+
+            rig.Add($"{p}_hip_yaw", "pelvis", new Vector3(0f, side * 0.0875f, -0.1632f), Vector3.UnitZ,
+                $"{p}_hip_yaw_link", [UrdfRig.Bone(new Vector3(0f, side * 0.0755f, 0f), 0.05f)]);
+            rig.Add($"{p}_hip_pitch", $"{p}_hip_yaw", new Vector3(0f, side * 0.0755f, 0f), Vector3.UnitY,
+                $"{p}_hip_pitch_link", [UrdfRig.Housing(0.05f)]);
+            rig.Add($"{p}_hip_roll", $"{p}_hip_pitch", Vector3.Zero, Vector3.UnitX,
+                $"{p}_hip_roll_link", [UrdfRig.Bone(new Vector3(0f, 0f, -0.4f), 0.05f)]);
+            rig.Add($"{p}_calf", $"{p}_hip_roll", new Vector3(0f, 0f, -0.4f), Vector3.UnitY,
+                $"{p}_knee_link", [UrdfRig.Bone(new Vector3(0f, 0f, -0.4f), 0.04f)]);
+            rig.Add($"{p}_ankle", $"{p}_calf", new Vector3(0f, 0f, -0.4f), Vector3.UnitY, $"{p}_ankle_pitch_link", []);
+            rig.Add($"{p}_foot", $"{p}_ankle", new Vector3(0f, 0f, -0.02f), Vector3.UnitX,
+                $"{p}_ankle_roll_link", [UrdfRig.Box(new Vector3(0.22f, 0.08f, 0.04f), new Vector3(0.04f, 0f, -0.025f), RigSurface.Contact)]);
+        }
+
+        rig.Add("torso", "pelvis", Vector3.Zero, Vector3.UnitZ, "torso_link",
+            [UrdfRig.Box(new Vector3(0.16f, 0.30f, 0.45f), new Vector3(0f, 0f, 0.28f), RigSurface.Shell)]);
+
+        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
+        {
+            string p = side > 0 ? "left" : "right";
+
+            rig.Add($"{p}_shoulder_pitch", "torso", new Vector3(0f, side * 0.14806f, 0.42333f), Vector3.UnitY,
+                $"{p}_shoulder_pitch_link", [UrdfRig.Housing(0.045f)], rotation: new Vector3(side * 0.2618f, 0f, 0f));
+            rig.Add($"{p}_shoulder_roll", $"{p}_shoulder_pitch", new Vector3(0.0342f, side * 0.061999f, -0.0060011f), Vector3.UnitX,
+                $"{p}_shoulder_roll_link", [], rotation: new Vector3(-side * 0.2618f, 0f, 0f));
+            rig.Add($"{p}_upper_arm", $"{p}_shoulder_roll", new Vector3(-0.0342f, 0f, -0.1456f), Vector3.UnitZ,
+                $"{p}_shoulder_yaw_link", [UrdfRig.Bone(new Vector3(0.006f, side * 0.0329f, -0.182f), 0.04f)]);
+            rig.Add($"{p}_forearm", $"{p}_upper_arm", new Vector3(0.006f, side * 0.0329f, -0.182f), Vector3.UnitY,
+                $"{p}_elbow_link", [UrdfRig.Bone(new Vector3(0.121f, -side * 0.0329f, -0.011f), 0.035f)]);
+            rig.Add($"{p}_wrist_roll", $"{p}_forearm", new Vector3(0.121f, -side * 0.0329f, -0.011f), Vector3.UnitX,
+                $"{p}_wrist_roll_link", [UrdfRig.Bone(new Vector3(0.087f, 0f, 0f), 0.03f)]);
+            rig.Add($"{p}_wrist_pitch", $"{p}_wrist_roll", new Vector3(0.087f, 0f, 0f), Vector3.UnitY, $"{p}_wrist_pitch_link", []);
+            rig.Add($"{p}_wrist_yaw", $"{p}_wrist_pitch", new Vector3(0.02f, 0f, 0f), Vector3.UnitZ, "wrist_yaw_link", []);
+        }
+
+        return rig.Build(RobotModel.H12, "H1-2", "H1 revision with wrists — 27 joints.", 1.031f);
+    }
+
+    /// <summary>R1 from <c>r1_description/R1.urdf</c>.</summary>
+    /// <remarks>
+    /// <para>
+    /// R1 is laid out differently from the others: the waist rolls then yaws, each arm has five joints
+    /// ending in a wrist roll, and the head pitches and yaws — 2×6, 2, 2×5 and 2 is 26.
+    /// </para>
+    /// <para>
+    /// The ankle is driven through two push-rod linkages. The URDF models the rods as fixed links, so
+    /// here they ride with the calf and the foot and do not follow the ankle exactly as it moves.
+    /// </para>
+    /// </remarks>
+    private static RobotRig R1()
+    {
+        var rig = new UrdfRig("r1");
+
+        rig.Add("pelvis", null, Vector3.Zero, Vector3.Zero, "pelvis_link",
+            [UrdfRig.Box(new Vector3(0.12f, 0.18f, 0.12f), new Vector3(0.03f, 0f, -0.05f), RigSurface.Shell)]);
+
+        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
+        {
+            string p = side > 0 ? "left" : "right";
+
+            // The hip pitch frame is rolled 0.4363 rad outward and the roll frame rolls it back: the
+            // hip actuators sit splayed, as G1's shoulders do.
+            rig.Add($"{p}_hip_pitch", "pelvis", new Vector3(0.0325f, side * 0.0704672f, -0.0902351f), Vector3.UnitY,
+                $"{p}_hip_pitch_link", [UrdfRig.Housing(0.04f)], rotation: new Vector3(-side * 0.436332f, 0f, 0f));
+            rig.Add($"{p}_hip_roll", $"{p}_hip_pitch", new Vector3(0.0248f, side * 0.045f, -0.053f), Vector3.UnitX,
+                $"{p}_hip_roll_link", [], rotation: new Vector3(side * 0.436332f, 0f, 0f));
+            rig.Add($"{p}_hip_yaw", $"{p}_hip_roll", new Vector3(-0.0194507f, -side * 0.0006f, -0.0618f), Vector3.UnitZ,
+                $"{p}_hip_yaw_link", [UrdfRig.Bone(new Vector3(-0.02315f, side * 0.01866f, -0.159301f), 0.04f)]);
+            rig.Add($"{p}_calf", $"{p}_hip_yaw", new Vector3(-0.02315f, side * 0.01866f, -0.159301f), Vector3.UnitY,
+                $"{p}_knee_link", [UrdfRig.Bone(new Vector3(-0.0168139f, -side * 0.0205811f, -0.309175f))]);
+            rig.Add($"{p}_ankle_rod_a", $"{p}_calf", new Vector3(0.0137908f, -side * 0.0205811f, -0.0965262f), Vector3.Zero,
+                $"{p}_ankle_A_link", [], rotation: new Vector3(0f, 0.0893609f, 0f));
+            rig.Add($"{p}_ankle_rod_a_end", $"{p}_ankle_rod_a", new Vector3(0.013f, side * 0.0159962f, -0.00404621f), Vector3.Zero,
+                $"{p}_ankle_A_rod_link", []);
+            rig.Add($"{p}_ankle_rod_b", $"{p}_calf", new Vector3(0.00785625f, -side * 0.0205811f, -0.162761f), Vector3.Zero,
+                $"{p}_ankle_B_link", [], rotation: new Vector3(0f, 0.0893609f, 0f));
+            rig.Add($"{p}_ankle_rod_b_end", $"{p}_ankle_rod_b", new Vector3(0.013f, -side * 0.0159933f, -0.0040578f), Vector3.Zero,
+                $"{p}_ankle_B_rod_link", []);
+            rig.Add($"{p}_ankle", $"{p}_calf", new Vector3(-0.0168139f, -side * 0.0205811f, -0.309175f), Vector3.UnitY,
+                $"{p}_ankle_pitch_link", []);
+            rig.Add($"{p}_foot", $"{p}_ankle", Vector3.Zero, Vector3.UnitX,
+                $"{p}_ankle_roll_link", [UrdfRig.Box(new Vector3(0.17f, 0.07f, 0.045f), new Vector3(0.03f, 0f, -0.03f), RigSurface.Contact)]);
+            rig.Add($"{p}_ankle_link_a", $"{p}_foot", new Vector3(0.021f, side * 0.014f, -0.0094f), Vector3.Zero,
+                $"{p}_ankle_constraint_A_link", []);
+            rig.Add($"{p}_ankle_link_b", $"{p}_foot", new Vector3(0.021f, -side * 0.014f, -0.0094f), Vector3.Zero,
+                $"{p}_ankle_constraint_B_link", []);
+        }
+
+        rig.Add("waist_roll", "pelvis", Vector3.Zero, Vector3.UnitX, "waist_roll_link", [],
+            meshOffset: new Vector3(0.0325f, 0f, 0.049f));
+        rig.Add("torso", "waist_roll", new Vector3(0.0325f, 0f, 0.049f), Vector3.UnitZ, "waist_yaw_link",
+            [UrdfRig.Box(new Vector3(0.12f, 0.20f, 0.26f), new Vector3(0f, 0f, 0.14f), RigSurface.Shell)]);
+
+        foreach (float side in (ReadOnlySpan<float>)[1f, -1f])
+        {
+            string p = side > 0 ? "left" : "right";
+
+            rig.Add($"{p}_shoulder_pitch", "torso", new Vector3(0f, side * 0.085688f, 0.19749f), Vector3.UnitY,
+                $"{p}_shoulder_pitch_link", [UrdfRig.Housing(0.035f)], rotation: new Vector3(side * 0.26187f, 0f, 0f));
+            rig.Add($"{p}_shoulder_roll", $"{p}_shoulder_pitch", new Vector3(0.03445f, side * 0.047132f, -0.025693f), Vector3.UnitX,
+                $"{p}_shoulder_roll_link", [], rotation: new Vector3(-side * 0.26187f, 0f, 0f));
+            rig.Add($"{p}_upper_arm", $"{p}_shoulder_roll", new Vector3(-0.03445f, side * 0.0043f, -0.10835f), Vector3.UnitZ,
+                $"{p}_shoulder_yaw_link", [UrdfRig.Bone(new Vector3(0.016191f, side * 0.026461f, -0.082858f), 0.03f)]);
+            rig.Add($"{p}_forearm", $"{p}_upper_arm", new Vector3(0.016191f, side * 0.026461f, -0.082858f), Vector3.UnitY,
+                $"{p}_elbow_link", [UrdfRig.Bone(new Vector3(0.11218f, -side * 0.03002f, -0.011702f), 0.028f)]);
+            rig.Add($"{p}_wrist_roll", $"{p}_forearm", new Vector3(0.11218f, -side * 0.03002f, -0.011702f), Vector3.UnitX,
+                $"{p}_wrist_roll_link", [UrdfRig.Box(new Vector3(0.08f, 0.035f, 0.05f), new Vector3(0.04f, 0f, 0f), RigSurface.Contact)]);
+        }
+
+        rig.Add("head_pitch", "torso", new Vector3(-0.006f, 0.03155f, 0.255f), Vector3.UnitY, "head_pitch_link", []);
+        rig.Add("head", "head_pitch", new Vector3(0.0010126f, -0.03155f, 0.1165f), Vector3.UnitZ, "head_yaw_link",
+            [UrdfRig.Box(new Vector3(0.12f, 0.12f, 0.14f), new Vector3(0.02f, 0f, 0f), RigSurface.Shell)]);
+        rig.Add("camera", "head", new Vector3(0.066971f, 0f, -0.021637f), Vector3.Zero, "camera_link", [],
+            rotation: new Vector3(0f, 0.34907f, 0f));
+
+        return rig.Build(RobotModel.R1, "R1", "1.21 m humanoid, 26 joints with 5-DoF arms and a 2-DoF head.", 0.744f);
+    }
+
+    /// <summary>Collects the links of a humanoid transcribed from its URDF.</summary>
+    private sealed class UrdfRig(string meshSet)
+    {
+        // The URDF's zero pose holds every one of these humanoids' forearms out level, elbows at a
+        // right angle. The neutral pose lowers them by this much so the arms hang, and the gait's
+        // elbow swing is added to it.
+        private const float ElbowNeutral = 0.8f;
+
+        private readonly List<RigLink> _links = [];
+        private int _joints;
+
+        /// <summary>
+        /// Adds a link. A non-zero <paramref name="axis"/> makes it a joint, numbered in the order
+        /// added — which is URDF order.
+        /// </summary>
+        public void Add(
+            string name, string? parent, Vector3 offset, Vector3 axis, string? mesh, RigShape[] shapes,
+            Vector3 rotation = default, Vector3 meshOffset = default)
+        {
+            int joint = axis == Vector3.Zero ? -1 : _joints++;
+            _links.Add(new RigLink(name, parent, offset, axis, joint, 1f, shapes)
+            {
+                Mesh = mesh is null ? null : new RigMesh($"{meshSet}/{mesh}.glb", meshOffset, Vector3.Zero),
+                Rotation = rotation,
+            });
+        }
+
+        /// <summary>
+        /// A capsule from the link origin to <paramref name="to"/>, so the fallback skeleton follows
+        /// the same frames the meshes do. Each segment runs mostly along one axis, which is the one used.
+        /// </summary>
+        public static RigShape Bone(Vector3 to, float radius = 0.035f)
+        {
+            Vector3 a = Vector3.Abs(to);
+            int axis = a.X >= a.Y && a.X >= a.Z ? 0 : a.Y >= a.Z ? 1 : 2;
+            float length = MathF.Max(to.Length() - (2f * radius), 0.001f);
+            return new RigShape(RigShapeKind.Capsule, new Vector3(radius, length, 0f), to * 0.5f, RigSurface.Limb, axis);
+        }
+
+        /// <summary>An actuator housing across the link's Y axis.</summary>
+        public static RigShape Housing(float radius) =>
+            new(RigShapeKind.Cylinder, new Vector3(radius, radius * 1.4f, 0f), Vector3.Zero, RigSurface.Actuator, AxisAlong: 1);
+
+        /// <summary>A box, for pelvis, torso, feet and hands.</summary>
+        public static RigShape Box(Vector3 size, Vector3 center, RigSurface surface) =>
+            new(RigShapeKind.Box, size, center, surface);
+
+        public RobotRig Build(RobotModel model, string name, string summary, float standingHeight)
+        {
+            // A mismatch means the pose array and the rig disagree, which shows up as a limb that never
+            // moves. It fails here, at construction, rather than there.
+            int expected = RobotModelInfo.GetActuatedJointCount(model);
+            if (_joints != expected)
+            {
+                throw new InvalidOperationException($"The {name} rig defines {_joints} joints but the platform has {expected}.");
+            }
+
+            var neutral = new float[expected];
+            foreach (RigLink link in _links)
+            {
+                if (link.JointIndex >= 0 && link.Name.EndsWith("_forearm", StringComparison.Ordinal))
+                {
+                    neutral[link.JointIndex] = ElbowNeutral;
+                }
+            }
+
+            return new RobotRig(model, name, summary, expected, standingHeight, _links, ["left_foot", "right_foot"], neutral);
+        }
     }
 }

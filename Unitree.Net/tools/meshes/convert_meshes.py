@@ -1,11 +1,20 @@
 """Converts Unitree URDF visual meshes (DAE/STL) into compact GLB files for the simulator viewport.
 
 usage:
-    python convert_meshes.py <mesh dir> <out dir> <name>=<triangle budget> [<name>=<budget> ...]
+    python convert_meshes.py <mesh dir> <out dir> <spec> [<spec> ...]
+
+    spec:  [<out>:]<source>[+<source>...]=<triangle budget>[@<role>]
+
+    <out>:   output name when it differs from the (first) source's, e.g. when merging
+    +        merges sources that sit at the same URDF origin into one file (pelvis + its contour)
+    @<role>  forces every face to one role: shell, limb or contact. STL carries no colour, so for
+             STL meshes the role comes from the URDF's material name and is given here
 
     python convert_meshes.py unitree_ros/robots/go2_description/dae \\
         ../../apps/Unitree.Net.Simulator/wwwroot/models/go2 \\
         base=14000 hip=5000 thigh=5000 thigh_mirror=5000 calf=2500 calf_mirror=2500 foot=800
+
+    python convert_meshes.py unitree_ros/robots/g1_description/meshes models/g1         pelvis:pelvis+pelvis_contour_link=4000@limb left_knee_link=3000@shell ...
 
 requires: pip install trimesh pycollada fast_simplification numpy scipy
 
@@ -57,17 +66,15 @@ def colour_of(geometry):
     return np.array([0.7, 0.7, 0.7])
 
 
-def load_groups(path):
-    """Returns {role: Trimesh} with every geometry in the file baked into the file's root frame."""
+def load_groups(path, groups, forced_role=None):
+    """Adds {role: [Trimesh]} for every geometry in the file, baked into the file's root frame."""
     scene = trimesh.load(path, force="scene")
-    groups = {}
     for node in scene.graph.nodes_geometry:
         transform, geometry_name = scene.graph[node]
         geometry = scene.geometry[geometry_name]
         mesh = trimesh.Trimesh(geometry.vertices.copy(), geometry.faces.copy(), process=False)
         mesh.apply_transform(transform)
-        groups.setdefault(role_of(colour_of(geometry)), []).append(mesh)
-    return {role: trimesh.util.concatenate(parts) for role, parts in groups.items()}
+        groups.setdefault(forced_role or role_of(colour_of(geometry)), []).append(mesh)
 
 
 def decimate(mesh, budget):
@@ -79,8 +86,11 @@ def decimate(mesh, budget):
     return trimesh.Trimesh(vertices, faces, process=True)
 
 
-def convert(source, target, budget):
-    groups = load_groups(source)
+def convert(sources, target, budget, forced_role=None):
+    parts = {}
+    for source in sources:
+        load_groups(source, parts, forced_role)
+    groups = {role: trimesh.util.concatenate(meshes) for role, meshes in parts.items()}
     total = sum(len(g.faces) for g in groups.values())
 
     scene = trimesh.Scene()
@@ -98,7 +108,7 @@ def convert(source, target, budget):
     # Normals are opt-in in trimesh. Without them the crease split above is lost and three.js
     # has nothing to light the surface with.
     target.write_bytes(scene.export(file_type="glb", include_normals=True))
-    print(f"{source.name:<20} {total:>7} -> {kept:>6} tris  {target.stat().st_size / 1024:>7.0f} KB  "
+    print(f"{target.name:<34} {total:>7} -> {kept:>6} tris  {target.stat().st_size / 1024:>7.0f} KB  "
           f"roles: {', '.join(sorted(groups))}")
 
 
@@ -111,14 +121,19 @@ def main(argv):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for spec in argv[2:]:
-        name, budget = spec.split("=")
-        source = next(
-            (p for p in (source_dir / f"{name}.{ext}" for ext in ("dae", "DAE", "stl", "STL")) if p.exists()),
-            None)
-        if source is None:
-            print(f"missing: {name}")
-            return 1
-        convert(source, out_dir / f"{name}.glb", int(budget))
+        names, _, rest = spec.partition("=")
+        budget, _, role = rest.partition("@")
+        out, _, names = names.rpartition(":")
+        sources = []
+        for name in names.split("+"):
+            source = next(
+                (p for p in (source_dir / f"{name}.{ext}" for ext in ("dae", "DAE", "stl", "STL")) if p.exists()),
+                None)
+            if source is None:
+                print(f"missing: {name}")
+                return 1
+            sources.append(source)
+        convert(sources, out_dir / f"{out or names.split('+')[0]}.glb", int(budget), role or None)
     return 0
 
 

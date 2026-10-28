@@ -162,6 +162,15 @@ function buildRobot(rig) {
         node.name = link.name;
         node.position.set(link.offset.x, link.offset.y, link.offset.z);
 
+        // A URDF joint origin can carry a fixed rotation of its own (G1's hips, knees, shoulders).
+        // URDF rpy is extrinsic X, Y, Z, which is three.js's intrinsic 'ZYX'.
+        const rest = new THREE.Quaternion();
+        const rotation = link.rotation;
+        if (rotation && (rotation.x || rotation.y || rotation.z)) {
+            rest.setFromEuler(new THREE.Euler(rotation.x, rotation.y, rotation.z, 'ZYX'));
+            node.quaternion.copy(rest);
+        }
+
         for (const shape of link.shapes) {
             node.add(buildShape(shape));
         }
@@ -174,6 +183,7 @@ function buildRobot(rig) {
 
         if (link.jointIndex >= 0 && link.jointIndex < jointNodes.length) {
             jointNodes[link.jointIndex] = {
+                rest,
                 node,
                 axis: new THREE.Vector3(link.axis.x, link.axis.y, link.axis.z),
                 sign: link.sign,
@@ -202,6 +212,12 @@ function buildRobot(rig) {
     });
 
     return { root, body, meshJobs };
+}
+
+function hidePrimitives(root) {
+    root?.traverse((child) => {
+        if (child.userData.primitive) child.visible = false;
+    });
 }
 
 function loadAsset(asset) {
@@ -250,11 +266,12 @@ async function loadMeshes(jobs, owner) {
             child.receiveShadow = true;
         });
 
-        for (const child of job.node.children) {
-            if (child.userData.primitive) child.visible = false;
-        }
         job.node.add(model);
     });
+
+    // Every primitive goes, not only those on links with a mesh: B2's calf mesh already ends in its
+    // foot, and a foot sphere left showing would sit inside it. Meshes replace the robot, not parts.
+    hidePrimitives(robotRoot);
 }
 
 function buildStage(theme, reach) {
@@ -405,7 +422,8 @@ const api = {
         for (let i = 0; i < jointNodes.length && i < angles.length; i++) {
             const joint = jointNodes[i];
             if (!joint) continue;
-            joint.node.setRotationFromAxisAngle(joint.axis, angles[i] * joint.sign);
+            // The joint turns about its axis inside the link's fixed frame: rest * axis-angle.
+            joint.node.quaternion.setFromAxisAngle(joint.axis, angles[i] * joint.sign).premultiply(joint.rest);
         }
 
         bodyNode.position.z = height;

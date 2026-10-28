@@ -13,6 +13,8 @@ high-level locomotion, ROS 2 integration, ML, and LLM support.
 
 ![Simulator: Go2 berjalan dengan mesh resmi Unitree / Simulator: Go2 walking, drawn from Unitree's own meshes](docs/images/simulator-go2.png)
 
+![Kedelapan platform di simulator / All eight platforms in the simulator](docs/images/simulator-lineup.png)
+
 | | |
 |---|---|
 | ![Robot Wizard](docs/images/wizard.png) | ![Dashboard](docs/images/dashboard.png) |
@@ -133,7 +135,7 @@ stream.Stop();
 
 | Aplikasi | Isi |
 |---|---|
-| **[Simulator](docs/simulator.md)** | Simulator robot 3D. Pilih platform (Go2, Go2-W, B2, B2-W, G1, H1, H1-2, R1), tekan Start, dan telemetri sungguhan mulai dipublikasikan. Ada panel status, panel log, dan drive pad. Go2 digambar dari mesh resmi `unitree_ros`. |
+| **[Simulator](docs/simulator.md)** | Simulator robot 3D. Pilih platform (Go2, Go2-W, B2, B2-W, G1, H1, H1-2, R1), tekan Start, dan telemetri sungguhan mulai dipublikasikan. Ada panel status, panel log, dan drive pad. Kedelapan platform digambar dari mesh resmi Unitree. |
 | **[Robot Wizard](docs/wizard.md)** | Editor kode dengan 16 template aplikasi robot, build/run/deploy, dan **Jack The Code Bender** — asisten yang membaca proyek Anda dan menulis kode dengan API SDK yang sebenarnya. |
 | **[Extension VS Code](docs/vscode-extension.md)** | Buat proyek, connect ke robot atau simulator, run, debug, dan deploy langsung dari editor. Ada panel status robot dan panel logs. |
 | **CLI** | `diagnose`, `status`, `monitor`, postur, `move`, chat AI, plus `templates`/`new`/`probe`/`stream`/`deploy` untuk otomasi |
@@ -285,7 +287,7 @@ stream.Stop();
 
 | Application | What it does |
 |---|---|
-| **[Simulator](docs/simulator.md)** | A 3D robot simulator. Pick a platform (Go2, Go2-W, B2, B2-W, G1, H1, H1-2, R1), press Start, and it publishes real telemetry on the SDK's own transport — the CLI and dashboard connect to it exactly as they would to hardware. Status panel, drive pad, system log, and a ribbon showing each topic's measured rate. Go2 is drawn from Unitree's own `unitree_ros` meshes. |
+| **[Simulator](docs/simulator.md)** | A 3D robot simulator. Pick a platform (Go2, Go2-W, B2, B2-W, G1, H1, H1-2, R1), press Start, and it publishes real telemetry on the SDK's own transport — the CLI and dashboard connect to it exactly as they would to hardware. Status panel, drive pad, system log, and a ribbon showing each topic's measured rate. All eight platforms are drawn from Unitree's own meshes. |
 | **[Robot Wizard](docs/wizard.md)** | A code editor with 16 project templates, build/run/deploy, and **Jack The Code Bender** — an assistant that reads your project, looks things up, and writes code against the real SDK API rather than a remembered one. |
 | **[VS Code extension](docs/vscode-extension.md)** | Create a project, connect to a robot or the simulator, run, debug and deploy without leaving the editor. Live robot status and logs in the sidebar. |
 | **CLI** | `diagnose`, `status`, `monitor`, postures, `move`, AI chat, plus `templates` / `new` / `probe` / `stream` / `deploy` for automation |

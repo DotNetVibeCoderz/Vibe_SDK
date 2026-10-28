@@ -116,11 +116,17 @@ real errors: H1 modelled with 21 joints (its ankle is pitch-only and its arms ha
 19) and the wheeled variants modelled without their four drive wheels. Never resolve a humanoid joint
 index by hard-coding — H1's leg layout shifts every index after it. Look it up by link name.
 
-**A rig link's mesh hangs in the URDF's link frame, so the rig's frame must be the URDF's.** Go2's are,
-which is the only reason its `unitree_ros` meshes drop in unmodified. The humanoid rigs are not built
-on URDF frames yet; giving one a mesh without first matching its frames puts every part in the wrong
-place, and nothing but looking at it will tell you. Primitives stay as the fallback, and the viewport
+**A rig link's mesh hangs in the URDF's link frame, so the rig's frame must be the URDF's.** Every
+platform's is, which is the only reason Unitree's meshes drop in unmodified. Some URDF joint origins are
+rotated, not just offset; `RigLink.Rotation` carries that. Generate humanoid rows with
+`tools/meshes/urdf_to_rig.py` rather than copying numbers, then pin them in
+`HumanoidForwardKinematicsMatchTheUrdf` with positions computed from the URDF in Python — a frame off by
+a sign looks plausible until you stand the robot up. Primitives stay as the fallback, and the viewport
 swaps all of a robot's meshes in or none of them.
+
+**A joint count that matches proves nothing about which joint is which.** R1 was modelled with a
+two-axis waist and six-joint arms; its URDF has five-joint arms and a two-axis head. Both are 26, so the
+count check passed. Read the URDF's joint list, not just its length.
 
 **The workflows live at the monorepo root.** `.github/workflows/unitree-net-{ci,publish}.yml` in
 `Vibe_SDK`, not under `Unitree.Net/`, because GitHub reads workflows from the repository root only.

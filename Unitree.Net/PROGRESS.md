@@ -128,6 +128,40 @@ peer, only through the `msedgewebview2` window, which matters for anyone scripti
 Tests pin the hip mesh rotations against the URDF and fail on any asset name with no file behind it.
 Every other platform still uses primitives, which remain the fallback when a mesh fails to load.
 
+### B2 and G1 drawn from Unitree's meshes — FK checked against the URDF
+
+B2 was the easy one: every joint origin is unrotated and Unitree ships a mesh per leg. Its rig was
+wrong, though — hips at x = 0.3455 against the URDF's 0.3285, abduction 0.120 against 0.11973 — and
+both are corrected. Its calf mesh ends in the foot, which is why the viewport now hides every
+primitive once a robot's meshes load, not only those on links with a mesh.
+
+G1 needed the rig model to grow. Its URDF rotates some joint origins as well as offsetting them (hip
+roll −0.1749 rad, knee +0.1749, shoulders ±0.279), which `RigLink` could not express. `RigLink.Rotation`
+now carries a joint origin's `rpy`, and G1's rig is a transcription of `g1_29dof_rev_1_0.urdf` with the
+link names and joint order unchanged. A test chains the rig at zero and compares both feet and a hand
+with positions computed independently from the URDF in Python, to half a millimetre.
+
+The URDF's zero pose holds the forearms out level, so G1's neutral lowers them and the gait's elbow
+swing is now added to the neutral. Both platforms were then run in the simulator, standing and
+walking, in both themes.
+
+### Every platform drawn from Unitree's meshes, and three rigs corrected
+
+Go2-W, B2-W, H1, H1-2 and R1 followed. The wheeled variants borrow their sibling's body, hips and
+thighs and add calves and wheels: Go2-W's axle sits at 0.2264, not 0.213, and its wheel is 0.088 in
+radius, not 0.070. `go2w_description` references DAE files it does not ship, so Go2-W's calves and
+wheel come from `unitree_mujoco`.
+
+The humanoids were rebuilt from their URDFs, and that corrected more than their looks. H1's hip chain
+runs yaw, roll, pitch, not pitch, roll, yaw; H1-2's runs yaw, pitch, roll. R1 was wrong in kind: the old
+rig gave it a two-axis waist and six-joint arms, while its URDF has five-joint arms and a two-axis
+head. Both come to 26, so the joint-count check never noticed.
+
+The rows were generated from the URDFs by `tools/meshes/urdf_to_rig.py` rather than copied, and
+`HumanoidForwardKinematicsMatchTheUrdf` checks 13 positions — feet, hands, R1's head — against
+Python's chain of each URDF, to half a millimetre. All passed on the first run. Each platform was then
+run in the simulator, standing and walking.
+
 ### Wizard templates — every one compiles
 
 `tools/Unitree.Net.TemplateCheck` scaffolds all 16 templates into a temporary folder and builds them.

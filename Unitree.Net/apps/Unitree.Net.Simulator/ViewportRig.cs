@@ -46,6 +46,7 @@ public readonly record struct ViewportMesh(string Asset, ViewportVector Offset, 
 /// <param name="Sign">Maps joint angle sign to rotation direction.</param>
 /// <param name="Shapes">Primitives drawn in this link's frame.</param>
 /// <param name="Mesh">Mesh drawn in place of <paramref name="Shapes"/> once it loads, or null.</param>
+/// <param name="Rotation">Fixed roll, pitch and yaw of the link frame, applied before the joint's own.</param>
 public sealed record ViewportLink(
     string Name,
     string? Parent,
@@ -54,7 +55,8 @@ public sealed record ViewportLink(
     int JointIndex,
     float Sign,
     IReadOnlyList<ViewportShape> Shapes,
-    ViewportMesh? Mesh);
+    ViewportMesh? Mesh,
+    ViewportVector Rotation);
 
 /// <summary>
 /// A rig flattened into the shape <c>viewport.js</c> consumes.
@@ -113,7 +115,8 @@ public sealed record ViewportRig(
                 shapes,
                 link.Mesh is { } mesh
                     ? new ViewportMesh(mesh.Asset, ViewportVector.From(mesh.Offset), ViewportVector.From(mesh.Rotation))
-                    : null));
+                    : null,
+                ViewportVector.From(link.Rotation)));
         }
 
         return new ViewportRig(

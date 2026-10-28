@@ -402,8 +402,12 @@ public sealed class SimulatedRobot
 
             SetJoint(_shoulderPitch[side], Blend(0.35f * direction * swing * amplitude), dt);
 
-            // A small permanent elbow bend keeps the hands off the thighs even when standing still.
-            SetJoint(_elbow[side], Blend(0.35f + (0.12f * direction * swing * amplitude)), dt);
+            // A small permanent elbow bend keeps the hands off the thighs even when standing still. It
+            // is added to the rig's neutral: G1's URDF zero holds the forearm level, so its neutral
+            // lowers it first, while the primitive rigs hang straight at zero.
+            int elbow = _elbow[side];
+            float neutral = (uint)elbow < (uint)_rig.NeutralPose.Count ? _rig.NeutralPose[elbow] : 0f;
+            SetJoint(elbow, Blend(neutral + 0.35f + (0.12f * direction * swing * amplitude)), dt);
         }
     }
 
