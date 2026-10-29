@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Membangun libdepthai-c.so untuk linux-x64 dan menyiapkan runtime-nya di
-# artifacts/native/linux-x64.
+# Membangun libdepthai-c.so untuk Linux (x64 atau arm64, mengikuti mesin build) dan
+# menyiapkan runtime-nya di artifacts/native/linux-<arch>.
 #
 # Luxonis tidak merilis paket C++ prebuilt untuk Linux, jadi depthai-core dibangun dari
 # sumber (vcpkg bawaannya mengurus dependensi). Konfigurasinya dirampingkan: OpenCV,
@@ -20,10 +20,22 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 deps="$here/.deps"
 src="$deps/depthai-core-$DEPTHAI_VERSION-src"
-install="$deps/depthai-core-$DEPTHAI_VERSION-linux-x64"
-build="$here/.build-linux"
-stage="$repo/artifacts/native/linux-x64"
+case "$(uname -m)" in
+    x86_64) rid=linux-x64 ;;
+    aarch64 | arm64) rid=linux-arm64 ;;
+    *) echo "Arsitektur $(uname -m) belum didukung." >&2; exit 1 ;;
+esac
+
+install="$deps/depthai-core-$DEPTHAI_VERSION-$rid"
+build="$here/.build-$rid"
+stage="$repo/artifacts/native/$rid"
 jobs="$(nproc)"
+
+# vcpkg tidak punya cmake/ninja prebuilt untuk ARM Linux dan menolak jalan tanpa ini;
+# versi sistem (dari apt) yang dipakai.
+if [ "$rid" = linux-arm64 ]; then
+    export VCPKG_FORCE_SYSTEM_BINARIES=1
+fi
 
 mkdir -p "$deps" "$stage"
 
@@ -93,7 +105,7 @@ if ldd "$stage/libdepthai-c.so" | grep -q "not found"; then
     exit 1
 fi
 
-echo "Runtime linux-x64 siap di $stage"
+echo "Runtime $rid siap di $stage"
 ls -la "$stage"
 echo "Dependensi sistem yang diharapkan ada di mesin pengguna:"
 ldd "$stage"/*.so* | awk -v stage="$stage" '/=> \// && index($3, stage) != 1 {print "  " $1}' | sort -u

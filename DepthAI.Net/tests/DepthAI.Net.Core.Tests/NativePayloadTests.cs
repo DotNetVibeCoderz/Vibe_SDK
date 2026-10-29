@@ -95,3 +95,19 @@ public class NativePayloadTests
         }
     }
 }
+
+public class NativeLibraryResolverTests
+{
+    [Fact]
+    public void CurrentRid_MatchesTheRuntimesFolderLayout()
+    {
+        var rid = DepthAI.Interop.NativeLibraryResolver.CurrentRid;
+
+        // Folder runtimes/<rid>/native memakai RID portabel: os-arch, huruf kecil.
+        Assert.Matches("^(win|linux|osx)-(x64|x86|arm64|arm)$", rid);
+        Assert.EndsWith(
+            System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant(),
+            rid,
+            StringComparison.Ordinal);
+    }
+}

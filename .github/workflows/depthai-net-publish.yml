@@ -31,12 +31,21 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  # depthai-core tidak punya rilis C++ prebuilt untuk Linux, jadi dibangun dari sumber.
+  # depthai-core tidak punya rilis C++ prebuilt untuk Linux, jadi dibangun dari sumber,
+  # native di arsitektur target (runner ARM64 GitHub, bukan cross-compile).
   # Ubuntu 22.04 (glibc 2.35) supaya pustakanya jalan di distro yang lebih lama juga.
-  # Build pertama memakan puluhan menit; hasil install di-cache berdasarkan isi build.sh.
+  # Build pertama memakan belasan menit; hasil install di-cache berdasarkan isi build.sh.
   native-linux:
-    name: Runtime native linux-x64
-    runs-on: ubuntu-22.04
+    name: Runtime native ${{ matrix.rid }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            runner: ubuntu-22.04
+          - rid: linux-arm64
+            runner: ubuntu-22.04-arm
 
     steps:
       - uses: actions/checkout@v4
@@ -53,15 +62,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build g++-12 pkg-config libudev-dev patchelf zip unzip \
-            autoconf automake autoconf-archive libtool
+            autoconf automake autoconf-archive libtool cmake curl
 
       - name: Cache depthai-core
         uses: actions/cache@v4
         with:
-          path: ${{ steps.sdk.outputs.dir }}/native/depthai-c/.deps/depthai-core-*-linux-x64
-          key: depthai-core-linux-x64-${{ hashFiles('**/native/depthai-c/build.sh') }}
+          path: ${{ steps.sdk.outputs.dir }}/native/depthai-c/.deps/depthai-core-*-${{ matrix.rid }}
+          key: depthai-core-${{ matrix.rid }}-${{ hashFiles('**/native/depthai-c/build.sh') }}
 
-      - name: Bangun runtime native linux-x64
+      - name: Bangun runtime native ${{ matrix.rid }}
         working-directory: ${{ steps.sdk.outputs.dir }}
         env:
           CC: gcc-12
@@ -81,11 +90,11 @@ jobs:
           echo "$out"
           echo "$out" | grep -q "(depthai-core [0-9]" || { echo "Runtime native tidak termuat"; exit 1; }
 
-      - name: Unggah runtime linux-x64
+      - name: Unggah runtime ${{ matrix.rid }}
         uses: actions/upload-artifact@v4
         with:
-          name: native-linux-x64
-          path: ${{ steps.sdk.outputs.dir }}/artifacts/native/linux-x64
+          name: native-${{ matrix.rid }}
+          path: ${{ steps.sdk.outputs.dir }}/artifacts/native/${{ matrix.rid }}
           if-no-files-found: error
 
   publish:
@@ -130,12 +139,18 @@ jobs:
           global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
 
       # Runtime Linux dibangun di job native-linux; diletakkan di tempat yang sama dengan
-      # hasil build.sh supaya proyek runtime linux-x64 dan tool CLI ikut membawanya.
+      # hasil build.sh supaya proyek runtime Linux dan tool CLI ikut membawanya.
       - name: Ambil runtime linux-x64
         uses: actions/download-artifact@v4
         with:
           name: native-linux-x64
           path: ${{ steps.sdk.outputs.dir }}/artifacts/native/linux-x64
+
+      - name: Ambil runtime linux-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: native-linux-arm64
+          path: ${{ steps.sdk.outputs.dir }}/artifacts/native/linux-arm64
 
       # Harus sebelum build: Core menyalin DLL native ke CLI, dan proyek runtime
       # hanya bisa di-pack bila artifacts/native/win-x64 sudah terisi.
@@ -164,7 +179,7 @@ jobs:
         working-directory: ${{ steps.sdk.outputs.dir }}
         shell: bash
         run: |
-          for rid in win-x64 linux-x64; do
+          for rid in win-x64 linux-x64 linux-arm64; do
             ls artifacts/nuget/DepthAI.Net.Runtime.$rid.${{ steps.ver.outputs.version }}.nupkg               || { echo "Paket DepthAI.Net.Runtime.$rid tidak terbentuk"; exit 1; }
           done
 

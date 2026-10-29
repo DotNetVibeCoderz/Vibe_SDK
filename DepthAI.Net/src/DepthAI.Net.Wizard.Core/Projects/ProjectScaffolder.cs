@@ -176,7 +176,8 @@ public static partial class ProjectScaffolder
 
         if (options.SdkReference == SdkReferenceMode.Package)
         {
-            // Runtime native per OS (Windows/Linux x64); di OS lain paketnya tidak dipulihkan
+            // Runtime native per OS; di Linux paket x64 dan arm64 sama-sama dirujuk dan host .NET
+            // memilih yang cocok dengan arsitektur. Di OS lain paketnya tidak dipulihkan
             // dan SDK berjalan dengan simulasi. Baris berikutnya diberi indentasi yang sama
             // dengan token, yang disisipkan template setelah empat spasi.
             return content.Replace(
@@ -185,7 +186,9 @@ public static partial class ProjectScaffolder
                     + "\n    "
                     + $"""<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="{TemplateFragments.SdkVersion}" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />"""
                     + "\n    "
-                    + $"""<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="{TemplateFragments.SdkVersion}" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />""",
+                    + $"""<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="{TemplateFragments.SdkVersion}" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />"""
+                    + "\n    "
+                    + $"""<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="{TemplateFragments.SdkVersion}" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />""",
                 StringComparison.Ordinal);
         }
 

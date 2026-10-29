@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Paket runtime native untuk hardware OAK di Linux ARM64 (Raspberry Pi 4/5, Jetson Orin): depthai-c (shim C ABI),
+    depthai-core 3.11 yang dibangun dari sumber tanpa OpenCV. Tidak berisi kode
+    managed; DepthAI.Net memuat pustaka ini lewat P/Invoke bila tersedia dan jatuh ke
+    simulasi bila tidak. Akses USB tanpa root butuh aturan udev untuk vendor 03e7.
+
+    Pustakanya disiapkan oleh native/depthai-c/build.sh ke artifacts/native/linux-arm64.
+    Tanpa folder itu proyek ini tidak bisa di-pack, supaya pack di mesin tanpa toolchain
+    C++ tetap jalan untuk paket lain; workflow publish memeriksa paket ini benar-benar ada.
+  -->
+  <PropertyGroup>
+    <PackageId>DepthAI.Net.Runtime.linux-arm64</PackageId>
+    <Description>Runtime native DepthAI.Net untuk Linux ARM64 (Raspberry Pi 4/5, Jetson Orin): shim depthai-c di atas depthai-core 3.11, agar DepthAI.Net berbicara dengan kamera OAK sungguhan.</Description>
+    <PackageTags>$(PackageTags);native;runtime;linux-arm64</PackageTags>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <NativeRuntimeDir>$(MSBuildThisFileDirectory)..\..\artifacts\native\linux-arm64\</NativeRuntimeDir>
+    <IsPackable Condition="!Exists('$(NativeRuntimeDir)libdepthai-c.so')">false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(NativeRuntimeDir)*.so*" Pack="true" PackagePath="runtimes/linux-arm64/native/" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="WarnMissingNativeRuntime" BeforeTargets="Build" Condition="!Exists('$(NativeRuntimeDir)libdepthai-c.so')">
+    <Message Importance="high" Text="DepthAI.Net.Runtime.linux-arm64 dilewati: jalankan native/depthai-c/build.sh untuk menyiapkan pustaka native." />
+  </Target>
+
+</Project>

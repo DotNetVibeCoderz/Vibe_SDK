@@ -36,10 +36,10 @@ punya kamera mono maupun IMU.
 Tambahkan paket runtime di samping SDK:
 
 ```xml
-<PackageReference Include="DepthAI.Net" Version="0.4.0" />
-<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.4.0"
+<PackageReference Include="DepthAI.Net" Version="0.5.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.5.0"
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
-<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.4.0"
+<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.5.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
 ```
 

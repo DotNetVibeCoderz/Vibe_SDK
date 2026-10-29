@@ -23,7 +23,7 @@ dotnet run --project src/DepthAI.Net.Wizard        # the wizard app
 dotnet run --project src/DepthAI.Net.Cli -- info   # CLI without installing it
 
 dotnet pack src/DepthAI.Net.Templates              # -> artifacts/nuget
-dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.4.0.nupkg
+dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.5.0.nupkg
 ```
 
 Windows environment: PowerShell 5.1 is primary (no `&&`, no ternary); a Git Bash tool is also

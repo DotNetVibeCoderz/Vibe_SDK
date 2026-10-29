@@ -20,6 +20,7 @@
     <Project Path="src/DepthAI.Net.Imaging.ImageSharp/DepthAI.Net.Imaging.ImageSharp.csproj" />
     <Project Path="src/DepthAI.Net.Imaging.SkiaSharp/DepthAI.Net.Imaging.SkiaSharp.csproj" />
     <Project Path="src/DepthAI.Net.Imaging.SystemDrawing/DepthAI.Net.Imaging.SystemDrawing.csproj" />
+    <Project Path="src/DepthAI.Net.Runtime.linux-arm64/DepthAI.Net.Runtime.linux-arm64.csproj" />
     <Project Path="src/DepthAI.Net.Runtime.linux-x64/DepthAI.Net.Runtime.linux-x64.csproj" />
     <Project Path="src/DepthAI.Net.Runtime.win-x64/DepthAI.Net.Runtime.win-x64.csproj" />
     <Project Path="src/DepthAI.Net.Templates/DepthAI.Net.Templates.csproj" />

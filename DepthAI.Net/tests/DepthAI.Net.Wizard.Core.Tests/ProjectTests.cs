@@ -109,9 +109,10 @@ public class ProjectScaffolderTests : IDisposable
         Assert.DoesNotContain("{{ProjectNamespace}}", program, StringComparison.Ordinal);
 
         var project = await File.ReadAllTextAsync(result.ProjectFile);
-        Assert.Contains("""<PackageReference Include="DepthAI.Net" Version="0.4.0" />""", project, StringComparison.Ordinal);
-        Assert.Contains("""<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.4.0" """, project, StringComparison.Ordinal);
-        Assert.Contains("""<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.4.0" """, project, StringComparison.Ordinal);
+        Assert.Contains("""<PackageReference Include="DepthAI.Net" Version="0.5.0" />""", project, StringComparison.Ordinal);
+        Assert.Contains("""<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.5.0" """, project, StringComparison.Ordinal);
+        Assert.Contains("""<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.5.0" """, project, StringComparison.Ordinal);
+        Assert.Contains("""<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.5.0" """, project, StringComparison.Ordinal);
         Assert.DoesNotContain("<!--SDK_REFERENCE-->", project, StringComparison.Ordinal);
     }
 

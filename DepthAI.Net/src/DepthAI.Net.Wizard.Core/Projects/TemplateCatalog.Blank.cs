@@ -14,7 +14,7 @@ namespace DepthAI.Wizard.Projects;
 internal static class TemplateFragments
 {
     /// <summary>Versi SDK yang dirujuk proyek hasil generate.</summary>
-    public const string SdkVersion = "0.4.0";
+    public const string SdkVersion = "0.5.0";
 
     /// <summary>
     /// Placeholder yang diganti scaffolder dengan referensi SDK yang sesuai —
