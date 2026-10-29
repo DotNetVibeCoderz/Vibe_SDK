@@ -119,7 +119,9 @@ jobs:
         run: |
           out=$(dotnet run --project src/DepthAI.Net.Cli -c Release -- info)
           echo "$out"
-          echo "$out" | grep -q "tersedia (depthai-core" || { echo "Runtime native tidak termuat"; exit 1; }
+          # Spectre menyisipkan kode warna ANSI setelah "tersedia", jadi yang dicocokkan
+          # versi depthai-core, yang hanya tampil bila pustaka native termuat.
+          echo "$out" | grep -q "(depthai-core [0-9]" || { echo "Runtime native tidak termuat"; exit 1; }
 
       # Build CI memakai nomor build sebagai suffix prerelease supaya paket dari
       # main tidak pernah bentrok dengan rilis stabil di nuget.org.
