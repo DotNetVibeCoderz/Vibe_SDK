@@ -34,6 +34,7 @@
 #include "depthai/device/Device.hpp"
 #include "depthai/nn_archive/NNArchive.hpp"
 #include "depthai/openvino/OpenVINO.hpp"
+#include "depthai/pipeline/InputQueue.hpp"
 #include "depthai/pipeline/Pipeline.hpp"
 #include "depthai/pipeline/datatype/EncodedFrame.hpp"
 #include "depthai/pipeline/datatype/IMUData.hpp"
@@ -172,6 +173,12 @@ std::vector<uint8_t> serializeTensors(dai::NNData& data) {
 // Sesi perangkat
 // ---------------------------------------------------------------------------
 
+/// Antrean host-ke-perangkat milik satu node HostInput.
+struct HostInput {
+    std::shared_ptr<dai::InputQueue> queue;
+    bool planar = false;  // tujuan neural network: model blob RVC2 mengharapkan CHW
+};
+
 struct Session {
     // Parameter buka disimpan karena depthai v3 menutup perangkat saat pipeline berhenti;
     // sesi .NET mengharapkan satu handle tetap bisa menjalankan pipeline berikutnya.
@@ -182,6 +189,7 @@ struct Session {
     std::shared_ptr<dai::Device> device;
     std::unique_ptr<dai::Pipeline> pipeline;
     std::vector<std::shared_ptr<dai::MessageQueue>> queues;
+    std::map<std::string, HostInput> inputs;
     std::map<std::string, std::vector<uint8_t>> models;
     std::vector<std::filesystem::path> tempFiles;
 
@@ -399,6 +407,7 @@ struct BuiltNode {
     std::shared_ptr<dai::node::ImageManip> manip;
     std::shared_ptr<dai::node::VideoEncoder> encoder;
     std::shared_ptr<dai::node::IMU> imu;
+    bool hostInput = false;  // tidak punya padanan node depthai: hanya antrean masukan
     std::map<std::string, dai::Node::Output*> requested;  // keluaran kamera yang sudah diminta
 };
 
@@ -421,12 +430,32 @@ class PipelineBuilder {
 
         for(const auto& spec : array("nodes")) createNode(spec);
 
+        std::map<std::string, HostInput> hostInputs;
+        std::map<std::string, dai::Node::Input*> hostTargets;
         for(const auto& link : array("links")) {
             const auto from = link.at("from").get<std::string>();
             const auto to = link.at("to").get<std::string>();
             auto* input = resolveInput(to);
             if(input == nullptr) continue;  // port yang sengaja tidak dipetakan, lihat resolveInput
+
+            // HostInput bukan node depthai: masukan tujuannya diberi antrean dari host.
+            const auto source = split(from).first;
+            if(node(source).hostInput) {
+                if(hostTargets.count(source) > 0) {
+                    throw DaiError(DAI_NOT_SUPPORTED, "HostInput '" + source + "' hanya boleh terhubung ke satu masukan");
+                }
+                hostTargets[source] = input;
+                hostInputs[source].planar = node(split(to).first).nn != nullptr;
+                continue;
+            }
             resolveOutput(from)->link(*input);
+        }
+
+        for(auto& [name, input] : hostInputs) {
+            // Non-blocking dengan antrean pendek: host yang mengirim lebih cepat dari
+            // inferensi kehilangan gambar lama alih-alih menahan thread pemanggil.
+            input.queue = hostTargets.at(name)->createInputQueue(4, false);
+            session_.inputs[name] = input;
         }
 
         for(const auto& stream : array("streams")) {
@@ -521,6 +550,8 @@ class PipelineBuilder {
         } else if(built.type == "Imu") {
             built.imu = pipeline.create<dai::node::IMU>();
             configureImu(*built.imu, p);
+        } else if(built.type == "HostInput") {
+            built.hostInput = true;
         } else {
             throw DaiError(DAI_NOT_SUPPORTED, "tipe node belum didukung runtime native: " + built.type);
         }
@@ -694,6 +725,7 @@ class PipelineBuilder {
         if(n.manip && port == "out") return &n.manip->out;
         if(n.encoder && port == "bitstream") return &n.encoder->out;
         if(n.imu && port == "out") return &n.imu->out;
+        if(n.hostInput) throw DaiError(DAI_NOT_SUPPORTED, "keluaran HostInput '" + path + "' tidak bisa dialirkan; gambarnya sudah ada di host");
 
         throw DaiError(DAI_NOT_SUPPORTED, "keluaran '" + path + "' belum didukung runtime native");
     }
@@ -748,6 +780,7 @@ void stopSession(Session& session, bool reopen) {
     if(session.pipeline) {
         if(session.pipeline->isRunning()) session.pipeline->stop();
         session.queues.clear();
+        session.inputs.clear();
         session.pipeline.reset();
     }
     session.clearPackets();
@@ -910,6 +943,54 @@ DAI_API int dai_device_start_pipeline(void* handle, const char* pipeline_json) {
 DAI_API int dai_device_stop_pipeline(void* handle) {
     return guarded(DAI_UNKNOWN, [&] {
         stopSession(*asSession(handle), true);
+        return static_cast<int>(DAI_OK);
+    });
+}
+
+DAI_API int dai_device_send_frame(void* handle, const char* input_name, int32_t width, int32_t height, int32_t pixel_format,
+                                  const uint8_t* data, int64_t length, int64_t sequence_number) {
+    return guarded(DAI_UNKNOWN, [&] {
+        auto* session = asSession(handle);
+        if(input_name == nullptr || data == nullptr || width <= 0 || height <= 0) return fail(DAI_INVALID_ARGUMENT, "argumen gambar tidak valid");
+
+        auto it = session->inputs.find(input_name);
+        if(it == session->inputs.end()) {
+            return fail(DAI_INVALID_ARGUMENT, std::string("pipeline yang berjalan tidak punya HostInput bernama ") + input_name);
+        }
+
+        using T = dai::ImgFrame::Type;
+        const auto pixels = static_cast<size_t>(width) * static_cast<size_t>(height);
+        const bool gray = pixel_format == DAI_PIXEL_GRAY8;
+        if(!gray && pixel_format != DAI_PIXEL_BGR888 && pixel_format != DAI_PIXEL_RGB888) {
+            return fail(DAI_NOT_SUPPORTED, "HostInput hanya menerima GRAY8, BGR888, atau RGB888");
+        }
+        const size_t channels = gray ? 1 : 3;
+        if(length != static_cast<int64_t>(pixels * channels)) return fail(DAI_INVALID_ARGUMENT, "panjang data tidak cocok dengan ukuran gambar");
+
+        const bool planar = it->second.planar && !gray;
+        std::vector<uint8_t> bytes(pixels * channels);
+        if(planar) {
+            // Kebalikan dari konversi di enqueueMessage: interleaved menjadi tiga bidang.
+            for(size_t i = 0; i < pixels; ++i) {
+                bytes[i] = data[i * 3];
+                bytes[pixels + i] = data[i * 3 + 1];
+                bytes[2 * pixels + i] = data[i * 3 + 2];
+            }
+        } else {
+            std::memcpy(bytes.data(), data, bytes.size());
+        }
+
+        const bool rgb = pixel_format == DAI_PIXEL_RGB888;
+        auto frame = std::make_shared<dai::ImgFrame>();
+        frame->setData(std::move(bytes));
+        frame->setType(gray ? T::GRAY8 : (rgb ? (planar ? T::RGB888p : T::RGB888i) : (planar ? T::BGR888p : T::BGR888i)));
+        frame->setSize(static_cast<unsigned>(width), static_cast<unsigned>(height));
+        // Tanpa transformasi, NNData keluaran tidak membawa ukuran masukan dan koordinat
+        // tidak bisa dinormalkan di host.
+        frame->setTransformation(dai::ImgTransformation(static_cast<size_t>(width), static_cast<size_t>(height)));
+        frame->setSequenceNum(sequence_number);
+        frame->setTimestamp(std::chrono::steady_clock::now());
+        it->second.queue->send(frame);
         return static_cast<int>(DAI_OK);
     });
 }

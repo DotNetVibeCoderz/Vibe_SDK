@@ -1,0 +1,75 @@
+{
+  "config_version": "1.0",
+  "model": {
+    "metadata": {
+      "name": "MediaPipe_Palm_Detection-192x192",
+      "path": "palm_detection.superblob",
+      "precision": "float16"
+    },
+    "inputs": [
+      {
+        "name": "input_1",
+        "dtype": "uint8",
+        "input_type": "image",
+        "shape": [
+          1,
+          3,
+          192,
+          192
+        ],
+        "layout": "NCHW",
+        "preprocessing": {
+          "mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "reverse_channels": false,
+          "interleaved_to_planar": false,
+          "dai_type": null
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Identity",
+        "dtype": "float16",
+        "shape": null,
+        "layout": null
+      },
+      {
+        "name": "Identity_1",
+        "dtype": "float16",
+        "shape": null,
+        "layout": null
+      }
+    ],
+    "heads": [
+      {
+        "name": null,
+        "parser": "MPPalmDetectionParser",
+        "metadata": {
+          "postprocessor_path": null,
+          "classes": [
+            "palm"
+          ],
+          "n_classes": 1,
+          "iou_threshold": 0.5,
+          "conf_threshold": 0.5,
+          "max_det": 100,
+          "anchors": null,
+          "scale": 192
+        },
+        "outputs": [
+          "Identity",
+          "Identity_1"
+        ]
+      }
+    ]
+  }
+}

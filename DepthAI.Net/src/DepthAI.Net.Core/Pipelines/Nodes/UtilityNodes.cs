@@ -173,6 +173,31 @@ public enum ImuSensors
     All = Accelerometer | Gyroscope | Magnetometer | RotationVector,
 }
 
+/// <summary>
+/// Sumber gambar dari host. Aplikasi mengirim frame lewat <see cref="DepthAiDevice.SendFrame"/>
+/// dan frame itu mengalir ke node tujuan di perangkat seperti frame kamera. Dipakai untuk
+/// menjalankan model pada foto, berkas video, atau gambar yang dibuat program.
+/// </summary>
+/// <remarks>
+/// Satu HostInput hanya boleh disambungkan ke satu masukan. Keluarannya tidak bisa
+/// dialirkan balik ke host, karena gambarnya memang sudah ada di sana.
+/// </remarks>
+public sealed class HostInputNode : PipelineNode
+{
+    public HostInputNode(string name) : base(name)
+    {
+        Out = DefineOutput("out");
+    }
+
+    public override string NodeType => "HostInput";
+
+    public NodeOutput Out { get; }
+
+    internal override IDictionary<string, object?> GetProperties() => new Dictionary<string, object?>();
+
+    internal override void ApplyProperties(IReadOnlyDictionary<string, object?> properties) { }
+}
+
 /// <summary>Memancarkan paket IMU dari sensor gerak on-board.</summary>
 public sealed class ImuNode : PipelineNode
 {

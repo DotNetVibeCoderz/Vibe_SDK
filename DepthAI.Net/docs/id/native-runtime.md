@@ -39,12 +39,12 @@ punya kamera mono maupun IMU.
 Tambahkan paket runtime di samping SDK:
 
 ```xml
-<PackageReference Include="DepthAI.Net" Version="0.5.0" />
-<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net" Version="0.6.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
-<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
-<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
 ```
 
@@ -121,10 +121,17 @@ Keputusan desain yang dijaga:
 | `ImageManip` | `ImageManip` | crop ternormalisasi, rotasi, resize (crop tengah / stretch), format keluaran |
 | `VideoEncoder` | `VideoEncoder` | MJPEG (lossy/lossless), H.264, H.265 |
 | `Imu` | `IMU` | accelerometer, gyroscope, magnetometer, rotation vector |
+| `HostInput` | `Input::createInputQueue` pada masukan tujuannya | gambar dari `dai_device_send_frame`; ke NN dikirim planar |
 
 Preview kamera yang dihubungkan ke node NN diminta dalam format **planar** (BGR888p), karena
 model blob RVC2 mengharapkan CHW. Bila preview yang sama juga dialirkan ke host, shim
 menyusunnya ulang menjadi interleaved, karena `ImageFrame` hanya mengenal interleaved.
+
+`HostInput` tidak punya padanan node: shim membuat antrean masukan (4 slot, non-blocking) pada
+port yang disambungkan ke sana. `dai_device_send_frame` menyalin gambar interleaved dari host,
+mengubahnya ke planar bila tujuannya neural network, lalu mengirimnya dengan nomor urut dari
+pemanggil. NN menyalin nomor urut itu ke tensornya, dan dari situ `InferAsync` memasangkan hasil
+dengan gambarnya. Diverifikasi di OAK-1: YOLOv6-nano pada foto 1280×714 menjawab dalam ±40 ms.
 
 ### Format payload non-piksel
 

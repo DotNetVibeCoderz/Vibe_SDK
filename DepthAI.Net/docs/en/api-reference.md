@@ -57,10 +57,38 @@ IFrameStream<T>     GetStream<T>(string name) where T : Frame
 IFrameStream<Frame> GetStream(string name)
 DeviceTelemetry     ReadTelemetry()
 
+long    SendFrame(string inputName, ImageFrame frame)
+Task<T> InferAsync<T>(string inputName, ImageFrame frame, string outputStream,
+                      TimeSpan? timeout = null, CancellationToken ct = default) where T : Frame
+
 event EventHandler<DeviceErrorEventArgs>? Error
 ```
 
 `DepthAiDevice` is `IAsyncDisposable`; use `await using`.
+
+The token passed to `StartAsync` only cancels starting. Streams keep running until `StopAsync`.
+
+#### Images from the host
+
+`SendFrame` sends an image (Bgr888, Rgb888, or Gray8) to a `HostInputNode` in the running
+pipeline. The downstream node's result arrives on its output stream carrying the sequence number
+`SendFrame` returned. `InferAsync` combines both: send one image, await one result.
+
+```csharp
+var pipeline = Pipeline.Create();
+var image = pipeline.AddHostInput("image");
+var nn = pipeline.AddDetectionNetwork("detector", n => n.Model = model);
+image.Out.LinkTo(nn.Input);
+pipeline.AddOutputStream(nn.Detections, "detections");
+await device.StartAsync(pipeline);
+
+using var frame = ImageFrame.CopyFrom(bgr, 640, 640, PixelFormat.Bgr888);
+using var result = await device.InferAsync<DetectionFrame>("image", frame, "detections");
+```
+
+Frames returned by `InferAsync` belong to the caller: they are not recycled after a callback the
+way stream frames are, so dispose them. In simulation the image content is not looked at (the
+tensors stay synthetic), but the rhythm is the same: one image, one result.
 
 ### `DeviceCapabilities`
 
@@ -161,6 +189,7 @@ Pipeline BuildUnvalidated()                               // for half-finished p
 | `ImageManipNode` | `input` | `out` |
 | `VideoEncoderNode` | `input` | `bitstream` |
 | `ImuNode` | — | `out` |
+| `HostInputNode` | — | `out` (one input only; cannot be streamed to the host) |
 
 Use `passthrough` — not the camera preview — when drawing overlays, so boxes line up with the
 frame that was actually inferred on.

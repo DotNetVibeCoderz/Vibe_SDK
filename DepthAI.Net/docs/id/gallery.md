@@ -5,6 +5,25 @@ Semua gambar di halaman ini diambil dari sistem yang benar-benar berjalan.
 
 ---
 
+## DepthAI.Net Gallery
+
+Aplikasi etalase dengan 14 use case nyata yang dijalankan di dalam kamera OAK, dari kepatuhan
+APD sampai kepadatan kerumunan. Setiap gambar di bawah diambil dari aplikasi yang berjalan dengan
+OAK-1 tersambung.
+
+| | |
+| --- | --- |
+| ![Hitung arus simpang jalan](../images/gallery/gallery-traffic.jpg) | ![Inventaris ruang kerja](../images/gallery/gallery-instances.jpg) |
+| ![Gerbang parkir](../images/gallery/gallery-plates.jpg) | ![Digitalisasi dokumen](../images/gallery/gallery-documents.jpg) |
+
+Daftar lengkap dan penjelasan tiap use case: [DepthAI.Net Gallery](gallery-app.md).
+
+```bash
+dotnet run --project src/DepthAI.Net.Gallery
+```
+
+---
+
 ## Jack The Code Bender
 
 ![Jack The Code Bender — tema gelap](../images/wizard-dark.png)

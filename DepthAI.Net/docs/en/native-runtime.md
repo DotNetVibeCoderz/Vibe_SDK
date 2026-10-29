@@ -39,12 +39,12 @@ neither mono cameras nor an IMU.
 Add the runtime package next to the SDK:
 
 ```xml
-<PackageReference Include="DepthAI.Net" Version="0.5.0" />
-<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net" Version="0.6.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
-<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
-<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
 ```
 
@@ -122,10 +122,17 @@ Design decisions to preserve:
 | `ImageManip` | `ImageManip` | normalised crop, rotation, resize (centre crop / stretch), output format |
 | `VideoEncoder` | `VideoEncoder` | MJPEG (lossy/lossless), H.264, H.265 |
 | `Imu` | `IMU` | accelerometer, gyroscope, magnetometer, rotation vector |
+| `HostInput` | `Input::createInputQueue` on its target input | images from `dai_device_send_frame`; sent planar to NNs |
 
 A camera preview linked into an NN node is requested **planar** (BGR888p), because RVC2 blob
 models expect CHW. If the same preview is also streamed to the host, the shim re-packs it as
 interleaved, since `ImageFrame` only knows interleaved layouts.
+
+`HostInput` has no node counterpart: the shim creates an input queue (4 slots, non-blocking) on
+the port linked to it. `dai_device_send_frame` copies the host's interleaved image, converts it to
+planar when the target is a neural network, and sends it with the caller's sequence number. The
+NN copies that number onto its tensors, which is how `InferAsync` pairs a result with its image.
+Verified on the OAK-1: YOLOv6-nano on a 1280×714 photo answers in about 40 ms.
 
 ### Non-pixel payload formats
 

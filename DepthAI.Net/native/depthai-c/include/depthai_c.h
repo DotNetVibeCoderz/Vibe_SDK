@@ -128,6 +128,15 @@ DAI_API int dai_device_upload_model(void* handle, const char* name, const uint8_
 DAI_API int dai_device_start_pipeline(void* handle, const char* pipeline_json);
 DAI_API int dai_device_stop_pipeline(void* handle);
 
+/*
+ * Mengirim satu gambar dari host ke node "HostInput" di pipeline yang sedang berjalan.
+ * data berisi piksel interleaved (GRAY8, BGR888, atau RGB888) rapat tanpa padding baris;
+ * shim mengubahnya ke planar bila tujuannya neural network. Data disalin sebelum fungsi
+ * kembali, jadi buffer pemanggil boleh langsung dipakai ulang.
+ */
+DAI_API int dai_device_send_frame(void* handle, const char* input_name, int32_t width, int32_t height, int32_t pixel_format,
+                                  const uint8_t* data, int64_t length, int64_t sequence_number);
+
 DAI_API int dai_device_poll(void* handle, dai_packet_t* out, int timeout_ms);
 DAI_API int dai_packet_release(void* handle, void* native_handle);
 

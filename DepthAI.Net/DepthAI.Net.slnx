@@ -17,6 +17,7 @@
   <Folder Name="/src/">
     <Project Path="src/DepthAI.Net.Cli/DepthAI.Net.Cli.csproj" />
     <Project Path="src/DepthAI.Net.Core/DepthAI.Net.Core.csproj" />
+    <Project Path="src/DepthAI.Net.Gallery/DepthAI.Net.Gallery.csproj" />
     <Project Path="src/DepthAI.Net.Imaging.ImageSharp/DepthAI.Net.Imaging.ImageSharp.csproj" />
     <Project Path="src/DepthAI.Net.Imaging.SkiaSharp/DepthAI.Net.Imaging.SkiaSharp.csproj" />
     <Project Path="src/DepthAI.Net.Imaging.SystemDrawing/DepthAI.Net.Imaging.SystemDrawing.csproj" />
@@ -29,6 +30,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DepthAI.Net.Core.Tests/DepthAI.Net.Core.Tests.csproj" />
+    <Project Path="tests/DepthAI.Net.Gallery.Tests/DepthAI.Net.Gallery.Tests.csproj" />
     <Project Path="tests/DepthAI.Net.Wizard.Core.Tests/DepthAI.Net.Wizard.Core.Tests.csproj" />
   </Folder>
 </Solution>

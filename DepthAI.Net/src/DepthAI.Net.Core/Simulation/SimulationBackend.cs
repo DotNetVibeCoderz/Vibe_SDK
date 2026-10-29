@@ -100,8 +100,11 @@ public sealed class SimulationBackend(
 internal sealed class SimulationSession(DeviceInfo info, SimulationOptions options, ILogger logger) : IDeviceSession
 {
     private readonly Stopwatch _clock = new();
+    private readonly Lock _planGate = new();
     private CancellationTokenSource? _cts;
     private Task? _loop;
+    private SimulationPlan? _plan;
+    private Action<DevicePacket>? _onPacket;
 
     public DeviceInfo Info { get; } = info;
 
@@ -124,7 +127,15 @@ internal sealed class SimulationSession(DeviceInfo info, SimulationOptions optio
         var plan = SimulationPlan.Build(pipeline, options.Seed);
         _clock.Restart();
 
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        lock (_planGate)
+        {
+            _plan = plan;
+            _onPacket = onPacket;
+        }
+
+        // Sama seperti sesi native: token pemanggil tidak menentukan umur stream.
+        cancellationToken.ThrowIfCancellationRequested();
+        var cts = new CancellationTokenSource();
         _cts = cts;
         _loop = Task.Factory.StartNew(
             () => RunAsync(plan, onPacket, cts.Token),
@@ -159,6 +170,52 @@ internal sealed class SimulationSession(DeviceInfo info, SimulationOptions optio
 
         cts?.Dispose();
         _clock.Stop();
+
+        lock (_planGate)
+        {
+            _plan = null;
+            _onPacket = null;
+        }
+    }
+
+    public void SendFrame(string inputName, ImageFrame frame, long sequenceNumber)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(inputName);
+        ArgumentNullException.ThrowIfNull(frame);
+
+        SimulationPlan plan;
+        Action<DevicePacket> onPacket;
+        lock (_planGate)
+        {
+            if (_plan is null || _onPacket is null)
+            {
+                throw new InvalidOperationException("Belum ada pipeline yang berjalan; panggil StartAsync() dulu.");
+            }
+
+            if (!_plan.HasHostInput(inputName))
+            {
+                throw new ArgumentException($"Pipeline yang berjalan tidak punya HostInput bernama '{inputName}'.", nameof(inputName));
+            }
+
+            (plan, onPacket) = (_plan, _onPacket);
+        }
+
+        var timestamp = _clock.Elapsed;
+
+        // Jawaban datang dari thread lain seperti pada perangkat, bukan di dalam panggilan ini.
+        _ = Task.Run(() =>
+        {
+            List<DevicePacket> packets;
+            lock (_planGate)
+            {
+                packets = [.. plan.GenerateForHostFrame(inputName, sequenceNumber, timestamp)];
+            }
+
+            foreach (var packet in packets)
+            {
+                onPacket(packet);
+            }
+        });
     }
 
     public DeviceTelemetry ReadTelemetry() => new()
@@ -182,10 +239,15 @@ internal sealed class SimulationSession(DeviceInfo info, SimulationOptions optio
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                plan.Scene.Advance();
-                var timestamp = _clock.Elapsed;
+                List<DevicePacket> packets;
+                lock (_planGate)
+                {
+                    // Adegan juga dibaca SendFrame dari thread lain.
+                    plan.Scene.Advance();
+                    packets = [.. plan.GeneratePackets(_clock.Elapsed)];
+                }
 
-                foreach (var packet in plan.GeneratePackets(timestamp))
+                foreach (var packet in packets)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     onPacket(packet);

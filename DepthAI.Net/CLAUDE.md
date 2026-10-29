@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A .NET 10 SDK for **DepthAI API V3** (Luxonis OAK cameras) plus its tooling ecosystem:
 a CLI, `dotnet new` templates, a VS Code extension, sample apps, and **Jack The Code Bender** —
-an Avalonia desktop wizard that generates computer vision apps with LLM assistance.
+an Avalonia desktop wizard that generates computer vision apps with LLM assistance — and the
+**DepthAI.Net Gallery**, an Avalonia showcase of 14 real use cases run on the camera.
 
 `requirements.txt` is the original product spec (written in Indonesian). It is the source of
 truth for scope, not a dependency list.
@@ -20,10 +21,11 @@ dotnet test tests/DepthAI.Net.Core.Tests
 dotnet test --filter "FullyQualifiedName~YoloParser"
 
 dotnet run --project src/DepthAI.Net.Wizard        # the wizard app
+dotnet run --project src/DepthAI.Net.Gallery       # the use-case showcase (needs an OAK for live runs)
 dotnet run --project src/DepthAI.Net.Cli -- info   # CLI without installing it
 
 dotnet pack src/DepthAI.Net.Templates              # -> artifacts/nuget
-dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.5.0.nupkg
+dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.6.0.nupkg
 ```
 
 Windows environment: PowerShell 5.1 is primary (no `&&`, no ternary); a Git Bash tool is also
@@ -97,6 +99,7 @@ src/
   DepthAI.Net.Templates/       dotnet new template package
   DepthAI.Net.Wizard.Core/     project system, 16 CV templates, Semantic Kernel layer
   DepthAI.Net.Wizard/          Avalonia UI
+  DepthAI.Net.Gallery/         Avalonia showcase: Showcase/ (catalog, engine), Inference/ (decoders)
 native/depthai-c/              C ABI shim (C++17) + build.ps1 (Windows) / build.sh (Linux)
 samples/                       generated from the wizard's template catalogue
 tools/vscode-depthai/          plain JavaScript, no build step
@@ -124,6 +127,26 @@ reattaches them.
 `PackageReference` normally, but `ProjectReference` when it detects it is running inside this
 repo (`FindSdkRepositoryRoot` looks for `DepthAI.Net.slnx` or `.sln`). Without that, generated
 projects cannot build here because the packages are unpublished.
+
+### Gallery specifics
+
+- `HostInputNode` + `DepthAiDevice.SendFrame`/`InferAsync` (and `dai_device_send_frame` in the
+  shim) exist for it: images go host → camera NN. NN outputs keep the sent sequence number;
+  `InferAsync` matches on it and hands the caller its own (non-pooled) frame.
+- Every use case runs its models as raw `NeuralNetwork` and decodes on the host, so image and
+  live mode share one path. YOLO detection reuses `YoloParser`; the rest live in
+  `Inference/Decoders.cs` (YuNet priors, palm anchors, pose, instance masks, DB text).
+- Models are downloaded from Luxonis Model Zoo at runtime (public GET endpoint, no key) and are
+  **not** committed. `ModelConfigs/<slug>.json` is each archive's `config.json`, installed as a
+  `.tar.json` sidecar because .NET cannot read `.tar.xz`.
+- `Samples/*.jpg` were generated with Rodin (Nano Banana 2); people and plates are fictional.
+  `Samples/recorded.json` holds results recorded on the OAK-1 and is what the app shows without
+  a camera. Re-record with `--record` after changing a decoder or sample; `CatalogTests` fails if a
+  sample has no recording. Never hand-edit it.
+- `--screenshot <dir>` regenerates `docs/images/gallery`; live mode is never captured (it shows
+  the room the camera is in).
+- Verified on the OAK-1 above, image and live, all 14. Emotion was checked with BGR and RGB input:
+  same top-1, so BGR stays (Luxonis convention).
 
 ### Wizard specifics
 

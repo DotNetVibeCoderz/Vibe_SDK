@@ -150,6 +150,19 @@ internal static partial class NativeMethods
     [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     internal static partial int UploadModel(IntPtr handle, string modelName, ReadOnlySpan<byte> payload, long length);
 
+    /// <summary>Mengirim gambar interleaved rapat ke node HostInput yang berjalan.</summary>
+    [LibraryImport(LibraryName, EntryPoint = "dai_device_send_frame", StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+    internal static partial int SendFrame(
+        IntPtr handle,
+        string inputName,
+        int width,
+        int height,
+        int pixelFormat,
+        ReadOnlySpan<byte> data,
+        long length,
+        long sequenceNumber);
+
     [LibraryImport(LibraryName, EntryPoint = "dai_device_stop_pipeline")]
     [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     internal static partial int StopPipeline(IntPtr handle);

@@ -116,6 +116,10 @@ public sealed partial class Pipeline
     public ImuNode AddImu(string name = "imu", Action<ImuNode>? configure = null)
         => AddConfigured(new ImuNode(name), configure);
 
+    /// <summary>Menambahkan sumber gambar dari host; lihat <see cref="HostInputNode"/>.</summary>
+    public HostInputNode AddHostInput(string name = "image")
+        => AddConfigured(new HostInputNode(name), null);
+
     /// <summary>
     /// Memaparkan port keluaran sebagai stream bernama yang bisa dilanggan host.
     /// Nama bawaan mengikuti nama node supaya kasus lazim tidak perlu menamai manual.

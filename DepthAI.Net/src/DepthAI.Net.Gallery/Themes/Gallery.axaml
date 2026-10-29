@@ -1,0 +1,437 @@
+<!--
+  Gaya kontrol Depth Field, dibagi dengan Jack The Code Bender. Bagian bawah berkas berisi
+  tambahan khas galeri.
+
+  Nada instrumen ukur: label panel huruf kapital dengan tracking lebar, angka
+  tabular, radius kecil, dan aksen dipakai hemat. Kebolehan visualnya dihabiskan
+  di satu tempat saja — depth ribbon — sisanya dijaga tenang.
+ -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Label panel: penanda alat ukur, bukan judul. -->
+  <Style Selector="TextBlock.panel-label">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource InkFaint}" />
+    <Setter Property="LetterSpacing" Value="1.4" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
+
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+  </Style>
+
+  <!-- Angka status memakai figur tabular supaya tidak bergeser saat berubah. -->
+  <Style Selector="TextBlock.metric">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+  </Style>
+
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource SurfaceDeep}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairLine}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+
+  <!-- Tombol dasar: tenang, tanpa isian, sampai di-hover. -->
+  <Style Selector="Button.tool">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="Button.tool:disabled /template/ ContentPresenter">
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource InkFaint}" />
+  </Style>
+
+  <!-- Aksi utama memakai ujung "dekat" peta warna: hangat berarti langsung. -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource AccentNear}" />
+    <!-- Tinta di atas aksen dibalik antar tema: amber terang butuh teks gelap, amber gelap butuh teks terang. -->
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentNear}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="Button.primary /template/ ContentPresenter">
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource OnAccentNear}" />
+  </Style>
+
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentNear}" />
+    <Setter Property="Opacity" Value="0.85" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource OnAccentNear}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairLine}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentFar}" />
+  </Style>
+
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairLine}" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="MinHeight" Value="30" />
+  </Style>
+
+  <!-- Fokus keyboard harus selalu terlihat, termasuk pada tombol tanpa isian. -->
+  <Style Selector=":is(Button):focus-visible /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="MenuItem">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="TabItem">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+  </Style>
+
+  <Style Selector="TabItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <!-- Tambahan khas galeri. -->
+
+  <Styles.Resources>
+    <!--
+      Chakra Petch hanya untuk judul, angka hasil, dan nama: bentuknya yang bersudut seperti
+      tulisan pada pelat alat ukur. Teks bacaan tetap Inter.
+     -->
+    <FontFamily x:Key="DisplayFont">avares://DepthAI.Net.Gallery/Assets/Fonts#Chakra Petch</FontFamily>
+
+    <!-- Depth ribbon yang diputar tegak: garis pindai di panggung. -->
+    <LinearGradientBrush x:Key="DepthRibbonVertical" StartPoint="0%,0%" EndPoint="0%,100%">
+      <GradientStop Color="#DB3A07" Offset="0.0" />
+      <GradientStop Color="#FE9B2D" Offset="0.12" />
+      <GradientStop Color="#D2E935" Offset="0.25" />
+      <GradientStop Color="#62FC6B" Offset="0.38" />
+      <GradientStop Color="#1BCFD4" Offset="0.5" />
+      <GradientStop Color="#39A2FC" Offset="0.62" />
+      <GradientStop Color="#4675ED" Offset="0.75" />
+      <GradientStop Color="#4145AB" Offset="0.88" />
+      <GradientStop Color="#30123B" Offset="1.0" />
+    </LinearGradientBrush>
+  </Styles.Resources>
+
+  <Style Selector="TextBlock.wordmark">
+    <Setter Property="FontFamily" Value="{DynamicResource DisplayFont}" />
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.wordmark.accent">
+    <Setter Property="Foreground" Value="{DynamicResource AccentNear}" />
+  </Style>
+
+  <Style Selector="TextBlock.stage-title">
+    <Setter Property="FontFamily" Value="{DynamicResource DisplayFont}" />
+    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="TextBlock.headline">
+    <Setter Property="FontFamily" Value="{DynamicResource DisplayFont}" />
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="27" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <!-- Eyebrow sektor: mengatakan untuk siapa use case ini, bukan hiasan. -->
+  <Style Selector="TextBlock.eyebrow">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1.2" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentMid}" />
+  </Style>
+
+  <Style Selector="TextBlock.item-title">
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="TextBlock.body">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="LineHeight" Value="19" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="Border.segmented">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="3" />
+  </Style>
+
+  <Style Selector="RadioButton.segment">
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border x:Name="PART_Surface" Background="Transparent" CornerRadius="5" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="RadioButton.segment:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="RadioButton.segment:checked">
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+  </Style>
+
+  <Style Selector="RadioButton.segment:checked /template/ Border#PART_Surface">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
+  </Style>
+
+  <Style Selector="RadioButton.segment:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+
+  <Style Selector="RadioButton.segment:focus-visible /template/ Border#PART_Surface">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="Border.device-chip">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="CornerRadius" Value="13" />
+    <Setter Property="Padding" Value="12,6" />
+  </Style>
+
+  <!-- Saringan sektor sebagai cip. -->
+  <Style Selector="ListBox.chips">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="ListBox.chips ListBoxItem">
+    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="Margin" Value="3" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+  </Style>
+
+  <Style Selector="ListBox.chips ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+  </Style>
+
+  <Style Selector="ListBox.chips ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentNearSoft}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentNear}" />
+  </Style>
+
+  <Style Selector="ListBox.usecases">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="ListBox.usecases ListBoxItem">
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+
+  <Style Selector="ListBox.usecases ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceMid}" />
+  </Style>
+
+  <Style Selector="ListBox.usecases ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+  </Style>
+
+  <Style Selector="Border.stage">
+    <Setter Property="Background" Value="{DynamicResource EditorBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HairLine}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+
+  <Style Selector="Border.live-badge">
+    <Setter Property="Background" Value="#D90E1417" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentMid}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.live-badge TextBlock">
+    <Setter Property="Foreground" Value="#E8F1F2" />
+  </Style>
+
+  <Style Selector="ListBox.samples">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+  </Style>
+
+  <Style Selector="ListBox.samples ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Opacity" Value="0.7" />
+  </Style>
+
+  <Style Selector="ListBox.samples ListBoxItem:pointerover">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="ListBox.samples ListBoxItem:selected">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="ListBox.samples ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Border.recorded-dot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="{DynamicResource AccentMid}" />
+    <Setter Property="BorderBrush" Value="#10191E" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Button.primary:disabled /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+    <Setter Property="TextBlock.Foreground" Value="{DynamicResource InkFaint}" />
+  </Style>
+
+  <Style Selector="Grid.metric-row">
+    <Setter Property="Margin" Value="0,4" />
+  </Style>
+
+  <Style Selector="TextBlock.metric-label">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{DynamicResource InkMuted}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.metric-value">
+    <Setter Property="FontFamily" Value="{DynamicResource DisplayFont}" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.bar-track">
+    <Setter Property="Height" Value="5" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceNear}" />
+  </Style>
+
+  <Style Selector="Border.bar-fill">
+    <Setter Property="Height" Value="5" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{DynamicResource AccentMid}" />
+  </Style>
+
+  <Style Selector="Rectangle.rule">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Fill" Value="{DynamicResource HairLine}" />
+    <Setter Property="Margin" Value="0,20,0,16" />
+  </Style>
+
+  <Style Selector="Border.note">
+    <Setter Property="Background" Value="{DynamicResource AccentNearSoft}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentNear}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+
+  <Style Selector="Border.note TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="LineHeight" Value="16" />
+  </Style>
+
+  <Style Selector="TextBlock.specimen-key">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource InkFaint}" />
+    <Setter Property="Margin" Value="0,0,0,7" />
+  </Style>
+
+  <Style Selector=":is(TextBlock).specimen-value">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBright}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,0,0,7" />
+  </Style>
+
+</Styles>

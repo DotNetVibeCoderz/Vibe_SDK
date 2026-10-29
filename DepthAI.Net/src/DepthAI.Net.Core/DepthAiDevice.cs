@@ -38,6 +38,9 @@ public sealed class DepthAiDevice : IAsyncDisposable
     private readonly Lock _gate = new();
     private readonly Dictionary<string, FrameStream<Frame>> _streams = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IPacketConverter> _converters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<long, InferenceWaiter> _waiters = [];
+
+    private long _hostSequence;
 
     private Pipeline? _pipeline;
     private int _disposed;
@@ -242,6 +245,95 @@ public sealed class DepthAiDevice : IAsyncDisposable
             nodeName, config.ConfidenceThreshold, config.IouThreshold);
     }
 
+    /// <summary>
+    /// Mengirim satu gambar ke <see cref="HostInputNode"/> di pipeline yang berjalan. Hasil node
+    /// hilirnya muncul di stream keluarannya seperti hasil frame kamera.
+    /// </summary>
+    /// <param name="inputName">Nama node HostInput.</param>
+    /// <param name="frame">Gambar Bgr888, Rgb888, atau Gray8. Isinya disalin sebelum metode kembali.</param>
+    /// <returns>Nomor urut yang dibawa frame hasil untuk gambar ini.</returns>
+    public long SendFrame(string inputName, ImageFrame frame)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(inputName);
+        ArgumentNullException.ThrowIfNull(frame);
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        RequireHostInput(inputName);
+
+        var sequence = Interlocked.Increment(ref _hostSequence);
+        _session.SendFrame(inputName, frame, sequence);
+        return sequence;
+    }
+
+    /// <summary>
+    /// Mengirim gambar ke perangkat lalu menunggu hasilnya di <paramref name="outputStream"/>.
+    /// Cara paling ringkas menjalankan model pada foto atau berkas: satu panggilan, satu hasil.
+    /// </summary>
+    /// <typeparam name="T">Tipe frame hasil, misalnya <see cref="DetectionFrame"/> atau <see cref="NeuralTensorFrame"/>.</typeparam>
+    /// <param name="inputName">Nama node HostInput.</param>
+    /// <param name="frame">Gambar yang diinferensi.</param>
+    /// <param name="outputStream">Stream keluaran node yang diumpani HostInput.</param>
+    /// <param name="timeout">Batas tunggu; bawaan 10 detik.</param>
+    /// <param name="cancellationToken">Membatalkan penantian.</param>
+    /// <returns>
+    /// Frame hasil milik pemanggil: tidak didaur ulang setelah callback seperti frame stream,
+    /// jadi pemanggil yang wajib membuangnya.
+    /// </returns>
+    /// <exception cref="TimeoutException">Perangkat tidak menjawab dalam <paramref name="timeout"/>.</exception>
+    public async Task<T> InferAsync<T>(
+        string inputName,
+        ImageFrame frame,
+        string outputStream,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
+        where T : Frame
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(inputName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputStream);
+        ArgumentNullException.ThrowIfNull(frame);
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        RequireHostInput(inputName);
+        _ = GetStreamCore(outputStream);
+
+        var sequence = Interlocked.Increment(ref _hostSequence);
+        var waiter = new InferenceWaiter(outputStream);
+        lock (_gate)
+        {
+            _waiters[sequence] = waiter;
+        }
+
+        try
+        {
+            _session.SendFrame(inputName, frame, sequence);
+            var limit = timeout ?? TimeSpan.FromSeconds(10);
+            Frame result;
+            try
+            {
+                result = await waiter.Result.Task.WaitAsync(limit, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                throw new TimeoutException(
+                    $"Perangkat tidak menjawab gambar #{sequence} di stream '{outputStream}' dalam {limit.TotalSeconds:0.#} detik.");
+            }
+
+            if (result is T typed)
+            {
+                return typed;
+            }
+
+            result.Dispose();
+            throw new InvalidCastException(
+                $"Stream '{outputStream}' menghasilkan {result.GetType().Name}, bukan {typeof(T).Name}.");
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                _waiters.Remove(sequence);
+            }
+        }
+    }
+
     /// <summary>Membaca telemetri kesehatan perangkat.</summary>
     public DeviceTelemetry ReadTelemetry() => _session.ReadTelemetry();
 
@@ -283,6 +375,20 @@ public sealed class DepthAiDevice : IAsyncDisposable
         logger.LogInformation("Perangkat {Device} terbuka lewat backend {Backend}.", device, backend.Name);
 
         return new DepthAiDevice(backend, ownsBackend, session, logger);
+    }
+
+    private void RequireHostInput(string inputName)
+    {
+        lock (_gate)
+        {
+            var pipeline = _pipeline
+                ?? throw new InvalidOperationException("Belum ada pipeline yang berjalan; panggil StartAsync() dulu.");
+
+            if (!pipeline.Nodes.OfType<HostInputNode>().Any(n => string.Equals(n.Name, inputName, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new KeyNotFoundException($"Pipeline yang berjalan tidak punya HostInput bernama '{inputName}'.");
+            }
+        }
     }
 
     private FrameStream<Frame> GetStreamCore(string name)
@@ -338,11 +444,34 @@ public sealed class DepthAiDevice : IAsyncDisposable
     {
         FrameStream<Frame>? stream;
         IPacketConverter? converter;
+        InferenceWaiter? waiter;
 
         lock (_gate)
         {
             _streams.TryGetValue(packet.StreamName, out stream);
             _converters.TryGetValue(packet.StreamName, out converter);
+            if (_waiters.TryGetValue(packet.SequenceNumber, out waiter)
+                && !string.Equals(waiter.StreamName, packet.StreamName, StringComparison.OrdinalIgnoreCase))
+            {
+                waiter = null;
+            }
+        }
+
+        if (waiter is not null && converter is not null)
+        {
+            // Frame stream dibuang setelah callback, jadi penanti InferAsync mendapat
+            // konversi sendiri yang hidupnya dipegang pemanggil.
+            try
+            {
+                if (converter.Convert(packet) is { } owned && !waiter.Result.TrySetResult(owned))
+                {
+                    owned.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                waiter.Result.TrySetException(ex);
+            }
         }
 
         if (stream is null || converter is null)
@@ -365,6 +494,13 @@ public sealed class DepthAiDevice : IAsyncDisposable
             _logger.LogError(ex, "Gagal mengubah paket dari stream {Stream}.", packet.StreamName);
             Error?.Invoke(this, new DeviceErrorEventArgs(packet.StreamName, ex));
         }
+    }
+
+    private sealed class InferenceWaiter(string streamName)
+    {
+        public string StreamName { get; } = streamName;
+
+        public TaskCompletionSource<Frame> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     /// <summary>Mengubah paket mentah backend menjadi frame publik.</summary>

@@ -57,10 +57,38 @@ IFrameStream<T>     GetStream<T>(string name) where T : Frame
 IFrameStream<Frame> GetStream(string name)
 DeviceTelemetry     ReadTelemetry()
 
+long    SendFrame(string inputName, ImageFrame frame)
+Task<T> InferAsync<T>(string inputName, ImageFrame frame, string outputStream,
+                      TimeSpan? timeout = null, CancellationToken ct = default) where T : Frame
+
 event EventHandler<DeviceErrorEventArgs>? Error
 ```
 
 `DepthAiDevice` adalah `IAsyncDisposable`; pakai `await using`.
+
+Token di `StartAsync` hanya membatalkan proses memulai. Stream tetap berjalan sampai `StopAsync`.
+
+#### Gambar dari host
+
+`SendFrame` mengirim gambar (Bgr888, Rgb888, atau Gray8) ke `HostInputNode` di pipeline yang
+berjalan. Hasil node hilirnya muncul di stream keluarannya dengan nomor urut yang dikembalikan
+`SendFrame`. `InferAsync` menggabungkan keduanya: kirim satu gambar, tunggu satu hasil.
+
+```csharp
+var pipeline = Pipeline.Create();
+var image = pipeline.AddHostInput("image");
+var nn = pipeline.AddDetectionNetwork("detector", n => n.Model = model);
+image.Out.LinkTo(nn.Input);
+pipeline.AddOutputStream(nn.Detections, "detections");
+await device.StartAsync(pipeline);
+
+using var frame = ImageFrame.CopyFrom(bgr, 640, 640, PixelFormat.Bgr888);
+using var result = await device.InferAsync<DetectionFrame>("image", frame, "detections");
+```
+
+Frame dari `InferAsync` milik pemanggil: frame itu tidak didaur ulang setelah callback seperti
+frame stream, jadi wajib di-`Dispose`. Di simulasi isi gambar tidak dilihat (tensornya tetap
+sintetis), tetapi iramanya sama: satu gambar, satu hasil.
 
 ### `DeviceCapabilities`
 
@@ -161,6 +189,7 @@ Pipeline BuildUnvalidated()                               // untuk pipeline sete
 | `ImageManipNode` | `input` | `out` |
 | `VideoEncoderNode` | `input` | `bitstream` |
 | `ImuNode` | — | `out` |
+| `HostInputNode` | — | `out` (hanya ke satu masukan, tidak bisa dialirkan ke host) |
 
 Pakai `passthrough` — bukan preview kamera — saat menggambar overlay, supaya kotak sejajar
 dengan frame yang benar-benar diinferensi.

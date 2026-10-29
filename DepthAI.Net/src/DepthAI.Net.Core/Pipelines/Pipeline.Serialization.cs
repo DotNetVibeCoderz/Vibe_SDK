@@ -37,6 +37,7 @@ public sealed partial class Pipeline
             ["ImageManip"] = static name => new ImageManipNode(name),
             ["VideoEncoder"] = static name => new VideoEncoderNode(name),
             ["Imu"] = static name => new ImuNode(name),
+            ["HostInput"] = static name => new HostInputNode(name),
         };
 
     /// <summary>Tipe node yang dikenali loader — dipakai tooling untuk melengkapi editor.</summary>

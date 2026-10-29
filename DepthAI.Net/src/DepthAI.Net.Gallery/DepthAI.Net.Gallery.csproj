@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>DepthAI.Gallery</RootNamespace>
+    <AssemblyName>DepthAI.Net.Gallery</AssemblyName>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DepthAI.Net.Gallery.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="..\..\icon.png" Link="Assets\icon.png" />
+    <!--
+      Gambar contoh dan hasil rekamannya dibaca dari disk, bukan resource, supaya
+      mode perekaman (opsi record) bisa menulis ulang hasilnya ke folder yang sama.
+    -->
+    <None Include="Samples\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="ModelConfigs\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

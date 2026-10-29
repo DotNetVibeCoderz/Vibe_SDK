@@ -20,6 +20,7 @@ Dibuat oleh **Gravicode Studios**, dipimpin **Kang Fadhil**.
 | [Konsep inti](#konsep-inti--core-concepts) | Pipeline, stream, frame, inferensi |
 | [CLI](#cli) | `depthai-dotnet-cli` |
 | [Wizard](#jack-the-code-bender) | Aplikasi desktop dengan asisten LLM |
+| [Gallery](#depthainet-gallery) | 14 use case nyata, dijalankan di kamera |
 | [Dokumentasi lengkap](#dokumentasi--documentation) | Referensi API dan tutorial |
 
 ---
@@ -70,12 +71,12 @@ SDK ini punya dua backend di balik satu antarmuka:
 | `NativeBackend` | Hardware OAK sungguhan lewat shim `depthai-c` di atas depthai-core 3.11 | **Windows x64**, **Linux x64**, dan **Linux ARM64** (`DepthAI.Net.Runtime.<rid>`) |
 
 ```xml
-<PackageReference Include="DepthAI.Net" Version="0.5.0" />
-<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net" Version="0.6.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
-<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
-<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.5.0"
+<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.6.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
 ```
 
@@ -274,6 +275,48 @@ selalu menang atas berkas, dan tidak ikut ter-commit.
 
 ---
 
+## DepthAI.Net Gallery
+
+Etalase 14 use case nyata — kepatuhan APD, gerbang parkir, pemindaian paket, penyamaran wajah,
+analitik pengunjung, pelatih postur, kepadatan kerumunan, digitalisasi dokumen, dan lainnya —
+masing-masing dengan model Luxonis Model Zoo yang berjalan **di dalam kamera**.
+
+![DepthAI.Net Gallery](docs/images/gallery/gallery-ppe.jpg)
+
+```bash
+dotnet run --project src/DepthAI.Net.Gallery
+```
+
+- **Gambar contoh**: gambar dikirim ke kamera lewat `HostInputNode`, hasilnya kembali ke layar
+- **Kamera live**: model yang sama pada preview kamera
+- **Tanpa kamera**: hasil yang direkam dari OAK-1 sungguhan, lengkap dengan MxId dan waktunya
+- **Tab Kode**: program C# lengkap per use case, versi gambar dan versi live
+
+| | |
+| --- | --- |
+| ![Analitik pengunjung](docs/images/gallery/gallery-audience.jpg) | ![Pelatih postur](docs/images/gallery/gallery-posture.jpg) |
+| ![Kepadatan kerumunan](docs/images/gallery/gallery-crowd.jpg) | ![Latar virtual](docs/images/gallery/gallery-background.jpg) |
+
+Daftar lengkap, angka di OAK-1, dan batas tiap model: [docs/id/gallery-app.md](docs/id/gallery-app.md)
+· [English](docs/en/gallery-app.md).
+
+### Gambar dari host / Images from the host
+
+Pipeline bisa diumpani gambar dari aplikasi, bukan hanya dari kamera:
+
+```csharp
+var pipeline = Pipeline.Create();
+var image = pipeline.AddHostInput("image");
+var nn = pipeline.AddDetectionNetwork("detector", n => n.Model = model);
+image.Out.LinkTo(nn.Input);
+pipeline.AddOutputStream(nn.Detections, "detections");
+await device.StartAsync(pipeline);
+
+using var result = await device.InferAsync<DetectionFrame>("image", frame, "detections");
+```
+
+---
+
 ## Sample
 
 | Sample | Isi |
@@ -296,7 +339,7 @@ tidak pernah menyimpang.
 
 ```bash
 dotnet build DepthAI.Net.slnx          # seluruh solusi
-dotnet test                            # semua test (114)
+dotnet test                            # semua test (227)
 dotnet test tests/DepthAI.Net.Core.Tests
 dotnet test --filter "FullyQualifiedName~YoloParser"
 ```
@@ -314,6 +357,7 @@ hardware, termasuk parser inferensi sungguhan.
 | [Tutorial](docs/id/tutorials.md) | [Tutorials](docs/en/tutorials.md) |
 | [Runtime native](docs/id/native-runtime.md) | [Native runtime](docs/en/native-runtime.md) |
 | [Galeri](docs/id/gallery.md) | [Gallery](docs/en/gallery.md) |
+| [DepthAI.Net Gallery](docs/id/gallery-app.md) | [DepthAI.Net Gallery](docs/en/gallery-app.md) |
 | [Sinkronisasi depthai-core](docs/id/upstream-sync.md) | [depthai-core sync](docs/en/upstream-sync.md) |
 
 ---

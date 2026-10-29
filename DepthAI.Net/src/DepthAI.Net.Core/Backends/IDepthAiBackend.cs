@@ -1,5 +1,6 @@
 using DepthAI.Devices;
 using DepthAI.Pipelines;
+using DepthAI.Streaming;
 
 namespace DepthAI.Backends;
 
@@ -63,11 +64,20 @@ public interface IDeviceSession : IAsyncDisposable
     /// <summary>
     /// Mengunggah pipeline dan mulai menjalankannya. Paket akan dikirim ke
     /// <paramref name="onPacket"/> dari thread latar; implementasi harus memanggilnya
-    /// secara berurutan per stream.
+    /// secara berurutan per stream. <paramref name="cancellationToken"/> hanya membatalkan
+    /// proses memulai; stream berjalan sampai <see cref="StopAsync"/>.
     /// </summary>
     Task StartAsync(Pipeline pipeline, Action<DevicePacket> onPacket, CancellationToken cancellationToken = default);
 
     Task StopAsync(CancellationToken cancellationToken = default);
 
     DeviceTelemetry ReadTelemetry();
+
+    /// <summary>
+    /// Mengirim satu gambar ke node <c>HostInput</c> bernama <paramref name="inputName"/> di
+    /// pipeline yang sedang berjalan. Hasil node hilirnya membawa <paramref name="sequenceNumber"/>.
+    /// </summary>
+    /// <remarks>Implementasi bawaan menolak, supaya backend pihak ketiga tetap terkompilasi.</remarks>
+    void SendFrame(string inputName, ImageFrame frame, long sequenceNumber)
+        => throw new NotSupportedException($"Backend ini tidak mendukung pengiriman gambar dari host.");
 }

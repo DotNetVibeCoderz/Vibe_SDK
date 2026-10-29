@@ -5,6 +5,24 @@ captured from a running system.
 
 ---
 
+## DepthAI.Net Gallery
+
+A showcase app with 14 real use cases running inside the OAK camera, from PPE compliance to
+crowd density. Every image below was captured from the running app with an OAK-1 connected.
+
+| | |
+| --- | --- |
+| ![Intersection traffic count](../images/gallery/gallery-traffic.jpg) | ![Workspace inventory](../images/gallery/gallery-instances.jpg) |
+| ![Parking gate](../images/gallery/gallery-plates.jpg) | ![Document digitisation](../images/gallery/gallery-documents.jpg) |
+
+Full list and the story behind each use case: [DepthAI.Net Gallery](gallery-app.md).
+
+```bash
+dotnet run --project src/DepthAI.Net.Gallery
+```
+
+---
+
 ## Jack The Code Bender
 
 ![Jack The Code Bender — dark theme](../images/wizard-dark.png)

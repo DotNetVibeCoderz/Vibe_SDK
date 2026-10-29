@@ -1,0 +1,190 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:DepthAI.Gallery.Views"
+        xmlns:edit="using:AvaloniaEdit"
+        x:Class="DepthAI.Gallery.Views.MainWindow"
+        Title="DepthAI.Net Gallery"
+        Icon="avares://DepthAI.Net.Gallery/Assets/icon.png"
+        Width="1440" Height="900" MinWidth="1100" MinHeight="680"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SurfaceAbyss}">
+
+  <Grid RowDefinitions="52,*,Auto">
+
+    <!-- Bilah atas: nama, pilihan sumber gambar, dan status kamera. -->
+    <Border Grid.Row="0" Background="{DynamicResource SurfaceDeep}" BorderBrush="{DynamicResource HairLine}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" Margin="18,0">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Image Source="avares://DepthAI.Net.Gallery/Assets/icon.png" Width="24" Height="24" />
+          <TextBlock Classes="wordmark" Text="DepthAI.Net" />
+          <TextBlock Classes="wordmark accent" Text="Gallery" />
+        </StackPanel>
+
+        <Border Grid.Column="2" Classes="segmented" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal">
+            <RadioButton x:Name="ImageModeButton" Classes="segment" GroupName="mode" IsChecked="True" Content="Gambar contoh" />
+            <RadioButton x:Name="LiveModeButton" Classes="segment" GroupName="mode" Content="Kamera live" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="4" Classes="device-chip" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse x:Name="DeviceDot" Width="8" Height="8" Fill="{DynamicResource InkFaint}" VerticalAlignment="Center" />
+            <TextBlock x:Name="DeviceText" Classes="metric" Text="Mencari kamera…" VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="300,*,340">
+
+      <!-- Kiri: saringan sektor dan daftar use case. -->
+      <Border Grid.Column="0" Background="{DynamicResource SurfaceDeep}" BorderBrush="{DynamicResource HairLine}" BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <TextBlock Grid.Row="0" Classes="panel-label" Text="SEKTOR" Margin="16,16,16,8" />
+          <ListBox Grid.Row="1" x:Name="SectorList" Classes="chips" Margin="12,0,12,10" SelectionMode="Single">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+          </ListBox>
+          <ListBox Grid.Row="2" x:Name="UseCaseList" Classes="usecases" Margin="8,4,8,8">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Spacing="3">
+                  <TextBlock Classes="eyebrow" Text="{Binding SectorText}" />
+                  <TextBlock Classes="item-title" Text="{Binding Title}" />
+                  <TextBlock Classes="caption" Text="{Binding Summary}" TextWrapping="Wrap" MaxLines="2" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <!-- Tengah: panggung dan pilihan gambar. -->
+      <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="22,18,22,14">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+          <StackPanel Spacing="2">
+            <TextBlock x:Name="SectorEyebrow" Classes="eyebrow" />
+            <TextBlock x:Name="TitleText" Classes="stage-title" />
+          </StackPanel>
+          <Border Grid.Column="1" Classes="segmented" VerticalAlignment="Bottom">
+            <StackPanel Orientation="Horizontal">
+              <RadioButton x:Name="ResultTabButton" Classes="segment" GroupName="tab" IsChecked="True" Content="Hasil" />
+              <RadioButton x:Name="CodeTabButton" Classes="segment" GroupName="tab" Content="Kode" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Border Grid.Row="1" Classes="stage">
+          <Grid>
+            <views:StageView x:Name="Stage" />
+            <Border x:Name="LiveBadge" Classes="live-badge" IsVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12">
+              <TextBlock x:Name="LiveBadgeText" Classes="metric" Text="LIVE" />
+            </Border>
+            <Grid x:Name="CodePanel" IsVisible="False" RowDefinitions="Auto,*">
+              <Grid ColumnDefinitions="*,Auto" Margin="14,10,10,6">
+                <TextBlock x:Name="CodeCaption" Classes="caption" VerticalAlignment="Center" />
+                <Button Grid.Column="1" x:Name="CopyCodeButton" Classes="tool" Content="Salin kode" />
+              </Grid>
+              <edit:TextEditor Grid.Row="1" x:Name="CodeEditor" IsReadOnly="True" ShowLineNumbers="True"
+                               FontFamily="{DynamicResource MonoFont}" FontSize="12.5" Padding="6,4"
+                               HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+            </Grid>
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+          <ListBox x:Name="SampleList" Classes="samples" Height="78">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="6" />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ToolTip.Tip="{Binding Tip}">
+                  <Image Source="{Binding Thumbnail}" Width="112" Height="63" Stretch="UniformToFill" />
+                  <Border Classes="recorded-dot" IsVisible="{Binding IsRecorded}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="14,0,0,0" VerticalAlignment="Center">
+            <Button x:Name="OpenImageButton" Classes="tool" Content="Gambar sendiri…" />
+            <Button x:Name="RunButton" Classes="primary" Content="Jalankan di kamera" />
+          </StackPanel>
+        </Grid>
+      </Grid>
+
+      <!-- Kanan: jawaban, konteks lapangan, dan label spesimen. -->
+      <Border Grid.Column="2" Background="{DynamicResource SurfaceDeep}" BorderBrush="{DynamicResource HairLine}" BorderThickness="1,0,0,0">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="20,18,20,20" Spacing="0">
+            <TextBlock Classes="panel-label" Text="HASIL" />
+            <TextBlock x:Name="HeadlineText" Classes="headline" TextWrapping="Wrap" />
+
+            <ItemsControl x:Name="MetricList" Margin="0,14,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="*,Auto" Classes="metric-row">
+                    <TextBlock Classes="metric-label" Text="{Binding Label}" />
+                    <TextBlock Grid.Column="1" Classes="metric-value" Text="{Binding Value}" Foreground="{Binding Brush}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ItemsControl x:Name="ScoreList" Margin="0,10,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Spacing="3" Margin="0,0,0,8">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Classes="metric-label" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Classes="metric" Text="{Binding Percent}" />
+                    </Grid>
+                    <Border Classes="bar-track">
+                      <Border Classes="bar-fill" Width="{Binding BarWidth}" HorizontalAlignment="Left" />
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Rectangle Classes="rule" />
+            <TextBlock Classes="panel-label" Text="DI LAPANGAN" />
+            <TextBlock x:Name="ApplicationText" Classes="body" TextWrapping="Wrap" />
+            <Border x:Name="NoteBox" Classes="note" Margin="0,12,0,0">
+              <TextBlock x:Name="NoteText" Classes="caption" TextWrapping="Wrap" />
+            </Border>
+
+            <Rectangle Classes="rule" />
+            <TextBlock Classes="panel-label" Text="LABEL SPESIMEN" />
+            <Grid x:Name="SpecimenGrid" ColumnDefinitions="78,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Classes="specimen">
+              <TextBlock Grid.Row="0" Classes="specimen-key" Text="MODEL" />
+              <SelectableTextBlock Grid.Row="0" Grid.Column="1" x:Name="SpecModel" Classes="specimen-value" />
+              <TextBlock Grid.Row="1" Classes="specimen-key" Text="MASUKAN" />
+              <TextBlock Grid.Row="1" Grid.Column="1" x:Name="SpecInput" Classes="specimen-value" />
+              <TextBlock Grid.Row="2" Classes="specimen-key" Text="KAMERA" />
+              <TextBlock Grid.Row="2" Grid.Column="1" x:Name="SpecDevice" Classes="specimen-value" />
+              <TextBlock Grid.Row="3" Classes="specimen-key" Text="WAKTU" />
+              <TextBlock Grid.Row="3" Grid.Column="1" x:Name="SpecTime" Classes="specimen-value" />
+              <TextBlock Grid.Row="4" Classes="specimen-key" Text="SUMBER" />
+              <TextBlock Grid.Row="4" Grid.Column="1" x:Name="SpecSource" Classes="specimen-value" />
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+
+    <!-- Status bar dengan depth ribbon, sama seperti Jack. -->
+    <Border Grid.Row="2" Background="{DynamicResource SurfaceDeep}">
+      <StackPanel>
+        <Rectangle Height="2" Fill="{StaticResource DepthRibbon}" />
+        <TextBlock x:Name="StatusText" Classes="metric" Margin="18,6,18,7" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

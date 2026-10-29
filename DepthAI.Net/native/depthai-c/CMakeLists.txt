@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(depthai-c VERSION 0.5.0 LANGUAGES CXX)
+project(depthai-c VERSION 0.6.0 LANGUAGES CXX)
 
 # DEPTHAI_CORE_DIR menunjuk paket depthai-core terpasang: rilis prebuilt Luxonis (Windows)
 # atau hasil `cmake --install` dari sumber (Linux, lihat build.sh).

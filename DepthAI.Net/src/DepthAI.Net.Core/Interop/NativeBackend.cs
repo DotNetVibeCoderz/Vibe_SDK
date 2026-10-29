@@ -216,6 +216,7 @@ internal sealed class NativeSession(
         }
 
         pipeline.Validate(Capabilities).ThrowIfInvalid();
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Payload model harus diunggah sebelum pipeline mulai, karena node NN
         // merujuk model berdasarkan nama di dalam JSON pipeline.
@@ -233,7 +234,10 @@ internal sealed class NativeSession(
             NativeMethods.StartPipeline(_handle, pipeline.ToJson(indented: false)),
             "Memulai pipeline");
 
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        // Token pemanggil hanya membatalkan proses memulai, bukan umur stream. Dulu token ini
+        // ditautkan ke loop polling: membatalkannya menghentikan polling diam-diam sementara
+        // pipeline native tetap berjalan, dan StartAsync berikutnya gagal "pipeline sudah berjalan".
+        var cts = new CancellationTokenSource();
         _pollCts = cts;
         _pollTask = Task.Factory.StartNew(
             () => PollLoop(onPacket, cts.Token),
@@ -276,6 +280,37 @@ internal sealed class NativeSession(
                 logger.LogWarning("Menghentikan pipeline mengembalikan {Status}: {Error}",
                     status, NativeRuntime.GetLastError());
             }
+        }
+    }
+
+    public void SendFrame(string inputName, ImageFrame frame, long sequenceNumber)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(inputName);
+        ArgumentNullException.ThrowIfNull(frame);
+        EnsureOpen();
+
+        if (frame.Format is not (PixelFormat.Bgr888 or PixelFormat.Rgb888 or PixelFormat.Gray8))
+        {
+            throw new NotSupportedException($"HostInput menerima Bgr888, Rgb888, atau Gray8, bukan {frame.Format}.");
+        }
+
+        // Shim mengharapkan baris rapat; frame dengan padding baris disalin dulu.
+        var rowBytes = frame.Width * frame.BytesPerPixel;
+        var pixels = frame.Stride == rowBytes ? frame.Pixels[..(rowBytes * frame.Height)] : Pack(frame, rowBytes);
+
+        NativeRuntime.ThrowIfFailed(
+            NativeMethods.SendFrame(_handle, inputName, frame.Width, frame.Height, (int)frame.Format, pixels, pixels.Length, sequenceNumber),
+            $"Mengirim gambar ke '{inputName}'");
+
+        static ReadOnlySpan<byte> Pack(ImageFrame frame, int rowBytes)
+        {
+            var packed = new byte[rowBytes * frame.Height];
+            for (var y = 0; y < frame.Height; y++)
+            {
+                frame.GetRow(y)[..rowBytes].CopyTo(packed.AsSpan(y * rowBytes));
+            }
+
+            return packed;
         }
     }
 

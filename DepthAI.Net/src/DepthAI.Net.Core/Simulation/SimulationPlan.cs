@@ -13,6 +13,7 @@ namespace DepthAI.Simulation;
 internal sealed class SimulationPlan
 {
     private readonly List<StreamGenerator> _generators = [];
+    private readonly HashSet<string> _hostInputs = new(StringComparer.OrdinalIgnoreCase);
 
     private SimulationPlan(SyntheticScene scene, int fps)
     {
@@ -45,6 +46,7 @@ internal sealed class SimulationPlan
             .Max();
 
         var plan = new SimulationPlan(new SyntheticScene(labels, seed), fps);
+        plan._hostInputs.UnionWith(pipeline.Nodes.OfType<HostInputNode>().Select(static n => n.Name));
 
         foreach (var stream in pipeline.OutputStreams)
         {
@@ -62,7 +64,8 @@ internal sealed class SimulationPlan
 
     public IEnumerable<DevicePacket> GeneratePackets(TimeSpan timestamp)
     {
-        foreach (var generator in _generators)
+        // Stream yang diumpani HostInput hanya menghasilkan paket saat host mengirim gambar.
+        foreach (var generator in _generators.Where(static g => g.HostInput is null))
         {
             var packet = generator.Generate(Scene, timestamp);
             if (packet is not null)
@@ -70,6 +73,43 @@ internal sealed class SimulationPlan
                 yield return packet;
             }
         }
+    }
+
+    /// <summary>
+    /// Paket untuk satu gambar yang dikirim host ke <paramref name="inputName"/>. Simulasi tidak
+    /// melihat isi gambarnya: tensornya tetap berasal dari adegan sintetis, hanya iramanya
+    /// yang mengikuti host, sama seperti perangkat sungguhan menjawab tiap gambar sekali.
+    /// </summary>
+    public IEnumerable<DevicePacket> GenerateForHostFrame(string inputName, long sequenceNumber, TimeSpan timestamp)
+    {
+        foreach (var generator in _generators.Where(g => string.Equals(g.HostInput, inputName, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (generator.Generate(Scene, timestamp) is { } packet)
+            {
+                yield return new DevicePacket
+                {
+                    StreamName = packet.StreamName,
+                    Kind = packet.Kind,
+                    Payload = packet.Payload,
+                    Width = packet.Width,
+                    Height = packet.Height,
+                    Format = packet.Format,
+                    Tensors = packet.Tensors,
+                    SequenceNumber = sequenceNumber,
+                    DeviceTimestamp = timestamp,
+                };
+            }
+        }
+    }
+
+    /// <summary>True bila pipeline punya node HostInput bernama <paramref name="inputName"/>.</summary>
+    public bool HasHostInput(string inputName)
+        => _hostInputs.Contains(inputName);
+
+    private static string? FeedingHostInput(NeuralNetworkNode nn, Pipeline pipeline)
+    {
+        var link = pipeline.Links.FirstOrDefault(l => string.Equals(l.To, nn.Input.Path, StringComparison.OrdinalIgnoreCase));
+        return link is not null && pipeline.ResolveOutput(link.From).Node is HostInputNode host ? host.Name : null;
     }
 
     private static StreamGenerator? CreateGenerator(string streamName, NodeOutput output, Pipeline pipeline)
@@ -106,7 +146,10 @@ internal sealed class SimulationPlan
             }
 
             case NeuralNetworkNode nn when output.Name is "detections" or "out":
-                return new TensorGenerator(streamName, nn.Model?.Metadata ?? ModelMetadata.Default);
+                return new TensorGenerator(streamName, nn.Model?.Metadata ?? ModelMetadata.Default)
+                {
+                    HostInput = FeedingHostInput(nn, pipeline),
+                };
 
             case NeuralNetworkNode nn when output.Name is "passthrough":
             {
@@ -156,6 +199,9 @@ internal sealed class SimulationPlan
         protected string StreamName { get; } = streamName;
 
         public abstract DevicePacket? Generate(SyntheticScene scene, TimeSpan timestamp);
+
+        /// <summary>Nama HostInput yang mengumpani stream ini, atau null bila diumpani kamera.</summary>
+        public string? HostInput { get; init; }
     }
 
     private sealed class ColorGenerator(string streamName, int width, int height, bool bgr)
