@@ -202,3 +202,61 @@ jobs:
             ${{ steps.sdk.outputs.dir }}/artifacts/nuget/*.nupkg
             ${{ steps.sdk.outputs.dir }}/artifacts/nuget/*.snupkg
           if-no-files-found: error
+
+  # Memakai paket hasil pack persis seperti pengguna: aplikasi baru yang hanya punya
+  # PackageReference, dan tool CLI yang di-install. Ini menguji jalur yang tidak tersentuh
+  # build di dalam repo — runtimes/<rid>/native di paket dan RUNPATH $ORIGIN di Linux.
+  verify-packages:
+    name: Uji paket (${{ matrix.os }})
+    needs: pack
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-22.04, windows-latest ]
+
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: feed
+
+      - name: Aplikasi konsumen memuat runtime native
+        shell: bash
+        run: |
+          version=$(ls feed/DepthAI.Net.Runtime.linux-x64.*.nupkg | sed -E 's/.*linux-x64\.(.*)\.nupkg/\1/')
+          rid=$([ "$RUNNER_OS" = "Windows" ] && echo win-x64 || echo linux-x64)
+          mkdir consumer && cd consumer
+          cat > nuget.config <<XML
+          <configuration><packageSources>
+            <add key="local" value="$GITHUB_WORKSPACE/feed" />
+          </packageSources></configuration>
+          XML
+          cat > consumer.csproj <<XML
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="DepthAI.Net" Version="$version" />
+              <PackageReference Include="DepthAI.Net.Runtime.$rid" Version="$version" />
+            </ItemGroup>
+          </Project>
+          XML
+          cat > Program.cs <<'CS'
+          using DepthAI.Interop;
+          System.Console.WriteLine($"native={NativeRuntime.IsAvailable} version={NativeRuntime.Version} reason={NativeRuntime.UnavailableReason}");
+          return NativeRuntime.IsAvailable ? 0 : 1;
+          CS
+          dotnet run -c Release
+
+      - name: Tool CLI memuat runtime native
+        shell: bash
+        run: |
+          version=$(ls feed/DepthAI.Net.Cli.*.nupkg | sed -E 's/.*Cli\.(.*)\.nupkg/\1/')
+          dotnet tool install DepthAI.Net.Cli --version "$version" --tool-path tool --add-source feed
+          out=$(./tool/depthai-dotnet-cli info)
+          echo "$out"
+          echo "$out" | grep -q "(depthai-core [0-9]" || { echo "Runtime native tidak termuat"; exit 1; }
