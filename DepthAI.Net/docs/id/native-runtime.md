@@ -5,12 +5,15 @@ shim `depthai-c`, cara memasangnya, cara membangunnya, dan batasannya.
 
 ## Keadaan sekarang
 
-| Kemampuan | Windows x64 | Linux x64 | macOS / ARM |
-| --- | --- | --- | --- |
-| Deteksi perangkat USB (ada/tidak, tahap boot, MxId) | ✅ tanpa pustaka native | ✅ sysfs | ❌ |
-| Runtime native termuat (`dai_get_version`, ABI cocok) | ✅ | ✅ diuji di CI | ❌ belum ada paket |
-| Membuka perangkat dan streaming | ✅ diuji dengan OAK-1 | ⚠️ belum diuji dengan kamera | ❌ |
-| Seluruh SDK di atas backend simulasi | ✅ | ✅ | ✅ |
+| Kemampuan | Windows x64 | Linux x64 | Linux ARM64 | macOS |
+| --- | --- | --- | --- | --- |
+| Deteksi perangkat USB (ada/tidak, tahap boot, MxId) | ✅ tanpa pustaka native | ✅ sysfs | ✅ sysfs | ❌ |
+| Runtime native termuat (`dai_get_version`, ABI cocok) | ✅ | ✅ diuji di CI | ✅ diuji di CI | ❌ belum ada paket |
+| Membuka perangkat dan streaming | ✅ diuji dengan OAK-1 | ⚠️ belum diuji dengan kamera | ⚠️ belum diuji dengan kamera | ❌ |
+| Seluruh SDK di atas backend simulasi | ✅ | ✅ | ✅ | ✅ |
+
+Linux ARM64 mencakup Raspberry Pi 4/5 dengan OS 64-bit (Raspberry Pi OS Bookworm) dan
+Jetson Orin dengan JetPack 6. JetPack 5 (Ubuntu 20.04, glibc 2.31) terlalu lama.
 
 Runtime Linux berasal dari kode shim yang sama dengan Windows dan depthai-core versi yang
 sama, dan CI membuktikan pustakanya termuat dari paket NuGet maupun tool CLI. Tapi belum
@@ -41,7 +44,13 @@ Tambahkan paket runtime di samping SDK:
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 <PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.5.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.5.0"
+                  Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
 ```
+
+Di Linux, rujuk paket x64 dan arm64 sekaligus. Aplikasi .NET portabel membawa keduanya di
+`runtimes/<rid>/native`, dan host memilih yang cocok dengan arsitektur mesin. Aplikasi yang
+dipublikasikan untuk satu RID (`dotnet publish -r linux-arm64`) hanya membawa satu.
 
 Tidak ada konfigurasi lain. `DepthAiDevice.OpenAsync()` memakai hardware bila runtime
 native termuat dan ada perangkat, selain itu jatuh ke simulasi. Untuk memaksa hardware:
@@ -55,8 +64,9 @@ await using var device = await DepthAiDevice.OpenAsync(
 | --- | --- | --- |
 | `DepthAI.Net.Runtime.win-x64` | `depthai-c.dll`, `depthai-core.dll` 3.11.0, `opencv_world4130.dll`, `dynamic_calibration.dll`, `libusb-1.0.dll`, runtime MSVC app-local (tidak butuh VC++ Redistributable) | ±54 MB |
 | `DepthAI.Net.Runtime.linux-x64` | `libdepthai-c.so`, `libdepthai-core.so` 3.11.0 (tanpa OpenCV), `libusb-1.0.so`, semuanya dengan RUNPATH `$ORIGIN` | ±22 MB |
+| `DepthAI.Net.Runtime.linux-arm64` | isi yang sama, dibangun native di ARM64 | ±22 MB |
 
-Linux x64 butuh **glibc 2.35 dan libstdc++ GLIBCXX_3.4.30** atau lebih baru (Ubuntu 22.04,
+Linux x64 dan ARM64 butuh **glibc 2.35 dan libstdc++ GLIBCXX_3.4.30** atau lebih baru (Ubuntu 22.04,
 Debian 12, Fedora 36, dan sesudahnya). Selain itu hanya `libc`, `libm`, `libstdc++`, dan
 `libgcc_s` dari sistem; libudev tidak dibutuhkan.
 
@@ -70,11 +80,13 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 Tanpa aturan ini perangkat tetap terlihat, tapi dilaporkan `Faulty`, dan membukanya gagal
 dengan pesan yang berisi perintah di atas.
 
-Template `dotnet new` dan proyek buatan Jack The Code Bender sudah menyertakan kedua referensi.
-Di dalam repo, `DepthAI.Net.Core.csproj` menyalin pustaka dari `artifacts/native/win-x64` dan
-`artifacts/native/linux-x64` (bila sudah dibangun) ke setiap proyek yang mereferensikannya:
-CLI, Wizard, sample, dan tes. Tool CLI membawa keduanya, jadi `depthai-dotnet-cli` membaca
-kamera di Windows maupun Linux (paketnya ±78 MB).
+Template `dotnet new` dan proyek buatan Jack The Code Bender sudah menyertakan referensi ini.
+Di dalam repo, `DepthAI.Net.Core.csproj` menyalin pustaka dari `artifacts/native/<rid>` (bila
+sudah dibangun) ke setiap proyek yang mereferensikannya: CLI, Wizard, sample, dan tes. Windows
+disalin rata ke folder output; Linux disalin ke `runtimes/<rid>/native`, karena x64 dan arm64
+memakai nama berkas yang sama, dan `NativeLibraryResolver` memuatnya dari sana. Tool CLI
+membawa ketiga platform, jadi `depthai-dotnet-cli` membaca kamera di Windows x64, Linux x64,
+dan Linux ARM64 (paketnya ±100 MB).
 
 ## Arsitektur
 
@@ -145,19 +157,23 @@ GitHub `windows-latest`; CI dan workflow publish menjalankan skrip ini sebelum p
 CMake memakai target impor buatan sendiri, bukan `find_package(depthai)`: config CMake rilis
 prebuilt mewajibkan OpenCV, padahal shim tidak memakai API OpenCV sama sekali.
 
-### Linux x64
+### Linux x64 dan ARM64
 
 ```bash
 sudo apt-get install ninja-build g++-12 pkg-config libudev-dev patchelf zip unzip \
   autoconf automake autoconf-archive libtool
 CC=gcc-12 CXX=g++-12 native/depthai-c/build.sh
-dotnet pack src/DepthAI.Net.Runtime.linux-x64
+dotnet pack src/DepthAI.Net.Runtime.linux-x64     # atau linux-arm64, sesuai mesin
 ```
+
+`build.sh` mengikuti arsitektur mesin tempatnya dijalankan (`uname -m`) dan tidak
+melakukan cross-compile. Di ARM64, vcpkg diminta memakai cmake dan ninja dari sistem
+(`VCPKG_FORCE_SYSTEM_BINARIES`), karena vcpkg tidak menyediakan binari prebuilt untuk ARM Linux.
 
 Luxonis tidak merilis paket C++ prebuilt untuk Linux, jadi skrip ini membangun depthai-core
 dari sumber dengan vcpkg bawaannya. Fitur yang tidak dipakai shim dimatikan: OpenCV (beserta
 ffmpeg, bagian build paling lama), dynamic calibration, protobuf, curl, dan AprilTag.
-Firmware perangkat tetap di-embed. Di runner GitHub build pertama memakan waktu ±13 menit;
+Firmware perangkat tetap di-embed. Di runner GitHub build pertama memakan waktu ±9–13 menit;
 hasil install-nya di-cache, jadi build berikutnya hanya mengompilasi shim.
 
 Skrip lalu menelusuri `ldd` dari `libdepthai-c.so`, menyalin setiap pustaka yang berasal
@@ -166,15 +182,15 @@ ke `$ORIGIN` dengan `patchelf`, dan gagal bila ada dependensi yang tidak ditemuk
 `LD_LIBRARY_PATH`. Di Linux, CMake memakai `find_package(depthai)`, karena tanpa OpenCV
 config resminya bisa dipakai dan definisi kompilasinya dijamin cocok.
 
-CI membangun runtime Linux di Ubuntu 22.04, lalu menguji paket hasil pack di aplikasi baru
-dan tool CLI yang di-install, di Ubuntu dan Windows.
+CI membangun runtime Linux di Ubuntu 22.04, x64 di runner biasa dan arm64 di runner ARM64
+GitHub (`ubuntu-22.04-arm`), lalu menguji paket hasil pack di aplikasi baru dan tool CLI yang
+di-install, di Ubuntu x64, Ubuntu ARM64, dan Windows.
 
 ## Batasan yang perlu diketahui
 
-- **Linux belum diuji dengan kamera.** Runtime-nya termuat dan ABI-nya cocok (diuji di CI),
-  tapi membuka perangkat dan streaming di Linux belum pernah dicoba.
-- **Belum ada macOS dan ARM** (termasuk Raspberry Pi / Jetson). `build.sh` kemungkinan bisa
-  dipakai di linux-arm64 dengan penyesuaian kecil, tapi belum dicoba.
+- **Linux (x64 dan ARM64) belum diuji dengan kamera.** Runtime-nya termuat dan ABI-nya cocok
+  (diuji di CI), tapi membuka perangkat dan streaming di Linux belum pernah dicoba.
+- **Belum ada macOS**, dan belum ada ARM 32-bit (Raspberry Pi OS 32-bit).
 - **Posisi 3D deteksi spasial belum dihitung**, baik di hardware maupun di simulasi. Link
   kedalaman ke node spasial diterima tapi diabaikan.
 - **Stop pipeline menutup perangkat** (perilaku depthai v3). Shim membukanya ulang supaya handle

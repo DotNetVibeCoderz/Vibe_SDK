@@ -35,17 +35,19 @@ The SDK has two backends behind one interface:
 
 - `SimulationBackend`: synthetic colour, depth, and neural tensors. Fully working everywhere.
 - `NativeBackend`: P/Invokes into `depthai-c` (`native/depthai-c/`), a C ABI shim over
-  depthai-core 3.11. Shipped as `DepthAI.Net.Runtime.win-x64` (verified with a camera) and
-  `DepthAI.Net.Runtime.linux-x64` (loads in CI, **never opened a camera** — say so).
+  depthai-core 3.11. Shipped as `DepthAI.Net.Runtime.win-x64` (verified with a camera),
+  `linux-x64` and `linux-arm64` (both load in CI, **never opened a camera** — say so).
 
 `native/depthai-c/build.ps1` builds it: it downloads Luxonis' prebuilt win64 depthai-core,
 pulls `opencv_world4130.dll` from the official OpenCV installer (the prebuilt imports it but does
 not ship it), compiles the shim with VS's MSVC/CMake/Ninja, and stages everything plus an
 app-local MSVC runtime in `artifacts/native/win-x64`. `build.sh` is the Linux counterpart: Luxonis
 ships no Linux C++ prebuilt, so it builds depthai-core from source without OpenCV (~13 min, cached
-in CI), then stages the .so files with RUNPATH `$ORIGIN` in `artifacts/native/linux-x64`. Needs
-glibc 2.35+, so CI builds on Ubuntu 22.04. Core's csproj copies both folders into every project
-referencing it, so CLI, Wizard, samples and tests in the repo use hardware once built.
+in CI), then stages the .so files with RUNPATH `$ORIGIN` in `artifacts/native/linux-<arch>`. It
+builds for the host architecture only; arm64 is built natively on GitHub's `ubuntu-22.04-arm`
+runner. Needs glibc 2.35+, so CI builds on Ubuntu 22.04. Core's csproj copies every staged
+runtime into projects referencing it: Windows flat, Linux under `runtimes/<rid>/native` (x64 and
+arm64 share file names), loaded by `Interop/NativeLibraryResolver`.
 
 Rules for touching it:
 - `depthai_c.h` and `NativeMethods.cs` mirror each other; change both or neither.

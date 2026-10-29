@@ -67,13 +67,15 @@ SDK ini punya dua backend di balik satu antarmuka:
 | Backend | Kegunaan | Status |
 | --- | --- | --- |
 | `SimulationBackend` | Data sintetis: warna, kedalaman, deteksi | Berfungsi penuh, di semua OS |
-| `NativeBackend` | Hardware OAK sungguhan lewat shim `depthai-c` di atas depthai-core 3.11 | **Windows x64** (`DepthAI.Net.Runtime.win-x64`) dan **Linux x64** (`DepthAI.Net.Runtime.linux-x64`) |
+| `NativeBackend` | Hardware OAK sungguhan lewat shim `depthai-c` di atas depthai-core 3.11 | **Windows x64**, **Linux x64**, dan **Linux ARM64** (`DepthAI.Net.Runtime.<rid>`) |
 
 ```xml
 <PackageReference Include="DepthAI.Net" Version="0.5.0" />
 <PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.5.0"
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 <PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.5.0"
+                  Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+<PackageReference Include="DepthAI.Net.Runtime.linux-arm64" Version="0.5.0"
                   Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
 ```
 
@@ -83,8 +85,8 @@ tanpa keduanya SDK jatuh ke simulasi, jadi aplikasi tetap bisa dikembangkan tanp
 Sudah diverifikasi dengan OAK-1 sungguhan: enumerasi, kemampuan (`CamA=IMX378`), telemetri,
 preview kamera, YOLOv6 di perangkat dengan hasil yang sama persis dengan parser depthai, dan
 encoder MJPEG 1080p. Stereo dan IMU sudah dipetakan tapi belum diuji karena OAK-1 tidak memilikinya.
-Runtime Linux (glibc 2.35+, butuh aturan udev untuk akses USB) terbukti termuat di CI, tapi
-belum pernah diuji dengan kamera.
+Runtime Linux x64 dan ARM64 (Raspberry Pi 4/5, Jetson Orin; glibc 2.35+, butuh aturan udev
+untuk akses USB) terbukti termuat di CI, tapi belum pernah diuji dengan kamera.
 
 Detail arsitektur, cara membangun shim, dan batasannya ada di
 [docs/id/native-runtime.md](docs/id/native-runtime.md).
@@ -107,6 +109,7 @@ dari "ada kamera tapi runtime native belum terpasang". Dua keadaan itu butuh tin
 | `DepthAI.Net.Imaging.SystemDrawing` | Konversi ke `Bitmap` untuk WinForms dan WPF (khusus Windows) |
 | `DepthAI.Net.Runtime.win-x64` | Runtime native untuk hardware OAK di Windows x64 (depthai-c + depthai-core 3.11) |
 | `DepthAI.Net.Runtime.linux-x64` | Runtime native untuk hardware OAK di Linux x64 (glibc 2.35+) |
+| `DepthAI.Net.Runtime.linux-arm64` | Runtime native untuk hardware OAK di Linux ARM64: Raspberry Pi 4/5, Jetson Orin (glibc 2.35+) |
 | `DepthAI.Net.Cli` | Tool `depthai-dotnet-cli` |
 | `DepthAI.Net.Templates` | Template `dotnet new` |
 | `DepthAI.Net.Wizard.Core` | Sistem proyek, template, dan lapisan asisten wizard |
