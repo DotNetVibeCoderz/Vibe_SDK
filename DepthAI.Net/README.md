@@ -70,8 +70,8 @@ SDK ini punya dua backend di balik satu antarmuka:
 | `NativeBackend` | Hardware OAK sungguhan lewat shim `depthai-c` di atas depthai-core 3.11 | **Windows x64**, lewat paket `DepthAI.Net.Runtime.win-x64` |
 
 ```xml
-<PackageReference Include="DepthAI.Net" Version="0.3.0" />
-<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.3.0"
+<PackageReference Include="DepthAI.Net" Version="0.4.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.4.0"
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 ```
 

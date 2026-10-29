@@ -225,6 +225,12 @@ void openDevice(Session& session) {
                                           : std::make_shared<dai::Device>(session.info, session.maxUsbSpeed);
 }
 
+/// Pesan untuk perangkat yang terlihat di bus tapi tidak boleh dibuka proses ini.
+const char* const PermissionHint =
+    "izin USB tidak cukup. Di Linux pasang aturan udev untuk vendor 03e7, lalu cabut-colok perangkat: "
+    "echo 'SUBSYSTEM==\"usb\", ATTRS{idVendor}==\"03e7\", MODE=\"0666\"' | sudo tee /etc/udev/rules.d/80-movidius.rules "
+    "&& sudo udevadm control --reload-rules && sudo udevadm trigger";
+
 Session* asSession(void* handle) {
     if(handle == nullptr) throw DaiError(DAI_INVALID_ARGUMENT, "handle perangkat null");
     return static_cast<Session*>(handle);
@@ -783,8 +789,9 @@ DAI_API int dai_device_list(dai_device_info_t* buffer, int capacity, int* count)
             copyFixed(out.name, d.platform == X_LINK_RVC4 ? "OAK4" : "OAK");
             copyFixed(out.connection_path, d.name);
             out.protocol = d.protocol == X_LINK_TCP_IP ? 2 : (d.protocol == X_LINK_USB_VSC ? 1 : 0);
-            // Perangkat yang sudah BOOTED dipegang proses lain; sisanya bisa dibuka.
-            out.state = d.state == X_LINK_BOOTED ? 2 : 1;
+            // Perangkat yang sudah BOOTED dipegang proses lain; perangkat tanpa izin USB
+            // dilaporkan Faulty supaya tidak tampak bisa dibuka; sisanya bisa dibuka.
+            out.state = d.status == X_LINK_INSUFFICIENT_PERMISSIONS ? 5 : (d.state == X_LINK_BOOTED ? 2 : 1);
             out.usb_speed = 0;
         }
         return static_cast<int>(DAI_OK);
@@ -798,6 +805,9 @@ DAI_API int dai_device_open(const char* mx_id, const dai_open_options_t* options
 
         auto [found, info] = dai::Device::getDeviceById(mx_id);
         if(!found) return fail(DAI_DEVICE_NOT_FOUND, std::string("tidak ada perangkat dengan MxId ") + mx_id);
+        if(info.status == X_LINK_INSUFFICIENT_PERMISSIONS) {
+            return fail(DAI_COMMUNICATION_ERROR, std::string("perangkat ") + mx_id + ": " + PermissionHint);
+        }
         if(info.state == X_LINK_BOOTED) return fail(DAI_DEVICE_BUSY, std::string("perangkat ") + mx_id + " sedang dipakai proses lain");
 
         auto session = std::make_unique<Session>();

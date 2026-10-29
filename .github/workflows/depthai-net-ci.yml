@@ -77,9 +77,66 @@ jobs:
           path: ${{ steps.sdk.outputs.dir }}/artifacts/test-results/**/*.trx
           if-no-files-found: ignore
 
+  # depthai-core tidak punya rilis C++ prebuilt untuk Linux, jadi dibangun dari sumber.
+  # Ubuntu 22.04 (glibc 2.35) supaya pustakanya jalan di distro yang lebih lama juga.
+  # Build pertama memakan puluhan menit; hasil install di-cache berdasarkan isi build.sh.
+  native-linux:
+    name: Runtime native linux-x64
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Temukan folder SDK
+        id: sdk
+        shell: bash
+        run: |
+          slnx=$(find . -name 'DepthAI.Net.slnx' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/.vs/*' | sort | head -n 1)
+          if [ -z "$slnx" ]; then echo "DepthAI.Net.slnx tidak ditemukan"; exit 1; fi
+          echo "dir=$(dirname "$slnx")" >> "$GITHUB_OUTPUT"
+
+      - name: Pasang toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build g++-12 pkg-config libudev-dev patchelf zip unzip \
+            autoconf automake autoconf-archive libtool
+
+      - name: Cache depthai-core
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.sdk.outputs.dir }}/native/depthai-c/.deps/depthai-core-*-linux-x64
+          key: depthai-core-linux-x64-${{ hashFiles('**/native/depthai-c/build.sh') }}
+
+      - name: Bangun runtime native linux-x64
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        env:
+          CC: gcc-12
+          CXX: g++-12
+        run: bash native/depthai-c/build.sh
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
+
+      # Probe native tidak butuh kamera: ini menangkap pustaka yang hilang atau ABI yang
+      # tidak cocok sebelum paket dirilis.
+      - name: Periksa runtime native termuat
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        run: |
+          out=$(dotnet run --project src/DepthAI.Net.Cli -c Release -- info)
+          echo "$out"
+          echo "$out" | grep -q "(depthai-core [0-9]" || { echo "Runtime native tidak termuat"; exit 1; }
+
+      - name: Unggah runtime linux-x64
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-linux-x64
+          path: ${{ steps.sdk.outputs.dir }}/artifacts/native/linux-x64
+          if-no-files-found: error
+
   pack:
     name: Pack
-    needs: build
+    needs: [build, native-linux]
     # Pack di Windows: DepthAI.Net.Imaging.SystemDrawing menargetkan net10.0-windows.
     runs-on: windows-latest
 
@@ -97,6 +154,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
+
+      # Runtime Linux dibangun di job native-linux; diletakkan di tempat yang sama dengan
+      # hasil build.sh supaya proyek runtime linux-x64 dan tool CLI ikut membawanya.
+      - name: Ambil runtime linux-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: native-linux-x64
+          path: ${{ steps.sdk.outputs.dir }}/artifacts/native/linux-x64
 
       # Shim native depthai-c: dibangun di atas depthai-core prebuilt. Unduhan (~270 MB)
       # di-cache berdasarkan isi skrip, karena versi dependensi ditetapkan di sana.

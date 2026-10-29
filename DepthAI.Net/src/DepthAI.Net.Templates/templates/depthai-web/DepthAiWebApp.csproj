@@ -8,10 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DepthAI.Net" Version="0.3.0" />
-    <!-- Runtime native untuk kamera OAK sungguhan; tanpanya SDK memakai simulasi. -->
-    <PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.3.0" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
-    <PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.3.0" />
+    <PackageReference Include="DepthAI.Net" Version="0.4.0" />
+    <!-- Runtime native untuk kamera OAK sungguhan (Windows/Linux x64); tanpanya SDK memakai simulasi. -->
+    <PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.4.0" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+    <PackageReference Include="DepthAI.Net.Runtime.linux-x64" Version="0.4.0" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+    <PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.4.0" />
   </ItemGroup>
 
 </Project>

@@ -19,7 +19,7 @@
     <Company>Gravicode Studios</Company>
     <Authors>Gravicode Studios</Authors>
     <Copyright>Copyright (c) Gravicode Studios. Dipimpin oleh Kang Fadhil.</Copyright>
-    <VersionPrefix>0.3.0</VersionPrefix>
+    <VersionPrefix>0.4.0</VersionPrefix>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>depthai;oak;luxonis;computer-vision;stereo-depth;dotnet</PackageTags>
 

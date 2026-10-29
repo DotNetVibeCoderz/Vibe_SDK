@@ -18,3 +18,4 @@ src/DepthAI.Net.Wizard/app.config
 # Unduhan dan hasil build shim native (native/depthai-c/build.ps1).
 native/depthai-c/.deps/
 native/depthai-c/.build/
+native/depthai-c/.build-linux/

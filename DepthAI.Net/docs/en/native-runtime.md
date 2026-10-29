@@ -31,8 +31,8 @@ neither mono cameras nor an IMU.
 Add the runtime package next to the SDK:
 
 ```xml
-<PackageReference Include="DepthAI.Net" Version="0.3.0" />
-<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.3.0"
+<PackageReference Include="DepthAI.Net" Version="0.4.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.4.0"
                   Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 ```
 

@@ -110,7 +110,7 @@ public partial class AboutDialog : Window
     {
         InitializeComponent();
 
-        WizardVersion.Text = typeof(AboutDialog).Assembly.GetName().Version?.ToString(3) ?? "0.3.0";
+        WizardVersion.Text = typeof(AboutDialog).Assembly.GetName().Version?.ToString(3) ?? "0.4.0";
         SdkVersion.Text = DepthAi.Version;
         DotnetVersion.Text = Environment.Version.ToString();
 

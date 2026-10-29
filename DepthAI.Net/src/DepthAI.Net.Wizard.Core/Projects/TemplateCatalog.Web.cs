@@ -16,7 +16,7 @@ public static partial class TemplateCatalog
         Files =
         [
             new("{{ProjectName}}.csproj", TemplateFragments.WebCsproj(
-                """<PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.3.0" />""")),
+                """<PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.4.0" />""")),
             new(".gitignore", TemplateFragments.GitIgnore),
             new("README.md", TemplateFragments.Readme(
                 "Blazor Server dengan render interaktif: frame dikirim sebagai data URI, deteksi diperbarui lewat SignalR.",
@@ -341,7 +341,7 @@ public static partial class TemplateCatalog
         Files =
         [
             new("{{ProjectName}}.csproj", TemplateFragments.WebCsproj(
-                """<PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.3.0" />""")),
+                """<PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.4.0" />""")),
             new(".gitignore", TemplateFragments.GitIgnore),
             new("README.md", TemplateFragments.Readme(
                 "Endpoint: `/api/detections`, `/api/depth?x=&y=`, `/api/frame.jpg`, `/api/health`.",

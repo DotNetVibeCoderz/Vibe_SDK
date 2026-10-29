@@ -20,13 +20,29 @@
   </ItemGroup>
 
   <!--
-    Runtime native hasil native/depthai-c/build.ps1, bila sudah dibangun. Item None dengan
-    CopyTo*Directory mengalir transitif lewat ProjectReference, jadi CLI, Wizard, sample,
-    dan proyek Wizard di dalam repo otomatis bisa memakai hardware. Pack="false": paket
-    NuGet DepthAI.Net tetap kecil; konsumen paket memakai DepthAI.Net.Runtime.win-x64.
+    Runtime native hasil native/depthai-c/build.ps1 (win-x64) dan build.sh (linux-x64), bila
+    sudah dibangun. Item None dengan CopyTo*Directory mengalir transitif lewat
+    ProjectReference, jadi CLI, Wizard, sample, dan proyek Wizard di dalam repo otomatis
+    bisa memakai hardware. Keduanya disalin apa pun OS build-nya, supaya tool CLI yang
+    di-pack di Windows juga jalan di Linux; nama berkasnya tidak bertabrakan dan loader
+    .NET hanya mencari ekstensi milik OS-nya. Pack="false": paket NuGet DepthAI.Net tetap
+    kecil; konsumen paket memakai DepthAI.Net.Runtime.<rid>.
   -->
-  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\..\artifacts\native\win-x64\depthai-c.dll')">
-    <None Include="$(MSBuildThisFileDirectory)..\..\artifacts\native\win-x64\*.dll"
+  <PropertyGroup>
+    <DepthAiNativeDir>$(MSBuildThisFileDirectory)..\..\artifacts\native\</DepthAiNativeDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(DepthAiNativeDir)win-x64\depthai-c.dll')">
+    <None Include="$(DepthAiNativeDir)win-x64\*.dll"
+          Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          Pack="false"
+          Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('$(DepthAiNativeDir)linux-x64\libdepthai-c.so')">
+    <None Include="$(DepthAiNativeDir)linux-x64\*.so*"
           Link="%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest"
