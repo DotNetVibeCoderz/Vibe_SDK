@@ -19,4 +19,19 @@
     <InternalsVisibleTo Include="DepthAI.Net.Cli" />
   </ItemGroup>
 
+  <!--
+    Runtime native hasil native/depthai-c/build.ps1, bila sudah dibangun. Item None dengan
+    CopyTo*Directory mengalir transitif lewat ProjectReference, jadi CLI, Wizard, sample,
+    dan proyek Wizard di dalam repo otomatis bisa memakai hardware. Pack="false": paket
+    NuGet DepthAI.Net tetap kecil; konsumen paket memakai DepthAI.Net.Runtime.win-x64.
+  -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\..\artifacts\native\win-x64\depthai-c.dll')">
+    <None Include="$(MSBuildThisFileDirectory)..\..\artifacts\native\win-x64\*.dll"
+          Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          Pack="false"
+          Visible="false" />
+  </ItemGroup>
+
 </Project>

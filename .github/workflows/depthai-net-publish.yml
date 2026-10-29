@@ -71,6 +71,13 @@ jobs:
         with:
           global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
 
+      # Harus sebelum build: Core menyalin DLL native ke CLI, dan proyek runtime
+      # hanya bisa di-pack bila artifacts/native/win-x64 sudah terisi.
+      - name: Bangun runtime native win-x64
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        shell: pwsh
+        run: ./native/depthai-c/build.ps1
+
       - name: Restore
         working-directory: ${{ steps.sdk.outputs.dir }}
         run: dotnet restore ${{ steps.sdk.outputs.slnx }}
@@ -86,6 +93,12 @@ jobs:
       - name: Pack
         working-directory: ${{ steps.sdk.outputs.dir }}
         run: dotnet pack ${{ steps.sdk.outputs.slnx }} -c Release --no-build -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Pastikan paket runtime native ikut
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        shell: bash
+        run: |
+          ls artifacts/nuget/DepthAI.Net.Runtime.win-x64.${{ steps.ver.outputs.version }}.nupkg             || { echo "Paket DepthAI.Net.Runtime.win-x64 tidak terbentuk"; exit 1; }
 
       - name: Unggah paket sebagai artifact
         uses: actions/upload-artifact@v4

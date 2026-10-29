@@ -62,49 +62,35 @@ await device.StopAsync();
 
 ## Status runtime native / Native runtime status
 
-**Ini bagian terpenting untuk dipahami sebelum menyambungkan kamera.**
-
 SDK ini punya dua backend di balik satu antarmuka:
 
 | Backend | Kegunaan | Status |
 | --- | --- | --- |
-| `SimulationBackend` | Data sintetis: warna, kedalaman, deteksi | **Berfungsi penuh sekarang** |
-| `NativeBackend` | Hardware OAK sungguhan lewat depthai-core | **Butuh pustaka `depthai-c` yang belum disertakan** |
+| `SimulationBackend` | Data sintetis: warna, kedalaman, deteksi | Berfungsi penuh, di semua OS |
+| `NativeBackend` | Hardware OAK sungguhan lewat shim `depthai-c` di atas depthai-core 3.11 | **Windows x64**, lewat paket `DepthAI.Net.Runtime.win-x64` |
 
-`NativeBackend` melakukan P/Invoke ke `depthai-c`, sebuah shim C ABI tipis di atas depthai-core.
-Shim itu **belum ada di repo ini** dan harus dikompilasi dari C++ (butuh CMake dan toolchain C++).
-Sampai itu tersedia, membuka perangkat akan otomatis jatuh ke simulasi.
-
-Alasan desainnya: depthai-core memaparkan API C++ dengan template dan tipe STL yang tidak punya
-ABI stabil, jadi P/Invoke langsung ke sana rapuh. Shim C dengan tipe POD adalah batas yang benar.
-
-### Yang tetap berfungsi dengan hardware nyata
-
-Deteksi perangkat USB **tidak** membutuhkan depthai-core dan sudah bekerja:
-
-```bash
-dotnet run --project src/DepthAI.Net.Cli -- info
+```xml
+<PackageReference Include="DepthAI.Net" Version="0.3.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.3.0"
+                  Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 ```
 
-```
-│ Runtime native │ tidak tersedia                                             │
-│ Perangkat USB  │ 1 terdeteksi                                               │
-│                │ OAK / Movidius MyriadX (sudah di-boot) — 03E7:F63B,        │
-│                │ Booted, MxId 14442C10011298CD00                            │
-│ Dampak         │ Perangkat fisik tidak bisa dibuka sampai pustaka native    │
-│                │ terpasang; perintah memakai simulasi.                      │
-```
+Dengan paket runtime terpasang dan kamera tercolok, `DepthAiDevice.OpenAsync()` memakai hardware;
+tanpa keduanya SDK jatuh ke simulasi, jadi aplikasi tetap bisa dikembangkan tanpa kamera.
 
-Keluaran di atas diambil dari OAK-1 sungguhan yang tercolok saat pengembangan; MxId-nya
-dibaca langsung dari deskriptor USB dan cocok persis dengan yang dilaporkan `depthai` Python.
+Sudah diverifikasi dengan OAK-1 sungguhan: enumerasi, kemampuan (`CamA=IMX378`), telemetri,
+preview kamera, YOLOv6 di perangkat dengan hasil yang sama persis dengan parser depthai, dan
+encoder MJPEG 1080p. Stereo dan IMU sudah dipetakan tapi belum diuji karena OAK-1 tidak memilikinya.
+Linux belum punya paket runtime.
 
-Pembedaan ini disengaja: "tidak ada kamera" dan "ada kamera tapi pustaka native belum
-terpasang" adalah dua keadaan yang butuh tindakan berbeda, jadi keduanya dilaporkan berbeda.
+Detail arsitektur, cara membangun shim, dan batasannya ada di
+[docs/id/native-runtime.md](docs/id/native-runtime.md).
 
-### Melengkapi dukungan hardware
+### Deteksi USB tanpa pustaka native
 
-Lihat [docs/id/native-runtime.md](docs/id/native-runtime.md) untuk ABI yang harus dipenuhi shim
-`depthai-c` beserta rencana pembangunannya.
+`UsbDeviceScanner` membaca perangkat OAK langsung dari bus USB (cfgmgr32 di Windows, sysfs di
+Linux) tanpa depthai-core, sehingga `depthai-dotnet-cli info` bisa membedakan "tidak ada kamera"
+dari "ada kamera tapi runtime native belum terpasang". Dua keadaan itu butuh tindakan berbeda.
 
 ---
 
@@ -116,6 +102,7 @@ Lihat [docs/id/native-runtime.md](docs/id/native-runtime.md) untuk ABI yang haru
 | `DepthAI.Net.Imaging.ImageSharp` | Konversi ke `Image<Rgb24>`, encoding PNG/JPEG, depth 16-bit |
 | `DepthAI.Net.Imaging.SkiaSharp` | Konversi ke `SKBitmap`, jalur tercepat untuk Avalonia dan MAUI |
 | `DepthAI.Net.Imaging.SystemDrawing` | Konversi ke `Bitmap` untuk WinForms dan WPF (khusus Windows) |
+| `DepthAI.Net.Runtime.win-x64` | Runtime native untuk hardware OAK di Windows x64 (depthai-c + depthai-core 3.11) |
 | `DepthAI.Net.Cli` | Tool `depthai-dotnet-cli` |
 | `DepthAI.Net.Templates` | Template `dotnet new` |
 | `DepthAI.Net.Wizard.Core` | Sistem proyek, template, dan lapisan asisten wizard |

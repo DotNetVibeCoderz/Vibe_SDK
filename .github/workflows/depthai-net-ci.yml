@@ -98,6 +98,29 @@ jobs:
         with:
           global-json-file: ${{ steps.sdk.outputs.dir }}/global.json
 
+      # Shim native depthai-c: dibangun di atas depthai-core prebuilt. Unduhan (~270 MB)
+      # di-cache berdasarkan isi skrip, karena versi dependensi ditetapkan di sana.
+      - name: Cache dependensi native
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.sdk.outputs.dir }}/native/depthai-c/.deps
+          key: depthai-native-deps-${{ hashFiles('**/native/depthai-c/build.ps1') }}
+
+      - name: Bangun runtime native win-x64
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        shell: pwsh
+        run: ./native/depthai-c/build.ps1
+
+      # Tanpa kamera pun probe native harus berhasil: ini menangkap DLL yang hilang
+      # atau ABI yang tidak cocok sebelum paket dirilis.
+      - name: Periksa runtime native termuat
+        working-directory: ${{ steps.sdk.outputs.dir }}
+        shell: bash
+        run: |
+          out=$(dotnet run --project src/DepthAI.Net.Cli -c Release -- info)
+          echo "$out"
+          echo "$out" | grep -q "tersedia (depthai-core" || { echo "Runtime native tidak termuat"; exit 1; }
+
       # Build CI memakai nomor build sebagai suffix prerelease supaya paket dari
       # main tidak pernah bentrok dengan rilis stabil di nuget.org.
       - name: Pack

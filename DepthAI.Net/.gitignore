@@ -14,3 +14,7 @@ secrets.json
 
 # app.config wizard memuat kunci API pengguna; yang di-commit adalah contohnya.
 src/DepthAI.Net.Wizard/app.config
+
+# Unduhan dan hasil build shim native (native/depthai-c/build.ps1).
+native/depthai-c/.deps/
+native/depthai-c/.build/

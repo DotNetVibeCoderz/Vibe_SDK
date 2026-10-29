@@ -23,26 +23,34 @@ dotnet run --project src/DepthAI.Net.Wizard        # the wizard app
 dotnet run --project src/DepthAI.Net.Cli -- info   # CLI without installing it
 
 dotnet pack src/DepthAI.Net.Templates              # -> artifacts/nuget
-dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.2.0.nupkg
+dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.3.0.nupkg
 ```
 
 Windows environment: PowerShell 5.1 is primary (no `&&`, no ternary); a Git Bash tool is also
 available. The solution is `.slnx` (the .NET 10 XML format), not `.sln`.
 
-## The native runtime gap — read this first
+## The native runtime — read this first
 
 The SDK has two backends behind one interface:
 
-- `SimulationBackend` — synthetic colour, depth, and neural tensors. **Fully working.**
-- `NativeBackend` — P/Invokes into `depthai-c`, a C ABI shim over depthai-core.
-  **The shim does not exist in this repo** and needs CMake + a C++ toolchain to build.
+- `SimulationBackend`: synthetic colour, depth, and neural tensors. Fully working everywhere.
+- `NativeBackend`: P/Invokes into `depthai-c` (`native/depthai-c/`), a C ABI shim over
+  depthai-core 3.11. **Working on Windows x64**, shipped as `DepthAI.Net.Runtime.win-x64`.
+  No Linux runtime yet (Luxonis ships no Linux C++ prebuilt; depthai-core must be built from source).
 
-So `DepthAiDevice.OpenAsync()` silently falls back to simulation. This is deliberate and
-documented in `docs/*/native-runtime.md`, which also specifies the ABI the shim must satisfy.
+`native/depthai-c/build.ps1` builds it: it downloads Luxonis' prebuilt win64 depthai-core,
+pulls `opencv_world4130.dll` from the official OpenCV installer (the prebuilt imports it but does
+not ship it), compiles the shim with VS's MSVC/CMake/Ninja, and stages everything plus an
+app-local MSVC runtime in `artifacts/native/win-x64`. Core's csproj then copies those DLLs into
+every project referencing it, so CLI, Wizard, samples and tests in the repo use hardware once built.
 
-Do not "fix" this by pretending hardware works. If asked to complete hardware support, the
-work is: build depthai-core, write the C shim against the signatures in
-`src/DepthAI.Net.Core/Interop/NativeMethods.cs`, ship it per-RID.
+Rules for touching it:
+- `depthai_c.h` and `NativeMethods.cs` mirror each other; change both or neither.
+- Pull model only: depthai callbacks fill a native ready queue, .NET polls. Never call managed code from native.
+- NNs run as raw `NeuralNetwork`; tensors are decoded by the .NET parsers so simulation and hardware match.
+- depthai v3 closes the device when a pipeline stops; the shim reopens it in `stopSession`.
+- Verified on the OAK-1 below: YOLOv6-nano boxes match depthai's on-device parser to 3 decimals.
+  Stereo and IMU mappings are untested (the OAK-1 has neither); do not claim otherwise.
 
 **What does work with real hardware:** `UsbDeviceScanner` (Core/Devices) enumerates OAK devices
 straight off the USB bus via `cfgmgr32` on Windows and sysfs on Linux — no depthai-core needed.
@@ -79,10 +87,12 @@ src/
     Imaging/                   PixelConverter, DepthColorizer, FrameOverlay (dependency-free)
     Devices/                   DeviceInfo, DeviceWatcher, UsbDeviceScanner
   DepthAI.Net.Imaging.*        thin adapters: ImageSharp, SkiaSharp, SystemDrawing
+  DepthAI.Net.Runtime.win-x64/ no code; packs artifacts/native/win-x64 as runtimes/win-x64/native
   DepthAI.Net.Cli/             Spectre.Console.Cli
   DepthAI.Net.Templates/       dotnet new template package
   DepthAI.Net.Wizard.Core/     project system, 16 CV templates, Semantic Kernel layer
   DepthAI.Net.Wizard/          Avalonia UI
+native/depthai-c/              C ABI shim (C++17) + build.ps1
 samples/                       generated from the wizard's template catalogue
 tools/vscode-depthai/          plain JavaScript, no build step
 ```

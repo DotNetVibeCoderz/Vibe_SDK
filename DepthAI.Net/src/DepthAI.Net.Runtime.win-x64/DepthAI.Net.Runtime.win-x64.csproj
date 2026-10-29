@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Paket runtime native untuk hardware OAK di Windows x64: depthai-c (shim C ABI),
+    depthai-core 3.11, OpenCV, libusb, dan runtime MSVC app-local. Tidak berisi kode
+    managed; DepthAI.Net memuat pustaka ini lewat P/Invoke bila tersedia dan jatuh ke
+    simulasi bila tidak.
+
+    DLL-nya disiapkan oleh native/depthai-c/build.ps1 ke artifacts/native/win-x64.
+    Tanpa folder itu proyek ini tidak bisa di-pack, supaya pack di mesin tanpa toolchain
+    C++ tetap jalan untuk paket lain; workflow publish memeriksa paket ini benar-benar ada.
+  -->
+  <PropertyGroup>
+    <PackageId>DepthAI.Net.Runtime.win-x64</PackageId>
+    <Description>Runtime native DepthAI.Net untuk Windows x64: shim depthai-c di atas depthai-core 3.11, agar DepthAI.Net berbicara dengan kamera OAK sungguhan.</Description>
+    <PackageTags>$(PackageTags);native;runtime;win-x64</PackageTags>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <NativeRuntimeDir>$(MSBuildThisFileDirectory)..\..\artifacts\native\win-x64\</NativeRuntimeDir>
+    <IsPackable Condition="!Exists('$(NativeRuntimeDir)depthai-c.dll')">false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(NativeRuntimeDir)*.dll" Pack="true" PackagePath="runtimes/win-x64/native/" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="WarnMissingNativeRuntime" BeforeTargets="Build" Condition="!Exists('$(NativeRuntimeDir)depthai-c.dll')">
+    <Message Importance="high" Text="DepthAI.Net.Runtime.win-x64 dilewati: jalankan native/depthai-c/build.ps1 untuk menyiapkan DLL native." />
+  </Target>
+
+</Project>

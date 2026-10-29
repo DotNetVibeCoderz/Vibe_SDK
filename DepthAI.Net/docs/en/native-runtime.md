@@ -1,129 +1,143 @@
 # Native runtime
 
-What is still missing before real OAK hardware works, and how to complete it.
+How DepthAI.Net talks to real OAK hardware: the `depthai-c` shim, how to install it, how to
+build it, and its limits.
 
-## Where things stand
+## Current state
 
-| Capability | Status |
+| Capability | Windows x64 | Linux / macOS |
+| --- | --- | --- |
+| USB device detection (presence, boot stage, MxId) | ✅ no native library needed | ✅ Linux (sysfs) |
+| Open device, capabilities, telemetry | ✅ `DepthAI.Net.Runtime.win-x64` | ❌ no runtime package yet |
+| Camera, NN, encoder pipelines → .NET streams | ✅ | ❌ |
+| The whole SDK on the simulation backend | ✅ | ✅ |
+
+Verified on a real device (OAK-1, MxId `14442C10011298CD00`, IMX378, USB 3):
+
+| Test | Result |
 | --- | --- |
-| USB device detection (presence, boot stage, MxId) | ✅ Works without depthai-core |
-| Opening a device, uploading pipelines, streaming | ❌ Needs `depthai-c` |
-| The whole SDK on the simulation backend | ✅ Fully working |
+| `depthai-dotnet-cli info` | Native runtime available (depthai-core 3.11.0) |
+| `depthai-dotnet-cli devices info` | 1 colour camera, `CamA=IMX378`, USB Super, 16 SHAVEs, chip temperature and DDR read |
+| 512×384 preview → YOLOv6-nano (NN Archive) → .NET `YoloParser` | 22 fps; box `[0.711, 0.293 → 0.934, 0.591]` vs depthai's on-device parser `[0.711, 0.29 → 0.933, 0.591]` |
+| 1080p NV12 video → MJPEG VideoEncoder | 30 fps, valid 1920×1080 JPEG |
+| Stop, then start a second pipeline on the same handle | works (device reopened automatically) |
+| Fresh app referencing only the NuGet packages | camera frames received with no manual DLL copying |
 
-Verified against real hardware during development:
+Stereo depth and IMU are mapped in the shim but **not yet tested on hardware**: the OAK-1 has
+neither mono cameras nor an IMU.
 
-```
-Device    : OAK-1 (Movidius MyriadX, RVC2)
-MxId      : 14442C10011298CD00
-Sensor    : CAM_A / IMX378, autofocus, up to 4056x3040
-USB       : SuperSpeed
-Detected  : yes, by UsbDeviceScanner with no native library at all
-Opened    : not yet — requires depthai-c
-```
+## Using it in an app
 
-## Why a shim layer is needed
+Add the runtime package next to the SDK:
 
-depthai-core is a C++ library whose public API exposes templates, `std::shared_ptr`,
-`std::vector`, and other STL types. Those types have no stable ABI: their layout differs
-between compilers, between versions of the same compiler, and even between debug and
-release builds.
-
-P/Invoke needs a stable ABI. So the path is not .NET → C++ directly, but:
-
-```
-DepthAI.Net  →  P/Invoke  →  depthai-c (C shim, POD types)  →  depthai-core (C++)
+```xml
+<PackageReference Include="DepthAI.Net" Version="0.3.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.3.0"
+                  Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 ```
 
-The shim is thin: it only flattens C++ types into plain structs and pointers.
+Nothing else to configure. `DepthAiDevice.OpenAsync()` uses hardware when the native runtime
+loads and a device is present, and falls back to simulation otherwise. To require hardware:
 
-## The ABI to implement
-
-The bindings are already written and waiting for an implementation. See
-[`NativeMethods.cs`](../../src/DepthAI.Net.Core/Interop/NativeMethods.cs) for exact
-signatures. In summary:
-
-```c
-// Lifecycle and info
-int  dai_get_version(char* buffer, int length);
-int  dai_last_error(char* buffer, int length);
-int  dai_device_list(dai_device_info_t* buffer, int capacity, int* count);
-int  dai_device_open(const char* mxid, const dai_open_options_t* options, void** handle);
-int  dai_device_close(void* handle);
-int  dai_device_capabilities(void* handle, dai_capabilities_t* out);
-
-// Pipeline
-int  dai_device_upload_model(void* handle, const char* name, const uint8_t* data, int64_t length);
-int  dai_device_start_pipeline(void* handle, const char* pipeline_json);
-int  dai_device_stop_pipeline(void* handle);
-
-// Data flow — pull model, not callbacks
-int  dai_device_poll(void* handle, dai_packet_t* out, int timeout_ms);
-int  dai_packet_release(void* handle, void* native_handle);
-
-// Telemetry
-int  dai_device_telemetry(void* handle, dai_telemetry_t* out);
+```csharp
+await using var device = await DepthAiDevice.OpenAsync(
+    new DepthAiOptions { Backend = BackendSelection.NativeOnly });
 ```
 
-Two design decisions implementors should preserve:
+The runtime package carries `depthai-c.dll`, `depthai-core.dll` 3.11.0, `opencv_world4130.dll`,
+`dynamic_calibration.dll`, `libusb-1.0.dll`, and an app-local MSVC runtime, so no VC++
+Redistributable is needed. It is about 54 MB compressed.
 
-**Pull model, not callbacks.** `dai_device_poll` pulls one packet and returns `DAI_TIMEOUT`
-when none is ready. Native-to-managed callbacks on the hot path require keeping delegates
-alive and can misbehave when the GC moves threads; polling avoids that whole class of problem.
+`dotnet new` templates and projects generated by Jack The Code Bender already include this
+reference. Inside the repo, `DepthAI.Net.Core.csproj` copies the DLLs from
+`artifacts/native/win-x64` (once built) into every project that references it: the CLI, the
+Wizard, samples and tests.
 
-**Pipelines travel as JSON.** The shim does not need to expose a graph API; it parses one
-string and builds a `dai::Pipeline` on the C++ side. The schema lives in
-[`pipeline.schema.json`](../../tools/vscode-depthai/schemas/pipeline.schema.json).
+## Architecture
 
-## Building the shim
-
-Prerequisites that are **not** present on the current development machine:
-
-- CMake 3.20+
-- A C++ compiler (MSVC Build Tools, GCC, or Clang)
-- depthai-core and its dependencies
-
-Rough steps:
-
-```bash
-git clone --recursive https://github.com/luxonis/depthai-core
-cd depthai-core
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
-cmake --build build --config Release
-
-# Then compile the shim against depthai-core and produce:
-#   Windows : depthai-c.dll
-#   Linux   : libdepthai-c.so
-#   macOS   : libdepthai-c.dylib
+```
+DepthAI.Net  →  P/Invoke  →  depthai-c (C shim, POD types)  →  depthai-core 3.11 (C++)
 ```
 
-Drop the resulting library next to your application, or anywhere on `PATH`
-(`LD_LIBRARY_PATH` on Linux). The SDK probes for it on first use and switches over
-automatically — no configuration change needed.
+depthai-core exposes templates and STL types with no stable ABI, so P/Invoking into it directly
+is fragile. A C shim with POD types is the right boundary. The contract lives in
+[`native/depthai-c/include/depthai_c.h`](../../native/depthai-c/include/depthai_c.h) and is
+mirrored exactly by [`NativeMethods.cs`](../../src/DepthAI.Net.Core/Interop/NativeMethods.cs).
 
-For distribution, package it per RID as `DepthAI.Net.Runtime.<rid>` with the native asset
-under `runtimes/<rid>/native/`.
+Design decisions to preserve:
+
+- **Pull model, no callbacks into .NET.** depthai queue callbacks run on depthai threads and
+  only fill a ready queue (up to 64 packets, oldest dropped). `dai_device_poll` pulls from it.
+  No managed delegate is ever called from native code.
+- **Pipelines travel as JSON.** The shim parses one string and builds a `dai::Pipeline`.
+- **Exceptions never cross the C boundary.** Everything becomes a status code; details are
+  available from `dai_last_error` (per thread).
+- **NNs run as a raw `NeuralNetwork`.** Tensors are decoded on the host by the same .NET parsers
+  the simulation path uses, so simulated and hardware results stay consistent.
+
+### Node mapping
+
+| .NET node | depthai-core v3 | Notes |
+| --- | --- | --- |
+| `ColorCamera` | `Camera` + `requestOutput` | `preview` by size/colour order; `video` NV12 at sensor size; `isp`; `still` = full-resolution output |
+| `MonoCamera` | `Camera` + `requestOutput` | size from resolution |
+| `StereoDepth` | `StereoDepth` | preset, LR check, subpixel, extended, confidence, median, align, output size |
+| `NeuralNetwork`, `DetectionNetwork`, `SpatialDetectionNetwork` | `NeuralNetwork` | `.blob`, `.superblob`, or NN Archive (`.tar.xz`) models |
+| `ImageManip` | `ImageManip` | normalised crop, rotation, resize (centre crop / stretch), output format |
+| `VideoEncoder` | `VideoEncoder` | MJPEG (lossy/lossless), H.264, H.265 |
+| `Imu` | `IMU` | accelerometer, gyroscope, magnetometer, rotation vector |
+
+A camera preview linked into an NN node is requested **planar** (BGR888p), because RVC2 blob
+models expect CHW. If the same preview is also streamed to the host, the shim re-packs it as
+interleaved, since `ImageFrame` only knows interleaved layouts.
+
+### Non-pixel payload formats
+
+- **NN tensors**: `int32 count`, then per tensor `int32 nameLen, name, int32 rank,
+  int32 dims[rank], float32 data[]`. 4D tensors are always sent NCHW and dequantised.
+- **IMU**: `float32[11]` = accel xyz, gyro xyz, rotation i j k real, rotation flag.
+
+## Building
+
+```powershell
+pwsh native/depthai-c/build.ps1        # or: powershell -File native/depthai-c/build.ps1
+dotnet pack src/DepthAI.Net.Runtime.win-x64
+```
+
+The script does not build depthai-core from source. It:
+
+1. Downloads Luxonis' prebuilt `depthai-core-v3.11.0-win64.zip`.
+2. Downloads the official OpenCV 4.13.0 installer and takes only `opencv_world4130.dll`. The
+   prebuilt depthai-core DLL imports it but does not ship it. The script checks the import
+   table so the OpenCV version is guaranteed to match.
+3. Compiles the shim with Visual Studio's MSVC, CMake and Ninja.
+4. Copies every DLL, including the MSVC runtime from Visual Studio's Redist folder, into
+   `artifacts/native/win-x64`.
+
+Prerequisites: Visual Studio 2022+ with the C++ workload, and 7-Zip. Both exist on GitHub's
+`windows-latest` runners; CI and the publish workflow run this script before packing.
+
+CMake uses a hand-made imported target rather than `find_package(depthai)`: the prebuilt
+release's CMake config requires OpenCV, yet the shim uses no OpenCV API at all.
+
+## Known limits
+
+- **Windows x64 only.** Luxonis only publishes a prebuilt C++ package for win64. Linux needs
+  depthai-core built from source; the shim and its `CMakeLists.txt` are portable
+  (`DEPTHAI_CORE_DIR` points at a `cmake --install` tree), but no `linux-x64` package exists yet.
+- **Spatial detection 3D positions are not computed**, on hardware or in simulation. The depth
+  link into a spatial node is accepted but ignored.
+- **Stopping a pipeline closes the device** (depthai v3 behaviour). The shim reopens it so the
+  handle stays usable, which takes a few seconds.
+- **H.264/H.265** arrive as encoded packets without a pixel format. The .NET streams do not yet
+  have a frame type for video bitstreams; MJPEG is fully supported.
+- `DeviceOpenOptions.BootTimeout` is ignored (depthai uses its own default). `FirmwarePath` and
+  `MaxUsbSpeed` are honoured.
 
 ## Verifying
 
-Once the library is in place:
-
 ```bash
-depthai-dotnet-cli info
+depthai-dotnet-cli info                              # "Native runtime" row → available (depthai-core 3.11.0)
+depthai-dotnet-cli devices list --require-hardware   # fails hard instead of falling back to simulation
+depthai-dotnet-cli devices info                      # sensors, USB speed, chip temperature
 ```
-
-The `Runtime native` row flips to available, and `devices list` shows physical devices as
-openable rather than in a separate section.
-
-To force a hard failure instead of falling back to simulation during testing:
-
-```bash
-depthai-dotnet-cli devices list --require-hardware
-```
-
-## In the meantime
-
-The simulation backend is not a stub: it produces colour frames, a depth map that is
-geometrically consistent with those frames, and neural network tensors in genuine
-MobileNet-SSD and YOLO layouts. Those tensors are decoded by exactly the same parsers the
-hardware path uses. So application code, pipelines, parsers, and UI can all be built and
-tested today; only the data source changes later.

@@ -82,7 +82,18 @@ public sealed class NativeBackend(ILogger<NativeBackend>? logger = null) : IDept
                 NativeMethods.GetCapabilities(handle, out var caps),
                 "Membaca kemampuan perangkat");
 
-            return new NativeSession(handle, device, Convert(caps), _logger);
+            // Enumerasi XLink hanya tahu MxId dan path; nama produk, kecepatan link, dan
+            // sensor baru diketahui setelah boot, jadi Info sesi dibangun ulang dari sini.
+            var capabilities = Convert(ref caps);
+            var opened = device with
+            {
+                Name = ReadProductName(ref caps) is { Length: > 0 } product ? product : device.Name,
+                State = DeviceState.Booted,
+                UsbSpeed = (UsbSpeed)caps.UsbSpeed,
+                Capabilities = capabilities,
+            };
+
+            return new NativeSession(handle, opened, capabilities, _logger);
         }
         finally
         {
@@ -124,14 +135,39 @@ public sealed class NativeBackend(ILogger<NativeBackend>? logger = null) : IDept
         }
     }
 
-    private static DeviceCapabilities Convert(DaiCapabilities native) => new()
+    private static unsafe DeviceCapabilities Convert(ref DaiCapabilities native)
     {
-        ColorCameraCount = native.ColorCameraCount,
-        MonoCameraCount = native.MonoCameraCount,
-        SupportsStereoDepth = native.SupportsStereoDepth != 0,
-        HasImu = native.HasImu != 0,
-        ShaveCores = native.ShaveCores,
-    };
+        var sensors = new Dictionary<CameraSocket, string>();
+        fixed (byte* names = native.SensorNames)
+        {
+            for (var socket = 0; socket < DaiCapabilities.SensorSlots; socket++)
+            {
+                var name = ReadUtf8(names + (socket * DaiCapabilities.SensorNameLength), DaiCapabilities.SensorNameLength);
+                if (name.Length > 0)
+                {
+                    sensors[(CameraSocket)socket] = name;
+                }
+            }
+        }
+
+        return new DeviceCapabilities
+        {
+            ColorCameraCount = native.ColorCameraCount,
+            MonoCameraCount = native.MonoCameraCount,
+            SupportsStereoDepth = native.SupportsStereoDepth != 0,
+            HasImu = native.HasImu != 0,
+            ShaveCores = native.ShaveCores,
+            Sensors = sensors,
+        };
+    }
+
+    private static unsafe string ReadProductName(ref DaiCapabilities native)
+    {
+        fixed (byte* name = native.ProductName)
+        {
+            return ReadUtf8(name, 64);
+        }
+    }
 
     private static unsafe string ReadUtf8(byte* pointer, int maxLength)
     {
@@ -346,23 +382,28 @@ internal sealed class NativeSession(
             streamName = nameLength == 0 ? string.Empty : Encoding.UTF8.GetString(name, nameLength);
         }
 
+        var kind = (DaiPacketType)native.Type switch
+        {
+            DaiPacketType.Depth => PacketKind.Depth,
+            DaiPacketType.NeuralTensors => PacketKind.NeuralTensors,
+            DaiPacketType.Encoded => PacketKind.Encoded,
+            DaiPacketType.Imu => PacketKind.Imu,
+            _ => PacketKind.Image,
+        };
+        var timestamp = TimeSpan.FromTicks(native.TimestampNanos / 100);
+
         return new DevicePacket
         {
             StreamName = streamName,
-            Kind = (DaiPacketType)native.Type switch
-            {
-                DaiPacketType.Depth => PacketKind.Depth,
-                DaiPacketType.NeuralTensors => PacketKind.NeuralTensors,
-                DaiPacketType.Encoded => PacketKind.Encoded,
-                DaiPacketType.Imu => PacketKind.Imu,
-                _ => PacketKind.Image,
-            },
+            Kind = kind,
             Payload = payload,
             Width = native.Width,
             Height = native.Height,
             Format = (PixelFormat)native.PixelFormat,
             SequenceNumber = native.SequenceNumber,
-            DeviceTimestamp = TimeSpan.FromTicks(native.TimestampNanos / 100),
+            DeviceTimestamp = timestamp,
+            Tensors = kind == PacketKind.NeuralTensors ? NativePayload.ParseTensors(payload) : null,
+            Imu = kind == PacketKind.Imu ? NativePayload.ParseImu(payload, timestamp) : null,
         };
     }
 

@@ -169,6 +169,7 @@ public sealed class DeviceInfoCommand : AsyncCommand<DeviceSettings>
         await using var device = await CliHelpers.OpenAsync(settings, cancellationToken);
 
         var info = device.Info;
+        var capabilities = device.Capabilities;
         var telemetry = device.ReadTelemetry();
 
         var table = new Table().Border(TableBorder.Rounded).HideHeaders();
@@ -180,15 +181,15 @@ public sealed class DeviceInfoCommand : AsyncCommand<DeviceSettings>
         table.AddRow("Protokol", $"{info.Protocol} ({info.UsbSpeed})");
         table.AddRow("Koneksi", info.ConnectionPath);
         table.AddRow("Firmware", info.FirmwareVersion ?? "-");
-        table.AddRow("Kamera warna", info.Capabilities.ColorCameraCount.ToString());
-        table.AddRow("Kamera mono", info.Capabilities.MonoCameraCount.ToString());
-        table.AddRow("Stereo depth", info.Capabilities.SupportsStereoDepth ? "ya" : "tidak");
-        table.AddRow("IMU", info.Capabilities.HasImu ? "ya" : "tidak");
-        table.AddRow("SHAVE core", info.Capabilities.ShaveCores.ToString());
+        table.AddRow("Kamera warna", capabilities.ColorCameraCount.ToString());
+        table.AddRow("Kamera mono", capabilities.MonoCameraCount.ToString());
+        table.AddRow("Stereo depth", capabilities.SupportsStereoDepth ? "ya" : "tidak");
+        table.AddRow("IMU", capabilities.HasImu ? "ya" : "tidak");
+        table.AddRow("SHAVE core", capabilities.ShaveCores.ToString());
 
-        if (info.Capabilities.Sensors.Count > 0)
+        if (capabilities.Sensors.Count > 0)
         {
-            table.AddRow("Sensor", string.Join(", ", info.Capabilities.Sensors.Select(s => $"{s.Key}={s.Value}")));
+            table.AddRow("Sensor", string.Join(", ", capabilities.Sensors.Select(s => $"{s.Key}={s.Value}")));
         }
 
         table.AddRow("Suhu chip", $"{telemetry.ChipTemperatureCelsius:F1} °C");

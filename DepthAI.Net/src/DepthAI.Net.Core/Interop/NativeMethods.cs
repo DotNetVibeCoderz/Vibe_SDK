@@ -39,13 +39,21 @@ internal unsafe struct DaiDeviceInfo
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal struct DaiCapabilities
+internal unsafe struct DaiCapabilities
 {
+    public const int SensorSlots = 8;
+    public const int SensorNameLength = 32;
+
     public int ColorCameraCount;
     public int MonoCameraCount;
     public int SupportsStereoDepth;
     public int HasImu;
     public int ShaveCores;
+    public int UsbSpeed;
+    public fixed byte ProductName[64];
+
+    /// <summary><c>char[8][32]</c>, indeks = socket CAM_A..CAM_H.</summary>
+    public fixed byte SensorNames[SensorSlots * SensorNameLength];
 }
 
 [StructLayout(LayoutKind.Sequential)]

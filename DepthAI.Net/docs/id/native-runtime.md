@@ -1,130 +1,142 @@
 # Runtime native / Native runtime
 
-Dokumen ini menjelaskan apa yang masih kurang untuk menjalankan hardware OAK sungguhan,
-dan bagaimana melengkapinya.
+Dokumen ini menjelaskan bagaimana DepthAI.Net berbicara dengan hardware OAK sungguhan:
+shim `depthai-c`, cara memasangnya, cara membangunnya, dan batasannya.
 
 ## Keadaan sekarang
 
-| Kemampuan | Status |
+| Kemampuan | Windows x64 | Linux / macOS |
+| --- | --- | --- |
+| Deteksi perangkat USB (ada/tidak, tahap boot, MxId) | ✅ tanpa pustaka native | ✅ Linux (sysfs) |
+| Membuka perangkat, kemampuan, telemetri | ✅ `DepthAI.Net.Runtime.win-x64` | ❌ belum ada paket runtime |
+| Pipeline kamera, NN, encoder → stream .NET | ✅ | ❌ |
+| Seluruh SDK di atas backend simulasi | ✅ | ✅ |
+
+Diverifikasi pada perangkat sungguhan (OAK-1, MxId `14442C10011298CD00`, IMX378, USB 3):
+
+| Uji | Hasil |
 | --- | --- |
-| Deteksi perangkat USB (ada/tidak, tahap boot, MxId) | ✅ Berfungsi tanpa depthai-core |
-| Membuka perangkat, mengunggah pipeline, streaming | ❌ Butuh `depthai-c` |
-| Seluruh SDK di atas backend simulasi | ✅ Berfungsi penuh |
+| `depthai-dotnet-cli info` | Runtime native tersedia (depthai-core 3.11.0) |
+| `depthai-dotnet-cli devices info` | 1 kamera warna, `CamA=IMX378`, USB Super, 16 SHAVE, suhu chip & DDR terbaca |
+| Preview 512×384 → YOLOv6-nano (NN Archive) → `YoloParser` .NET | 22 fps; kotak `[0.711, 0.293 → 0.934, 0.591]` vs parser on-device depthai `[0.711, 0.29 → 0.933, 0.591]` |
+| Video 1080p NV12 → VideoEncoder MJPEG | 30 fps, JPEG 1920×1080 valid |
+| Stop lalu start pipeline kedua pada handle yang sama | berhasil (perangkat dibuka ulang otomatis) |
+| Aplikasi baru yang hanya mereferensikan paket NuGet | frame kamera diterima tanpa menyalin DLL manual |
 
-Verifikasi pada perangkat sungguhan selama pengembangan:
+Stereo depth dan IMU sudah dipetakan di shim tapi **belum diuji di hardware**: OAK-1 tidak
+punya kamera mono maupun IMU.
 
-```
-Perangkat  : OAK-1 (Movidius MyriadX, RVC2)
-MxId       : 14442C10011298CD00
-Sensor     : CAM_A / IMX378, autofocus, sampai 4056x3040
-USB        : SuperSpeed
-Terdeteksi : ya, oleh UsbDeviceScanner tanpa pustaka native apa pun
-Dibuka     : belum — butuh depthai-c
-```
+## Memakai di aplikasi
 
-## Kenapa butuh lapisan shim
+Tambahkan paket runtime di samping SDK:
 
-depthai-core adalah pustaka C++ yang memaparkan template, `std::shared_ptr`, `std::vector`,
-dan tipe STL lain pada permukaan API-nya. Tipe-tipe itu tidak punya ABI stabil: tata letaknya
-berbeda antar kompiler, antar versi kompiler yang sama, bahkan antar mode debug dan release.
-
-P/Invoke membutuhkan ABI yang stabil. Jadi jalurnya bukan .NET → C++ langsung, melainkan:
-
-```
-DepthAI.Net  →  P/Invoke  →  depthai-c (shim C, tipe POD)  →  depthai-core (C++)
+```xml
+<PackageReference Include="DepthAI.Net" Version="0.3.0" />
+<PackageReference Include="DepthAI.Net.Runtime.win-x64" Version="0.3.0"
+                  Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 ```
 
-Shim-nya tipis: ia hanya meratakan tipe C++ menjadi struct dan pointer polos.
+Tidak ada konfigurasi lain. `DepthAiDevice.OpenAsync()` memakai hardware bila runtime
+native termuat dan ada perangkat, selain itu jatuh ke simulasi. Untuk memaksa hardware:
 
-## ABI yang harus dipenuhi
-
-Binding sudah ditulis dan menunggu implementasi. Lihat
-[`NativeMethods.cs`](../../src/DepthAI.Net.Core/Interop/NativeMethods.cs) untuk
-tanda tangan yang tepat. Ringkasnya:
-
-```c
-// Siklus hidup dan info
-int  dai_get_version(char* buffer, int length);
-int  dai_last_error(char* buffer, int length);
-int  dai_device_list(dai_device_info_t* buffer, int capacity, int* count);
-int  dai_device_open(const char* mxid, const dai_open_options_t* options, void** handle);
-int  dai_device_close(void* handle);
-int  dai_device_capabilities(void* handle, dai_capabilities_t* out);
-
-// Pipeline
-int  dai_device_upload_model(void* handle, const char* name, const uint8_t* data, int64_t length);
-int  dai_device_start_pipeline(void* handle, const char* pipeline_json);
-int  dai_device_stop_pipeline(void* handle);
-
-// Aliran data — model tarik, bukan callback
-int  dai_device_poll(void* handle, dai_packet_t* out, int timeout_ms);
-int  dai_packet_release(void* handle, void* native_handle);
-
-// Telemetri
-int  dai_device_telemetry(void* handle, dai_telemetry_t* out);
+```csharp
+await using var device = await DepthAiDevice.OpenAsync(
+    new DepthAiOptions { Backend = BackendSelection.NativeOnly });
 ```
 
-Dua keputusan desain yang perlu dipertahankan implementor:
+Paket runtime berisi `depthai-c.dll`, `depthai-core.dll` 3.11.0, `opencv_world4130.dll`,
+`dynamic_calibration.dll`, `libusb-1.0.dll`, dan runtime MSVC app-local, sehingga tidak
+butuh VC++ Redistributable. Ukurannya sekitar 54 MB terkompresi.
 
-**Model tarik, bukan callback.** `dai_device_poll` menarik satu paket dan mengembalikan
-`DAI_TIMEOUT` bila tidak ada. Callback dari native ke managed pada jalur panas mengharuskan
-delegate tetap hidup dan bisa bermasalah saat GC memindahkan thread; polling menghindari
-seluruh kelas masalah itu.
+Template `dotnet new` dan proyek buatan Jack The Code Bender sudah menyertakan referensi ini.
+Di dalam repo, `DepthAI.Net.Core.csproj` menyalin DLL dari `artifacts/native/win-x64` (bila
+sudah dibangun) ke setiap proyek yang mereferensikannya: CLI, Wizard, sample, dan tes.
 
-**Pipeline dikirim sebagai JSON.** Shim tidak perlu memaparkan API graf; ia cukup mem-parsing
-satu string dan membangun `dai::Pipeline` di sisi C++. Skemanya ada di
-[`pipeline.schema.json`](../../tools/vscode-depthai/schemas/pipeline.schema.json).
+## Arsitektur
 
-## Membangun shim
-
-Prasyarat yang **tidak ada** di mesin pengembangan saat ini:
-
-- CMake 3.20+
-- Kompiler C++ (MSVC Build Tools, GCC, atau Clang)
-- depthai-core beserta dependensinya
-
-Langkah kasarnya:
-
-```bash
-git clone --recursive https://github.com/luxonis/depthai-core
-cd depthai-core
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
-cmake --build build --config Release
-
-# Lalu kompilasi shim terhadap depthai-core dan hasilkan:
-#   Windows : depthai-c.dll
-#   Linux   : libdepthai-c.so
-#   macOS   : libdepthai-c.dylib
+```
+DepthAI.Net  →  P/Invoke  →  depthai-c (shim C, tipe POD)  →  depthai-core 3.11 (C++)
 ```
 
-Letakkan pustaka hasilnya di samping aplikasi, atau di direktori mana pun pada `PATH`
-(`LD_LIBRARY_PATH` pada Linux). SDK memeriksanya saat dipakai pertama kali dan otomatis
-memakainya begitu bisa dimuat — tidak ada konfigurasi yang perlu diubah.
+depthai-core memaparkan template dan tipe STL yang tidak punya ABI stabil, jadi P/Invoke
+langsung ke sana rapuh. Shim C dengan tipe POD adalah batas yang benar. Kontraknya ada di
+[`native/depthai-c/include/depthai_c.h`](../../native/depthai-c/include/depthai_c.h) dan
+dicerminkan persis oleh [`NativeMethods.cs`](../../src/DepthAI.Net.Core/Interop/NativeMethods.cs).
 
-Untuk distribusi, kemas per RID sebagai paket `DepthAI.Net.Runtime.<rid>` dengan aset native
-di `runtimes/<rid>/native/`.
+Keputusan desain yang dijaga:
+
+- **Model pull, bukan callback ke .NET.** Callback queue depthai berjalan di thread depthai
+  dan hanya mengisi antrean siap-ambil (maks. 64 paket, yang tertua dibuang). `dai_device_poll`
+  menariknya. Tidak ada delegate managed yang dipanggil dari native.
+- **Pipeline dikirim sebagai JSON.** Shim mengurai satu string dan membangun `dai::Pipeline`.
+- **Exception tidak pernah menyeberang batas C.** Semuanya menjadi kode status, dan detailnya
+  bisa dibaca lewat `dai_last_error` (per thread).
+- **NN dijalankan sebagai `NeuralNetwork` mentah.** Tensor diurai di host oleh parser .NET yang
+  sama dengan jalur simulasi, jadi hasil simulasi dan hardware konsisten.
+
+### Pemetaan node
+
+| Node .NET | depthai-core v3 | Catatan |
+| --- | --- | --- |
+| `ColorCamera` | `Camera` + `requestOutput` | `preview` sesuai ukuran/urutan warna; `video` NV12 seukuran sensor; `isp`; `still` = keluaran resolusi penuh |
+| `MonoCamera` | `Camera` + `requestOutput` | ukuran dari resolusi |
+| `StereoDepth` | `StereoDepth` | preset, LR-check, subpixel, extended, confidence, median, align, ukuran keluaran |
+| `NeuralNetwork`, `DetectionNetwork`, `SpatialDetectionNetwork` | `NeuralNetwork` | model `.blob`, `.superblob`, atau NN Archive (`.tar.xz`) |
+| `ImageManip` | `ImageManip` | crop ternormalisasi, rotasi, resize (crop tengah / stretch), format keluaran |
+| `VideoEncoder` | `VideoEncoder` | MJPEG (lossy/lossless), H.264, H.265 |
+| `Imu` | `IMU` | accelerometer, gyroscope, magnetometer, rotation vector |
+
+Preview kamera yang dihubungkan ke node NN diminta dalam format **planar** (BGR888p), karena
+model blob RVC2 mengharapkan CHW. Bila preview yang sama juga dialirkan ke host, shim
+menyusunnya ulang menjadi interleaved, karena `ImageFrame` hanya mengenal interleaved.
+
+### Format payload non-piksel
+
+- **Tensor NN**: `int32 count`, lalu per tensor `int32 nameLen, name, int32 rank,
+  int32 dims[rank], float32 data[]`. Tensor 4D selalu dikirim NCHW dan sudah di-dequantize.
+- **IMU**: `float32[11]` = accel xyz, gyro xyz, rotasi i j k real, penanda rotasi.
+
+## Membangun
+
+```powershell
+pwsh native/depthai-c/build.ps1        # atau: powershell -File native/depthai-c/build.ps1
+dotnet pack src/DepthAI.Net.Runtime.win-x64
+```
+
+Skrip ini tidak membangun depthai-core dari sumber. Yang dilakukannya:
+
+1. Mengunduh rilis prebuilt `depthai-core-v3.11.0-win64.zip` dari Luxonis.
+2. Mengunduh installer resmi OpenCV 4.13.0 dan mengambil `opencv_world4130.dll` saja. DLL
+   prebuilt depthai-core mengimpornya tapi tidak menyertakannya. Skrip memeriksa tabel impor
+   supaya versi OpenCV yang dipakai pasti cocok.
+3. Mengompilasi shim dengan MSVC, CMake, dan Ninja bawaan Visual Studio.
+4. Menyalin semua DLL, termasuk runtime MSVC dari folder Redist Visual Studio, ke
+   `artifacts/native/win-x64`.
+
+Prasyarat: Visual Studio 2022+ dengan workload C++, dan 7-Zip. Keduanya tersedia di runner
+GitHub `windows-latest`; CI dan workflow publish menjalankan skrip ini sebelum pack.
+
+CMake memakai target impor buatan sendiri, bukan `find_package(depthai)`: config CMake rilis
+prebuilt mewajibkan OpenCV, padahal shim tidak memakai API OpenCV sama sekali.
+
+## Batasan yang perlu diketahui
+
+- **Hanya Windows x64.** Luxonis hanya merilis paket C++ prebuilt untuk win64. Untuk Linux,
+  depthai-core perlu dibangun dari sumber; shim dan `CMakeLists.txt`-nya sudah portabel
+  (`DEPTHAI_CORE_DIR` menunjuk hasil `cmake --install`), tapi paket `linux-x64` belum dibuat.
+- **Posisi 3D deteksi spasial belum dihitung**, baik di hardware maupun di simulasi. Link
+  kedalaman ke node spasial diterima tapi diabaikan.
+- **Stop pipeline menutup perangkat** (perilaku depthai v3). Shim membukanya ulang supaya handle
+  tetap bisa dipakai, dan proses ini memakan beberapa detik.
+- **H.264/H.265** keluar sebagai paket encoded tanpa format piksel. Stream .NET-nya belum punya
+  tipe frame khusus untuk bitstream video; MJPEG sudah didukung penuh.
+- `DeviceOpenOptions.BootTimeout` diabaikan (depthai memakai bawaannya sendiri).
+  `FirmwarePath` dan `MaxUsbSpeed` didukung.
 
 ## Memverifikasi
 
-Setelah pustaka terpasang:
-
 ```bash
-depthai-dotnet-cli info
+depthai-dotnet-cli info                              # baris "Runtime native" → tersedia (depthai-core 3.11.0)
+depthai-dotnet-cli devices list --require-hardware   # gagal keras alih-alih jatuh ke simulasi
+depthai-dotnet-cli devices info                      # sensor, kecepatan USB, suhu chip
 ```
-
-Baris `Runtime native` akan berubah menjadi `tersedia`, dan `devices list` akan menampilkan
-perangkat fisik sebagai perangkat yang bisa dibuka, bukan lagi di bagian terpisah.
-
-Untuk memaksa kegagalan alih-alih jatuh ke simulasi selama pengujian:
-
-```bash
-depthai-dotnet-cli devices list --require-hardware
-```
-
-## Sementara itu
-
-Backend simulasi bukan stub: ia menghasilkan frame warna, peta kedalaman yang konsisten
-secara geometris dengan frame warna itu, dan tensor neural network dalam tata letak asli
-MobileNet-SSD maupun YOLO. Tensor itu diurai oleh parser yang sama persis dengan yang dipakai
-hardware. Artinya kode aplikasi, pipeline, parser, dan UI semuanya bisa dikembangkan dan
-diuji sekarang; yang berubah nanti hanya sumber datanya.
