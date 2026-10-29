@@ -191,6 +191,57 @@ public sealed class DepthAiDevice : IAsyncDisposable
     /// <summary>Stream keluaran tanpa penyempitan tipe.</summary>
     public IFrameStream<Frame> GetStream(string name) => GetStreamCore(name);
 
+    /// <summary>
+    /// Mengganti ambang deteksi node yang sedang berjalan tanpa menghentikan pipeline,
+    /// padanan mengirim <c>DetectionParserConfig</c> ke <c>inputConfig</c> di depthai-core 3.11.
+    /// Berlaku mulai frame berikutnya untuk semua stream keluaran node itu.
+    /// </summary>
+    /// <param name="nodeName">Nama <see cref="DetectionNetworkNode"/> di pipeline yang berjalan.</param>
+    /// <param name="config">Ambang baru; properti null mempertahankan nilai yang aktif.</param>
+    /// <exception cref="InvalidOperationException">Belum ada pipeline, atau node tidak punya stream deteksi.</exception>
+    /// <exception cref="KeyNotFoundException">Pipeline tidak punya node bernama <paramref name="nodeName"/>.</exception>
+    public void SendConfig(string nodeName, DetectionParserConfig config)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(nodeName);
+        ArgumentNullException.ThrowIfNull(config);
+        config.Validate();
+
+        lock (_gate)
+        {
+            var pipeline = _pipeline
+                ?? throw new InvalidOperationException("Belum ada pipeline yang berjalan; panggil StartAsync() dulu.");
+
+            var node = pipeline.Nodes.FirstOrDefault(n => string.Equals(n.Name, nodeName, StringComparison.OrdinalIgnoreCase))
+                ?? throw new KeyNotFoundException($"Pipeline tidak punya node bernama '{nodeName}'.");
+
+            if (node is not DetectionNetworkNode)
+            {
+                throw new InvalidOperationException(
+                    $"Node '{nodeName}' adalah {node.NodeType}; ambang deteksi hanya berlaku untuk DetectionNetwork.");
+            }
+
+            var targets = _converters.Values
+                .OfType<TensorConverter>()
+                .Where(c => ReferenceEquals(c.Node, node))
+                .ToList();
+
+            if (targets.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Node '{nodeName}' tidak punya stream deteksi yang dialirkan ke host. Tambahkan StreamOut untuk keluarannya.");
+            }
+
+            foreach (var converter in targets)
+            {
+                converter.Apply(config);
+            }
+        }
+
+        _logger.LogInformation(
+            "Ambang deteksi {Node} diperbarui: confidence={Confidence}, iou={Iou}.",
+            nodeName, config.ConfidenceThreshold, config.IouThreshold);
+    }
+
     /// <summary>Membaca telemetri kesehatan perangkat.</summary>
     public DeviceTelemetry ReadTelemetry() => _session.ReadTelemetry();
 
@@ -273,10 +324,10 @@ public sealed class DepthAiDevice : IAsyncDisposable
         // Node NN dengan model yang punya metadata keluarga memakai parser sungguhan;
         // tanpa itu, tensor diteruskan mentah agar bisa diproses sendiri di host.
         NeuralNetworkNode nn when source.Name is "detections" or "out" && nn.Model is { } model
-            => new TensorConverter(model.CreateParser(), nn.ConfidenceThreshold),
+            => new TensorConverter(nn, model.CreateParser(), nn.ConfidenceThreshold, (nn as DetectionNetworkNode)?.IouThreshold),
 
-        NeuralNetworkNode when source.Name is "detections" or "out"
-            => new TensorConverter(new RawTensorParser(), null),
+        NeuralNetworkNode nn when source.Name is "detections" or "out"
+            => new TensorConverter(nn, new RawTensorParser(), null, null),
 
         StereoDepthNode when source.Name == "depth" => DepthConverter.Instance,
 
@@ -358,8 +409,27 @@ public sealed class DepthAiDevice : IAsyncDisposable
         return frame;
     }
 
-    private sealed class TensorConverter(IInferenceParser parser, float? confidenceOverride) : IPacketConverter
+    private sealed class TensorConverter(
+        NeuralNetworkNode node,
+        IInferenceParser parser,
+        float? confidenceThreshold,
+        float? iouThreshold) : IPacketConverter
     {
+        // Ambang dibaca dari thread callback backend dan ditulis dari thread pemanggil
+        // SendConfig; satu objek imutabel yang ditukar atomik menjaga pasangan
+        // confidence/IoU selalu konsisten tanpa mengunci jalur frame.
+        private Thresholds _thresholds = new(confidenceThreshold, iouThreshold);
+
+        public NeuralNetworkNode Node { get; } = node;
+
+        public void Apply(DetectionParserConfig config)
+        {
+            var current = Volatile.Read(ref _thresholds);
+            Volatile.Write(ref _thresholds, new Thresholds(
+                config.ConfidenceThreshold ?? current.Confidence,
+                config.IouThreshold ?? current.Iou));
+        }
+
         public Frame? Convert(DevicePacket packet)
         {
             if (packet.Tensors is not { Count: > 0 } tensors)
@@ -367,6 +437,7 @@ public sealed class DepthAiDevice : IAsyncDisposable
                 return null;
             }
 
+            var thresholds = Volatile.Read(ref _thresholds);
             return parser.Parse(tensors, new InferenceContext
             {
                 SourceWidth = packet.Width,
@@ -374,9 +445,12 @@ public sealed class DepthAiDevice : IAsyncDisposable
                 SequenceNumber = packet.SequenceNumber,
                 DeviceTimestamp = packet.DeviceTimestamp,
                 StreamName = packet.StreamName,
-                ConfidenceThreshold = confidenceOverride,
+                ConfidenceThreshold = thresholds.Confidence,
+                IouThreshold = thresholds.Iou,
             });
         }
+
+        private sealed record Thresholds(float? Confidence, float? Iou);
     }
 
 }

@@ -206,12 +206,18 @@ public sealed class SegmentationParser(ModelMetadata metadata) : IInferenceParse
         var map = ArrayPool<byte>.Shared.Rent(pixels);
         var data = tensor.Span;
 
+        // Kanal latar belakang bukan kelas: piksel hanya diberi kelas bila skor kelas itu
+        // mengalahkan latar belakang, selain itu NoClass. Model satu kanal tidak punya
+        // latar belakang terpisah, jadi pengaturan ini diabaikan (sama seperti upstream).
+        var background = _metadata.BackgroundClass && classes > 1;
+        var firstClass = background ? 1 : 0;
+
         for (var p = 0; p < pixels; p++)
         {
-            byte best = 0;
-            var bestScore = float.NegativeInfinity;
+            var best = background ? SegmentationFrame.NoClass : (byte)0;
+            var bestScore = background ? data[p] : float.NegativeInfinity;
 
-            for (var c = 0; c < classes; c++)
+            for (var c = firstClass; c < classes; c++)
             {
                 var score = data[(c * pixels) + p];
                 if (score > bestScore)

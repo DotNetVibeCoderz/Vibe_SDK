@@ -15,7 +15,7 @@ truth for scope, not a dependency list.
 
 ```powershell
 dotnet build DepthAI.Net.slnx                      # whole solution
-dotnet test                                        # all tests (114)
+dotnet test                                        # all tests
 dotnet test tests/DepthAI.Net.Core.Tests
 dotnet test --filter "FullyQualifiedName~YoloParser"
 
@@ -23,7 +23,7 @@ dotnet run --project src/DepthAI.Net.Wizard        # the wizard app
 dotnet run --project src/DepthAI.Net.Cli -- info   # CLI without installing it
 
 dotnet pack src/DepthAI.Net.Templates              # -> artifacts/nuget
-dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.1.0.nupkg
+dotnet new install artifacts/nuget/DepthAI.Net.Templates.0.2.0.nupkg
 ```
 
 Windows environment: PowerShell 5.1 is primary (no `&&`, no ternary); a Git Bash tool is also
@@ -51,6 +51,19 @@ OAK-1: MxId `14442C10011298CD00`, IMX378 sensor, single colour camera, no stereo
 
 Registry enumeration was tried first and rejected: stale keys persist after unplug, and OAK
 appears under two product IDs (unbooted `2485`, booted `F63B`), so one camera read as two.
+
+## Upstream sync
+
+Synced with depthai-core **v3.11.0** (built on v3.8.0). `docs/*/upstream-sync.md` lists what was
+ported and what was deliberately not (device/beta nodes, multi-device pipelines). To sync again,
+diff upstream tags (`git diff v3.11.0 <new> -- include src/utility protos`) and port host-side
+behaviour only.
+
+`.dai` files (`Core/Messages`) are upstream's protobuf envelope, hand-encoded to keep Core
+dependency-free. The fixtures in `tests/.../Fixtures/depthai-3.11` were written by depthai 3.11
+for Python. Regenerate them with a real depthai install, never by hand.
+
+The NuGet icon is `icon.png`, drawn by `tools/branding/make_icon.py`. Edit the script, not the PNG.
 
 ## Architecture
 

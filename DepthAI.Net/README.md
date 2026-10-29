@@ -189,6 +189,21 @@ float[,] matrix = frame.ToMeterMatrix();           // NaN untuk piksel kosong
 
 API-nya sengaja nullable supaya kasus ini tidak lolos diam-diam menjadi "objek sangat dekat".
 
+### Berkas `.dai` / `.dai` files
+
+Frame dan deteksi bisa disimpan dalam format `.dai` milik depthai-core 3.10+, dan berkasnya
+bisa dibuka dari Python/C++ depthai maupun sebaliknya.
+
+```csharp
+using DepthAI.Messages;
+
+frame.Save("tangkapan");                              // → tangkapan.dai
+using var depth = DaiMessageFile.LoadDepthFrame("depth.dai");
+```
+
+Fitur yang disinkronkan dari depthai-core 3.9–3.11 tercantum di
+[docs/id/upstream-sync.md](docs/id/upstream-sync.md).
+
 ### Stream reaktif
 
 Stream adalah `IObservable<T>` biasa, jadi bisa dikomposisi dengan System.Reactive bila mau,
@@ -305,6 +320,7 @@ hardware, termasuk parser inferensi sungguhan.
 | [Tutorial](docs/id/tutorials.md) | [Tutorials](docs/en/tutorials.md) |
 | [Runtime native](docs/id/native-runtime.md) | [Native runtime](docs/en/native-runtime.md) |
 | [Galeri](docs/id/gallery.md) | [Gallery](docs/en/gallery.md) |
+| [Sinkronisasi depthai-core](docs/id/upstream-sync.md) | [depthai-core sync](docs/en/upstream-sync.md) |
 
 ---
 

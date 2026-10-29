@@ -34,6 +34,13 @@ public sealed class ClassificationFrame : Frame
 /// </summary>
 public sealed class SegmentationFrame : Frame
 {
+    /// <summary>
+    /// Nilai piksel yang tidak masuk kelas mana pun — dipakai saat model punya kanal latar
+    /// belakang (<see cref="ModelMetadata.BackgroundClass"/>). Sama dengan nilai 255 pada
+    /// <c>SegmentationMask</c> depthai-core.
+    /// </summary>
+    public const byte NoClass = byte.MaxValue;
+
     private byte[]? _pooled;
 
     internal SegmentationFrame(byte[] classMap, int width, int height, bool pooled)

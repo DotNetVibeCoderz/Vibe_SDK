@@ -13,6 +13,11 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
 
+  <!-- Berkas .dai yang dibuat depthai Python, dipakai menguji kompatibilitas format. -->
+  <ItemGroup>
+    <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\DepthAI.Net.Core\DepthAI.Net.Core.csproj" />
   </ItemGroup>

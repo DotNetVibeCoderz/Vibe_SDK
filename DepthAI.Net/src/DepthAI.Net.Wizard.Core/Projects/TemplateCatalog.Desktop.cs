@@ -17,7 +17,7 @@ public static partial class TemplateCatalog
     {
         var packages = new List<string>
         {
-            """<PackageReference Include="DepthAI.Net.Imaging.SkiaSharp" Version="0.1.0" />""",
+            """<PackageReference Include="DepthAI.Net.Imaging.SkiaSharp" Version="0.2.0" />""",
         };
         packages.AddRange(extraPackages);
 

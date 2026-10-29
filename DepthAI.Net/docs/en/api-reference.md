@@ -243,7 +243,9 @@ static NeuralModel       NeuralModel.CreatePlaceholder(ModelFamily family, IRead
                                                        int inputWidth = 640, int inputHeight = 640, ...)
 ```
 
-`LoadFromFileAsync` picks up a Luxonis-style `.json` sidecar automatically when present.
+`LoadFromFileAsync` picks up a Luxonis-style `.json` sidecar automatically when present, and an NN Archive
+`config.json` inside a `.tar`/`.tar.gz` or next to the model (`NnArchiveConfig`, with `strides`,
+`yolo_outputs`, `subtype` → `YoloDecodingFamily`, and `background_class`).
 `CreatePlaceholder` builds a metadata-only model for developing against the simulator.
 
 ### Results
@@ -273,6 +275,17 @@ Other result frames: `ClassificationFrame`, `SegmentationFrame`, `NeuralTensorFr
 `YoloParser`, `MobileNetSsdParser`, `ClassificationParser`, `SegmentationParser`, `RawTensorParser`.
 Implement `IInferenceParser` for architectures not covered.
 
+Raw multi-stride YOLO heads (`*_yolo`, `[1, 5 + nc, H, W]`) decode by `ModelMetadata.YoloDecoding`:
+`Tlbr` (v6r2/v8/v10/v11) or `CenterSize` (v6/v6r1). With `BackgroundClass`, `SegmentationParser` marks
+pixels won by channel 0 as `SegmentationFrame.NoClass` (255).
+
+Runtime thresholds (depthai-core 3.11 `DetectionParserConfig`):
+
+```csharp
+void device.SendConfig(string nodeName, DetectionParserConfig config)  // null fields keep current value
+float? DetectionNetworkNode.IouThreshold                                // startup NMS threshold
+```
+
 ---
 
 ## Imaging
@@ -285,6 +298,9 @@ byte[] PixelConverter.PlanarToInterleaved(ReadOnlySpan<byte> planar, int width, 
 
 byte[]     DepthColorizer.ToBgr(DepthFrame frame, DepthColorMap map = DepthColorMap.Turbo, ...)
 ImageFrame DepthColorizer.ToImageFrame(DepthFrame frame, ...)
+byte[]     DepthColorizer.Colorize(DepthFrame frame, float minMillimeters = 300, float maxMillimeters = 12000,
+                                   DepthColorMap map = DepthColorMap.Jet, bool useLog = true)  // upstream colorizeDepthFrame
+ImageFrame DepthColorizer.ColorizeToImageFrame(DepthFrame frame, ...)
 
 void FrameOverlay.DrawDetections(Span<byte> bgr, int width, int height, IEnumerable<Detection> detections, int thickness = 2)
 void FrameOverlay.DrawRectangle(...)
@@ -313,6 +329,21 @@ byte[]   frame.Encode(SKEncodedImageFormat format = SKEncodedImageFormat.Png, in
 Bitmap frame.ToBitmap()
 void   frame.Save(string path)
 ```
+
+## `.dai` message files
+
+`DepthAI.Messages.DaiMessageFile`, compatible with depthai-core 3.10+ `msg.save()`/`msg.load()`:
+
+```csharp
+void frame.Save(string path)                   // ImageFrame, DepthFrame, DetectionFrame; ".dai" appended if no extension
+Frame          DaiMessageFile.Load(string path) // RAW16 → DepthFrame, other ImgFrame → ImageFrame, ImgDetections → DetectionFrame
+ImageFrame     DaiMessageFile.LoadImageFrame(string path)
+DepthFrame     DaiMessageFile.LoadDepthFrame(string path)
+DetectionFrame DaiMessageFile.LoadDetections(string path)
+string         DaiMessageFile.ReadSchemaName(string path)
+```
+
+See [upstream-sync.md](upstream-sync.md) for what is and is not stored.
 
 ---
 

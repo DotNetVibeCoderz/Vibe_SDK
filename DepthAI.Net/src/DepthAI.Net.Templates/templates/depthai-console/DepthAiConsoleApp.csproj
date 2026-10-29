@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DepthAI.Net" Version="0.1.0" />
-    <PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.1.0" />
+    <PackageReference Include="DepthAI.Net" Version="0.2.0" />
+    <PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.2.0" />
   </ItemGroup>
 
 </Project>

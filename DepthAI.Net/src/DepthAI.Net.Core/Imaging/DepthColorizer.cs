@@ -87,6 +87,156 @@ public static class DepthColorizer
         return ImageFrame.Wrap(pixels, frame.Width, frame.Height, Streaming.PixelFormat.Bgr888);
     }
 
+    /// <summary>
+    /// Mewarnai kedalaman dengan semantik <c>dai::utility::colorizeDepthFrame</c> (depthai-core 3.9):
+    /// rentang dalam milimeter, skala logaritmik opsional, dan rentang otomatis.
+    /// </summary>
+    /// <param name="frame">Frame sumber.</param>
+    /// <param name="minMillimeters">Batas bawah rentang, mm. Bawaan upstream 300 mm.</param>
+    /// <param name="maxMillimeters">
+    /// Batas atas rentang, mm. Bila tidak lebih besar dari <paramref name="minMillimeters"/>
+    /// (misalnya keduanya 0), rentang dihitung dari persentil ke-3 dan ke-95 piksel valid.
+    /// </param>
+    /// <param name="colorMap">Peta warna. Upstream memakai Jet sebagai bawaan.</param>
+    /// <param name="useLog">
+    /// Skala logaritmik: detail di jarak dekat lebih terlihat, yang jauh dimampatkan.
+    /// </param>
+    /// <returns>
+    /// Buffer BGR888. Piksel tanpa pengukuran selalu hitam. Bila rentang tidak bisa
+    /// ditentukan (tidak ada piksel valid), seluruh gambar hitam, sama seperti upstream.
+    /// </returns>
+    public static byte[] Colorize(
+        DepthFrame frame,
+        float minMillimeters = 300f,
+        float maxMillimeters = 12_000f,
+        DepthColorMap colorMap = DepthColorMap.Jet,
+        bool useLog = true)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+
+        var source = frame.Millimeters;
+        var destination = new byte[frame.Width * frame.Height * 3];
+
+        if (maxMillimeters <= minMillimeters)
+        {
+            (minMillimeters, maxMillimeters) = AutoRange(source);
+            if (maxMillimeters <= minMillimeters)
+            {
+                return destination;
+            }
+        }
+
+        // Epsilon mencegah log(0), persis seperti implementasi OpenCV upstream.
+        const float Epsilon = 1e-6f;
+        var low = useLog ? MathF.Log(minMillimeters + Epsilon) : minMillimeters;
+        var high = useLog ? MathF.Log(maxMillimeters + Epsilon) : maxMillimeters;
+        if (high <= low)
+        {
+            return destination;
+        }
+
+        var scale = 255f / (high - low);
+
+        // Upstream memetakan ke 8-bit dulu baru menerapkan colormap, jadi warna hanya punya
+        // 256 kemungkinan; menghitungnya sekali lebih murah daripada polinomial per piksel.
+        var lut = new (byte R, byte G, byte B)[256];
+        for (var i = 0; i < lut.Length; i++)
+        {
+            lut[i] = Map(i / 255f, colorMap);
+        }
+
+        for (var i = 0; i < source.Length; i++)
+        {
+            var mm = source[i];
+            if (mm == 0)
+            {
+                continue;
+            }
+
+            var value = useLog ? MathF.Log(mm + Epsilon) : mm;
+
+            // convertTo(CV_8U) OpenCV membulatkan lalu menjenuhkan ke 0..255.
+            var index = (int)Math.Clamp(MathF.Round((value - low) * scale), 0f, 255f);
+            var (r, g, b) = lut[index];
+
+            var offset = i * 3;
+            destination[offset] = b;
+            destination[offset + 1] = g;
+            destination[offset + 2] = r;
+        }
+
+        return destination;
+    }
+
+    /// <summary>
+    /// Persentil ke-3 dan ke-95 dari piksel valid, dengan indeks
+    /// <c>round(p/100 * (n-1))</c> seperti <c>computeAutoDepthRange</c> upstream.
+    /// </summary>
+    /// <remarks>
+    /// Histogram 16-bit menggantikan sort upstream: hasilnya identik karena nilai
+    /// kedalaman berupa bilangan bulat, tapi waktunya linear.
+    /// </remarks>
+    internal static (float Min, float Max) AutoRange(ReadOnlySpan<ushort> millimeters)
+    {
+        var histogram = new int[ushort.MaxValue + 1];
+        var valid = 0;
+
+        foreach (var mm in millimeters)
+        {
+            if (mm != 0)
+            {
+                histogram[mm]++;
+                valid++;
+            }
+        }
+
+        if (valid == 0)
+        {
+            return (0f, 0f);
+        }
+
+        return (ValueAtRank(histogram, Rank(3.0)), ValueAtRank(histogram, Rank(95.0)));
+
+        long Rank(double percentile) => (long)Math.Round(percentile / 100.0 * (valid - 1), MidpointRounding.AwayFromZero);
+
+        static float ValueAtRank(int[] histogram, long rank)
+        {
+            long seen = 0;
+            for (var value = 1; value < histogram.Length; value++)
+            {
+                seen += histogram[value];
+                if (seen > rank)
+                {
+                    return value;
+                }
+            }
+
+            return histogram.Length - 1;
+        }
+    }
+
+    /// <summary>
+    /// Versi <see cref="Colorize"/> yang membungkus hasilnya sebagai <see cref="ImageFrame"/>
+    /// dan membawa nomor urut serta timestamp frame sumber, seperti <c>setMetadata</c> upstream.
+    /// </summary>
+    public static ImageFrame ColorizeToImageFrame(
+        DepthFrame frame,
+        float minMillimeters = 300f,
+        float maxMillimeters = 12_000f,
+        DepthColorMap colorMap = DepthColorMap.Jet,
+        bool useLog = true)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+
+        var pixels = Colorize(frame, minMillimeters, maxMillimeters, colorMap, useLog);
+        var image = ImageFrame.Wrap(pixels, frame.Width, frame.Height, Streaming.PixelFormat.Bgr888);
+        image.SequenceNumber = frame.SequenceNumber;
+        image.DeviceTimestamp = frame.DeviceTimestamp;
+        image.HostTimestamp = frame.HostTimestamp;
+        image.StreamName = frame.StreamName;
+        return image;
+    }
+
     private static (byte R, byte G, byte B) Map(float t, DepthColorMap colorMap) => colorMap switch
     {
         DepthColorMap.Grayscale => Grayscale(t),

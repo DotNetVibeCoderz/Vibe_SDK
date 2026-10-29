@@ -108,7 +108,11 @@ jobs:
           if [ -z "$NUGET_API_KEY" ]; then
             echo "Secret NUGET_API_KEY belum diset di repository ini."; exit 1
           fi
-          dotnet nuget push "artifacts/nuget/*.nupkg" \
-            --source https://api.nuget.org/v3/index.json \
-            --api-key "$NUGET_API_KEY" \
-            --skip-duplicate
+          # Glob diekspansi bash: di runner Windows dotnet nuget push tidak me-resolve "artifacts/nuget/*.nupkg".
+          # Paket .snupkg di sebelahnya ikut terunggah otomatis oleh push .nupkg.
+          for package in artifacts/nuget/*.nupkg; do
+            dotnet nuget push "$package" \
+              --source https://api.nuget.org/v3/index.json \
+              --api-key "$NUGET_API_KEY" \
+              --skip-duplicate
+          done

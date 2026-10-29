@@ -243,7 +243,9 @@ static NeuralModel       NeuralModel.CreatePlaceholder(ModelFamily family, IRead
                                                        int inputWidth = 640, int inputHeight = 640, ...)
 ```
 
-`LoadFromFileAsync` otomatis membaca berkas `.json` pendamping bergaya Luxonis bila ada.
+`LoadFromFileAsync` otomatis membaca berkas `.json` pendamping bergaya Luxonis bila ada, serta
+`config.json` NN Archive di dalam `.tar`/`.tar.gz` atau di sebelah model (`NnArchiveConfig`, termasuk
+`strides`, `yolo_outputs`, `subtype` → `YoloDecodingFamily`, dan `background_class`).
 `CreatePlaceholder` membuat model metadata-saja untuk dikembangkan melawan simulasi.
 
 ### Hasil
@@ -273,6 +275,17 @@ Tipe frame lain: `ClassificationFrame`, `SegmentationFrame`, `NeuralTensorFrame`
 `YoloParser`, `MobileNetSsdParser`, `ClassificationParser`, `SegmentationParser`, `RawTensorParser`.
 Implementasikan `IInferenceParser` untuk arsitektur yang belum didukung.
 
+Kepala YOLO grid mentah per stride (`*_yolo`, `[1, 5 + nc, H, W]`) didekode menurut
+`ModelMetadata.YoloDecoding`: `Tlbr` (v6r2/v8/v10/v11) atau `CenterSize` (v6/v6r1). Dengan `BackgroundClass`,
+`SegmentationParser` menandai piksel yang dimenangkan kanal 0 sebagai `SegmentationFrame.NoClass` (255).
+
+Ambang saat runtime (padanan `DetectionParserConfig` depthai-core 3.11):
+
+```csharp
+void device.SendConfig(string nodeName, DetectionParserConfig config)  // field null mempertahankan nilai aktif
+float? DetectionNetworkNode.IouThreshold                                // ambang NMS saat start
+```
+
 ---
 
 ## Imaging
@@ -285,6 +298,9 @@ byte[] PixelConverter.PlanarToInterleaved(ReadOnlySpan<byte> planar, int width, 
 
 byte[]     DepthColorizer.ToBgr(DepthFrame frame, DepthColorMap map = DepthColorMap.Turbo, ...)
 ImageFrame DepthColorizer.ToImageFrame(DepthFrame frame, ...)
+byte[]     DepthColorizer.Colorize(DepthFrame frame, float minMillimeters = 300, float maxMillimeters = 12000,
+                                   DepthColorMap map = DepthColorMap.Jet, bool useLog = true)  // colorizeDepthFrame upstream
+ImageFrame DepthColorizer.ColorizeToImageFrame(DepthFrame frame, ...)
 
 void FrameOverlay.DrawDetections(Span<byte> bgr, int width, int height, IEnumerable<Detection> detections, int thickness = 2)
 void FrameOverlay.DrawRectangle(...)
@@ -313,6 +329,21 @@ byte[]   frame.Encode(SKEncodedImageFormat format = SKEncodedImageFormat.Png, in
 Bitmap frame.ToBitmap()
 void   frame.Save(string path)
 ```
+
+## Berkas pesan `.dai`
+
+`DepthAI.Messages.DaiMessageFile`, kompatibel dengan `msg.save()`/`msg.load()` depthai-core 3.10+:
+
+```csharp
+void frame.Save(string path)                   // ImageFrame, DepthFrame, DetectionFrame; ".dai" ditambahkan bila tanpa ekstensi
+Frame          DaiMessageFile.Load(string path) // RAW16 → DepthFrame, ImgFrame lain → ImageFrame, ImgDetections → DetectionFrame
+ImageFrame     DaiMessageFile.LoadImageFrame(string path)
+DepthFrame     DaiMessageFile.LoadDepthFrame(string path)
+DetectionFrame DaiMessageFile.LoadDetections(string path)
+string         DaiMessageFile.ReadSchemaName(string path)
+```
+
+Lihat [upstream-sync.md](upstream-sync.md) untuk data yang ikut dan tidak ikut tersimpan.
 
 ---
 

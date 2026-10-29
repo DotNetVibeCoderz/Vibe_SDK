@@ -3,12 +3,16 @@ using DepthAI.Streaming;
 namespace DepthAI.Inference;
 
 /// <summary>
-/// Dekoder keluaran YOLO. Mengenali dua tata letak yang paling umum ditemui di ekosistem
-/// OAK dan memilihnya dari bentuk tensor, bukan dari nama model:
+/// Dekoder keluaran YOLO. Mengenali tata letak yang paling umum ditemui di ekosistem OAK:
 /// <list type="bullet">
 /// <item>anchor-free (v8/v10/v11): <c>[1, 4 + nc, anchors]</c> — tanpa skor objectness</item>
 /// <item>berbasis anchor (v5/v6/v7): <c>[1, anchors, 5 + nc]</c> — kolom ke-5 adalah objectness</item>
+/// <item>
+/// grid mentah per stride: satu tensor <c>[1, 5 + nc, H, W]</c> per keluaran <c>*_yolo</c>,
+/// didekode menurut <see cref="ModelMetadata.YoloDecoding"/> seperti DetectionParser depthai-core
+/// </item>
 /// </list>
+/// Dua tata letak pertama dipilih dari bentuk tensor, bukan dari nama model.
 /// </summary>
 public sealed class YoloParser(ModelMetadata metadata) : IInferenceParser
 {
@@ -26,10 +30,14 @@ public sealed class YoloParser(ModelMetadata metadata) : IInferenceParser
             throw new InvalidOperationException("Keluaran YOLO kosong — tidak ada tensor untuk didekode.");
         }
 
-        var tensor = tensors.Values.First();
         var threshold = context.ConfidenceThreshold ?? _metadata.ConfidenceThreshold;
-        var candidates = DecodeCandidates(tensor, threshold);
-        var kept = NonMaximumSuppression(candidates, _metadata.IouThreshold);
+        var iouThreshold = context.IouThreshold ?? _metadata.IouThreshold;
+
+        var gridLayers = ResolveGridLayers(tensors);
+        var candidates = gridLayers.Count > 0
+            ? DecodeGrid(gridLayers, threshold)
+            : DecodeCandidates(tensors.Values.First(), threshold);
+        var kept = NonMaximumSuppression(candidates, iouThreshold);
 
         return new DetectionFrame
         {
@@ -153,6 +161,144 @@ public sealed class YoloParser(ModelMetadata metadata) : IInferenceParser
 
             results.Add(CreateDetection(
                 bestClass, confidence, data[offset], data[offset + 1], data[offset + 2], data[offset + 3]));
+        }
+
+        return results;
+    }
+
+    /// <summary>Stride bawaan depthai-core untuk tiga kepala deteksi P3/P4/P5.</summary>
+    private static readonly int[] DefaultStrides = [8, 16, 32];
+
+    /// <summary>
+    /// Tensor grid mentah yang harus didekode per stride, terurut seperti upstream:
+    /// nama yang mengandung <c>_yolo</c>, diurutkan ordinal.
+    /// </summary>
+    private List<(Tensor Tensor, int Stride)> ResolveGridLayers(IReadOnlyDictionary<string, Tensor> tensors)
+    {
+        if (_metadata.YoloDecoding == YoloDecodingFamily.AnchorBased)
+        {
+            return [];
+        }
+
+        IEnumerable<string> candidates = _metadata.YoloOutputs.Count > 0 ? _metadata.YoloOutputs : tensors.Keys;
+        var layers = candidates
+            .Where(static n => n.Contains("_yolo", StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal)
+            .Select(n => tensors.TryGetValue(n, out var t) ? t : null)
+            .OfType<Tensor>()
+            .Where(static t => t.Rank == 3 || (t.Rank == 4 && t.Shape[0] == 1))
+            .ToList();
+
+        if (layers.Count == 0)
+        {
+            return [];
+        }
+
+        var strides = _metadata.Strides.Count > 0 ? _metadata.Strides : DefaultStrides;
+        if (strides.Count != layers.Count)
+        {
+            throw new InvalidOperationException(
+                $"Jumlah stride ({strides.Count}) tidak cocok dengan jumlah keluaran grid YOLO ({layers.Count}: "
+                + $"{string.Join(", ", layers.Select(static t => t.Name))}). Isi ModelMetadata.Strides sesuai model.");
+        }
+
+        return [.. layers.Select((t, i) => (t, strides[i]))];
+    }
+
+    /// <summary>
+    /// Mendekode keluaran grid CHW. Kanal 0..3 adalah kotak, 4 skor, 5.. probabilitas kelas.
+    /// Perhitungannya mengikuti <c>decodeTLBR</c>/<c>decodeR1AF</c> depthai-core 3.9+.
+    /// </summary>
+    private List<Detection> DecodeGrid(List<(Tensor Tensor, int Stride)> layers, float threshold)
+    {
+        var centerSize = _metadata.YoloDecoding == YoloDecodingFamily.CenterSize;
+        float inputWidth = _metadata.InputWidth > 0 ? _metadata.InputWidth : 1;
+        float inputHeight = _metadata.InputHeight > 0 ? _metadata.InputHeight : 1;
+        var results = new List<Detection>();
+
+        foreach (var (tensor, stride) in layers)
+        {
+            var shape = tensor.Shape;
+            var offset = shape.Count - 3;
+            var (channels, height, width) = (shape[offset], shape[offset + 1], shape[offset + 2]);
+            var classCount = channels - 5;
+            if (classCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Keluaran grid YOLO '{tensor.Name}' butuh lebih dari 5 kanal, tapi hanya ada {channels}.");
+            }
+
+            var data = tensor.Span;
+            var plane = width * height;
+
+            for (var row = 0; row < height; row++)
+            {
+                for (var col = 0; col < width; col++)
+                {
+                    var cell = (row * width) + col;
+                    if (data[(4 * plane) + cell] < threshold)
+                    {
+                        continue;
+                    }
+
+                    var bestClass = 0;
+                    var bestScore = 0f;
+                    for (var c = 0; c < classCount; c++)
+                    {
+                        var score = data[((5 + c) * plane) + cell];
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestClass = c;
+                        }
+                    }
+
+                    if (bestScore < threshold)
+                    {
+                        continue;
+                    }
+
+                    var (b0, b1, b2, b3) = (data[cell], data[plane + cell], data[(2 * plane) + cell], data[(3 * plane) + cell]);
+                    float xMin, yMin, xMax, yMax;
+
+                    if (centerSize)
+                    {
+                        // YOLOv6 R1: offset pusat dalam sel dan log ukuran, semuanya dalam satuan stride.
+                        // Sebelum 3.9 upstream membaca nilai ini sebagai piksel jadi; kotaknya meleset.
+                        var cx = (col + b0) * stride;
+                        var cy = (row + b1) * stride;
+                        var w = MathF.Exp(b2) * stride;
+                        var h = MathF.Exp(b3) * stride;
+                        (xMin, yMin, xMax, yMax) = (cx - (w / 2f), cy - (h / 2f), cx + (w / 2f), cy + (h / 2f));
+                    }
+                    else
+                    {
+                        // TLBR: jarak dari pusat sel ke tiap tepi, dalam satuan stride.
+                        xMin = (col - b0 + 0.5f) * stride;
+                        yMin = (row - b1 + 0.5f) * stride;
+                        xMax = (col + b2 + 0.5f) * stride;
+                        yMax = (row + b3 + 0.5f) * stride;
+                    }
+
+                    xMin = Math.Clamp(xMin, 0f, inputWidth);
+                    yMin = Math.Clamp(yMin, 0f, inputHeight);
+                    xMax = Math.Clamp(xMax, 0f, inputWidth);
+                    yMax = Math.Clamp(yMax, 0f, inputHeight);
+
+                    if (xMax <= xMin || yMax <= yMin)
+                    {
+                        continue;
+                    }
+
+                    results.Add(new Detection
+                    {
+                        LabelIndex = bestClass,
+                        Label = LabelFor(bestClass, _metadata.Labels),
+                        Confidence = bestScore,
+                        Box = new BoundingBox(xMin / inputWidth, yMin / inputHeight, xMax / inputWidth, yMax / inputHeight),
+                    });
+                }
+            }
         }
 
         return results;

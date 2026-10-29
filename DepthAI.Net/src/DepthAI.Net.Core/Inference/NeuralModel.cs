@@ -60,6 +60,30 @@ public sealed record ModelMetadata
     /// <summary>Jumlah SHAVE core yang dikompilasi ke blob. 0 = pakai bawaan perangkat.</summary>
     public int ShaveCores { get; init; }
 
+    /// <summary>
+    /// Subtipe YOLO dari NN Archive (<c>yolov6</c>, <c>yolov8</c>, ...). Menentukan
+    /// <see cref="YoloDecoding"/> untuk keluaran grid mentah.
+    /// </summary>
+    public string? Subtype { get; init; }
+
+    /// <summary>Cara mendekode keluaran grid YOLO mentah; lihat <see cref="YoloDecodingFamily"/>.</summary>
+    public YoloDecodingFamily YoloDecoding { get; init; } = YoloDecodingFamily.Auto;
+
+    /// <summary>
+    /// Stride tiap keluaran grid YOLO, berurutan sama dengan nama keluaran yang sudah
+    /// diurutkan. Kosong berarti bawaan depthai-core <c>{8, 16, 32}</c>.
+    /// </summary>
+    public IReadOnlyList<int> Strides { get; init; } = [];
+
+    /// <summary>Nama tensor keluaran grid YOLO. Kosong berarti semua tensor yang namanya mengandung <c>_yolo</c>.</summary>
+    public IReadOnlyList<string> YoloOutputs { get; init; } = [];
+
+    /// <summary>
+    /// True bila kanal 0 model segmentasi adalah latar belakang. Piksel yang dimenangkan
+    /// latar belakang lalu ditandai <see cref="SegmentationFrame.NoClass"/>.
+    /// </summary>
+    public bool BackgroundClass { get; init; }
+
     public static ModelMetadata Default { get; } = new();
 }
 
@@ -89,8 +113,10 @@ public sealed class NeuralModel
     public int SizeBytes => Payload.Length;
 
     /// <summary>
-    /// Memuat model dari disk. Bila ada berkas <c>.json</c> bersebelahan dengan nama sama,
-    /// metadata dibaca dari sana kecuali <paramref name="metadata"/> diberikan eksplisit.
+    /// Memuat model dari disk. Kecuali <paramref name="metadata"/> diberikan eksplisit,
+    /// metadata dicari berurutan di: berkas <c>.json</c> bersebelahan dengan nama sama
+    /// (gaya lama atau NN Archive), <c>config.json</c> di dalam arsip <c>.tar</c>/<c>.tar.gz</c>,
+    /// lalu <c>config.json</c> NN Archive di folder yang sama.
     /// </summary>
     public static async Task<NeuralModel> LoadFromFileAsync(
         string path,
@@ -108,7 +134,9 @@ public sealed class NeuralModel
         var format = DetectFormat(path);
         var name = Path.GetFileNameWithoutExtension(path);
 
-        metadata ??= await TryLoadSidecarMetadataAsync(path, cancellationToken) ?? ModelMetadata.Default;
+        metadata ??= await TryLoadSidecarMetadataAsync(path, cancellationToken)
+            ?? await TryLoadArchiveConfigAsync(path, cancellationToken)
+            ?? ModelMetadata.Default;
 
         return new NeuralModel(bytes, format, metadata, name);
     }
@@ -185,7 +213,7 @@ public sealed class NeuralModel
         ".blob" => ModelFormat.Blob,
         ".superblob" => ModelFormat.SuperBlob,
         ".onnx" => ModelFormat.Onnx,
-        ".tar" or ".xz" or ".gz" => ModelFormat.NnArchive,
+        ".tar" or ".xz" or ".gz" or ".tgz" => ModelFormat.NnArchive,
         _ => ModelFormat.Unknown,
     };
 
@@ -199,11 +227,44 @@ public sealed class NeuralModel
             return null;
         }
 
-        await using var stream = File.OpenRead(sidecar);
-        var config = await JsonSerializer.DeserializeAsync(
-            stream, ModelJsonContext.Default.LuxonisModelConfig, cancellationToken);
+        var json = await File.ReadAllBytesAsync(sidecar, cancellationToken);
 
+        // Berkas pendamping bisa bergaya lama (nn_config) atau config.json NN Archive
+        // yang diganti nama; keduanya dikenali dari kunci tingkat atasnya.
+        if (NnArchiveConfig.LooksLikeArchiveConfig(json))
+        {
+            return NnArchiveConfig.Parse(json);
+        }
+
+        var config = JsonSerializer.Deserialize(json, ModelJsonContext.Default.LuxonisModelConfig);
         return config?.ToMetadata();
+    }
+
+    /// <summary>
+    /// Membaca <c>config.json</c> NN Archive: di dalam arsip <c>.tar</c>, atau di folder
+    /// yang sama dengan model hasil ekstraksi arsip.
+    /// </summary>
+    private static async Task<ModelMetadata?> TryLoadArchiveConfigAsync(
+        string modelPath,
+        CancellationToken cancellationToken)
+    {
+        // .tar.xz tidak bisa dibuka tanpa dependensi tambahan (BCL tidak punya dekoder xz),
+        // jadi untuk format itu metadata dibaca dari config.json hasil ekstraksi.
+        if (modelPath.EndsWith(".tar", StringComparison.OrdinalIgnoreCase)
+            || modelPath.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)
+            || modelPath.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase))
+        {
+            return await NnArchiveConfig.ReadFromTarAsync(modelPath, cancellationToken);
+        }
+
+        var directory = Path.GetDirectoryName(Path.GetFullPath(modelPath))!;
+        var config = Path.Combine(directory, NnArchiveConfig.FileName);
+        if (!File.Exists(config))
+        {
+            return null;
+        }
+
+        return NnArchiveConfig.Parse(await File.ReadAllBytesAsync(config, cancellationToken));
     }
 }
 
@@ -238,7 +299,7 @@ internal sealed class LuxonisModelConfig
 
     private static ModelFamily ParseFamily(string? family) => family?.ToLowerInvariant() switch
     {
-        "yolo" or "yolov5" or "yolov6" or "yolov7" or "yolov8" => ModelFamily.Yolo,
+        "yolo" or "yolov5" or "yolov6" or "yolov7" or "yolov8" or "yolov10" or "yolov11" => ModelFamily.Yolo,
         "mobilenet" or "mobilenet-ssd" or "ssd" => ModelFamily.MobileNetSsd,
         "classification" => ModelFamily.Classification,
         "segmentation" => ModelFamily.Segmentation,

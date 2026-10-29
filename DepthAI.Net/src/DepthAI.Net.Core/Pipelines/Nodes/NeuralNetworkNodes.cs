@@ -117,6 +117,36 @@ public class DetectionNetworkNode : NeuralNetworkNode
 
     /// <summary>Deteksi yang sudah diurai, dipancarkan sebagai <see cref="DetectionFrame"/>.</summary>
     public NodeOutput Detections { get; }
+
+    /// <summary>
+    /// Ambang IoU non-maximum suppression saat pipeline dimulai; null memakai metadata model.
+    /// Ubah saat runtime lewat <see cref="DepthAiDevice.SendConfig"/>.
+    /// </summary>
+    public float? IouThreshold { get; set; }
+
+    internal override IDictionary<string, object?> GetProperties()
+    {
+        var props = base.GetProperties();
+        props["iouThreshold"] = IouThreshold;
+        return props;
+    }
+
+    internal override void ApplyProperties(IReadOnlyDictionary<string, object?> properties)
+    {
+        base.ApplyProperties(properties);
+        var iou = properties.GetFloat("iouThreshold", float.NaN);
+        IouThreshold = float.IsNaN(iou) ? null : iou;
+    }
+
+    internal override void Validate(DeviceCapabilities capabilities, IList<string> errors)
+    {
+        base.Validate(capabilities, errors);
+
+        if (IouThreshold is < 0 or > 1)
+        {
+            errors.Add($"Node '{Name}': iouThreshold harus di rentang 0..1, sekarang {IouThreshold}.");
+        }
+    }
 }
 
 /// <summary>

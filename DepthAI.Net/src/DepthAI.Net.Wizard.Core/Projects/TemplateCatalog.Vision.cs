@@ -377,7 +377,7 @@ public static partial class TemplateCatalog
         Files =
         [
             new("{{ProjectName}}.csproj", TemplateFragments.ConsoleCsproj(
-                """<PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.1.0" />""")),
+                """<PackageReference Include="DepthAI.Net.Imaging.ImageSharp" Version="0.2.0" />""")),
             new(".gitignore", TemplateFragments.GitIgnore),
             new("README.md", TemplateFragments.Readme(
                 "Merekam frame RGB (PNG) dan kedalaman (PNG 16-bit, milimeter asli) berpasangan.",

@@ -21,6 +21,12 @@ public readonly record struct InferenceContext
     /// saat runtime tanpa memuat ulang model.
     /// </summary>
     public float? ConfidenceThreshold { get; init; }
+
+    /// <summary>
+    /// Menimpa ambang IoU non-maximum suppression dari metadata model. Hanya dipakai
+    /// parser yang menjalankan NMS (YOLO); MobileNet-SSD sudah di-NMS di perangkat.
+    /// </summary>
+    public float? IouThreshold { get; init; }
 }
 
 /// <summary>
