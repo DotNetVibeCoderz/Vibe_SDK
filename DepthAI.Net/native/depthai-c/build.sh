@@ -96,4 +96,8 @@ fi
 echo "Runtime linux-x64 siap di $stage"
 ls -la "$stage"
 echo "Dependensi sistem yang diharapkan ada di mesin pengguna:"
-ldd "$stage/libdepthai-c.so" "$stage"/libdepthai-core*.so* | awk '/=> \//{print "  " $1}' | sort -u
+ldd "$stage"/*.so* | awk -v stage="$stage" '/=> \// && index($3, stage) != 1 {print "  " $1}' | sort -u
+# Versi simbol tertinggi menentukan distro tertua yang bisa memuat pustaka ini.
+glibc="$(objdump -T "$stage"/*.so* | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)"
+glibcxx="$(objdump -T "$stage"/*.so* | grep -o 'GLIBCXX_[0-9.]*' | sort -uV | tail -1)"
+echo "Versi minimum: $glibc, $glibcxx"
