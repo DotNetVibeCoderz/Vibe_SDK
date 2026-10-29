@@ -35,14 +35,17 @@ The SDK has two backends behind one interface:
 
 - `SimulationBackend`: synthetic colour, depth, and neural tensors. Fully working everywhere.
 - `NativeBackend`: P/Invokes into `depthai-c` (`native/depthai-c/`), a C ABI shim over
-  depthai-core 3.11. **Working on Windows x64**, shipped as `DepthAI.Net.Runtime.win-x64`.
-  No Linux runtime yet (Luxonis ships no Linux C++ prebuilt; depthai-core must be built from source).
+  depthai-core 3.11. Shipped as `DepthAI.Net.Runtime.win-x64` (verified with a camera) and
+  `DepthAI.Net.Runtime.linux-x64` (loads in CI, **never opened a camera** — say so).
 
 `native/depthai-c/build.ps1` builds it: it downloads Luxonis' prebuilt win64 depthai-core,
 pulls `opencv_world4130.dll` from the official OpenCV installer (the prebuilt imports it but does
 not ship it), compiles the shim with VS's MSVC/CMake/Ninja, and stages everything plus an
-app-local MSVC runtime in `artifacts/native/win-x64`. Core's csproj then copies those DLLs into
-every project referencing it, so CLI, Wizard, samples and tests in the repo use hardware once built.
+app-local MSVC runtime in `artifacts/native/win-x64`. `build.sh` is the Linux counterpart: Luxonis
+ships no Linux C++ prebuilt, so it builds depthai-core from source without OpenCV (~13 min, cached
+in CI), then stages the .so files with RUNPATH `$ORIGIN` in `artifacts/native/linux-x64`. Needs
+glibc 2.35+, so CI builds on Ubuntu 22.04. Core's csproj copies both folders into every project
+referencing it, so CLI, Wizard, samples and tests in the repo use hardware once built.
 
 Rules for touching it:
 - `depthai_c.h` and `NativeMethods.cs` mirror each other; change both or neither.
@@ -87,12 +90,12 @@ src/
     Imaging/                   PixelConverter, DepthColorizer, FrameOverlay (dependency-free)
     Devices/                   DeviceInfo, DeviceWatcher, UsbDeviceScanner
   DepthAI.Net.Imaging.*        thin adapters: ImageSharp, SkiaSharp, SystemDrawing
-  DepthAI.Net.Runtime.win-x64/ no code; packs artifacts/native/win-x64 as runtimes/win-x64/native
+  DepthAI.Net.Runtime.<rid>/   no code; packs artifacts/native/<rid> as runtimes/<rid>/native
   DepthAI.Net.Cli/             Spectre.Console.Cli
   DepthAI.Net.Templates/       dotnet new template package
   DepthAI.Net.Wizard.Core/     project system, 16 CV templates, Semantic Kernel layer
   DepthAI.Net.Wizard/          Avalonia UI
-native/depthai-c/              C ABI shim (C++17) + build.ps1
+native/depthai-c/              C ABI shim (C++17) + build.ps1 (Windows) / build.sh (Linux)
 samples/                       generated from the wizard's template catalogue
 tools/vscode-depthai/          plain JavaScript, no build step
 ```
